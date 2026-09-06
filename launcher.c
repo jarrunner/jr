@@ -5,6 +5,8 @@
 #include <stdarg.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <io.h>
+#include <fcntl.h>
 
 #define MAX_PATH_LEN 32768
 #define MAX_CMD_LEN 32768
@@ -19,6 +21,7 @@ typedef struct {
     char logLevel[32];             // Log level: info, warning, error, none
     int logOverwrite;              // Overwrite log file (1) or append (0)
     int enableAOT;                 // Enable AOT cache (1=yes, 0=no, -1=not specified)
+    int useJvmDll;                 // Load the JVM in-process (1=yes, 0=no, -1=not specified)
 } LauncherConfig;
 
 // Global log file handle
@@ -28,6 +31,11 @@ static int g_logEnabled = 0;
 // Global timing variables
 static LARGE_INTEGER g_perfFreq;
 static LARGE_INTEGER g_startTime;
+
+// Standard handles as they were before isGuiMode() juggles the console,
+// so an in-process JVM can be pointed at the console we end up attached to
+static HANDLE g_stdSaved[3];
+static int g_stdWasConsole[3];
 
 // Base52 encoding (alphanumeric, case-sensitive without confusing chars)
 // Using: 0-9, A-Z (except I, O), a-z (except l, o)
@@ -319,12 +327,91 @@ int findJavaInPath(const char* exeName, char* outPath, size_t outPathSize) {
     return 0;
 }
 
+// Remember the standard handles, and whether each one is a console (as opposed
+// to a file or pipe the user redirected). Must run before FreeConsole().
+void saveStdHandles() {
+    static const DWORD ids[3] = {STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE};
+    int i;
+    for (i = 0; i < 3; i++) {
+        DWORD mode;
+        HANDLE h = GetStdHandle(ids[i]);
+        g_stdSaved[i] = h;
+        g_stdWasConsole[i] = (h && h != INVALID_HANDLE_VALUE && GetConsoleMode(h, &mode));
+    }
+}
+
+// Point CRT descriptor fd and the process standard handle stdId at h.
+// Takes ownership of h.
+void bindStdStream(int fd, DWORD stdId, HANDLE h) {
+    int tmp = _open_osfhandle((intptr_t)h, (fd == 0) ? _O_RDONLY : _O_WRONLY);
+    if (tmp < 0) {
+        CloseHandle(h);
+        return;
+    }
+    if (_dup2(tmp, fd) == 0) {
+        _close(tmp);  // closes h; fd now holds its own duplicate
+        SetStdHandle(stdId, (HANDLE)_get_osfhandle(fd));
+    } else {
+        _close(tmp);
+    }
+}
+
+// AttachConsole() installs the new console's handles as the process standard
+// handles, which throws away any redirection the user asked for - that is why
+// `jr app.jar > out.txt` used to produce an empty file. File and pipe handles
+// survive FreeConsole() untouched, so putting the saved ones back restores the
+// redirection for both launch modes.
+void restoreRedirectedStdHandles() {
+    static const DWORD ids[3] = {STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE};
+    int i;
+    for (i = 0; i < 3; i++) {
+        if (!g_stdWasConsole[i] && g_stdSaved[i] && g_stdSaved[i] != INVALID_HANDLE_VALUE) {
+            SetStdHandle(ids[i], g_stdSaved[i]);
+        }
+    }
+}
+
+// The FreeConsole/AttachConsole dance in isGuiMode() also invalidates the
+// handles the CRT cached for fd 0/1/2 at startup. That is harmless when we spawn
+// java.exe (the child gets handles we pass explicitly), but an in-process JVM
+// resolves System.out through _get_osfhandle(1), so those descriptors have to be
+// repointed at the console we actually ended up attached to. Only streams that
+// were consoles are touched; redirected ones are already correct.
+void rebindConsoleStdStreams(BOOL hasConsole) {
+    static const DWORD ids[3] = {STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE};
+    int i;
+    for (i = 0; i < 3; i++) {
+        HANDLE h;
+
+        if (!g_stdWasConsole[i]) continue;
+
+        if (hasConsole) {
+            h = CreateFileA(i == 0 ? "CONIN$" : "CONOUT$",
+                            GENERIC_READ | GENERIC_WRITE,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE,
+                            NULL, OPEN_EXISTING, 0, NULL);
+        } else {
+            // GUI mode: there is no console at all, send it to the bit bucket
+            h = CreateFileA("NUL", GENERIC_READ | GENERIC_WRITE,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE,
+                            NULL, OPEN_EXISTING, 0, NULL);
+        }
+
+        if (h != INVALID_HANDLE_VALUE) {
+            bindStdStream(i, ids[i], h);
+        }
+    }
+}
+
 // Function to detect if we're in GUI mode (double-clicked from Explorer)
 // Returns: TRUE if GUI mode (should use javaw.exe), FALSE if console mode
 BOOL isGuiMode() {
     // With CONSOLE subsystem, Windows already created a console for us
     // We need to detect if we were launched from a terminal (console mode)
     // or double-clicked from Explorer (GUI mode)
+
+    // Record the standard handles while they are still valid
+    saveStdHandles();
 
     // First, hide the console window to prevent flashing in GUI mode
     HWND consoleWnd = GetConsoleWindow();
@@ -373,6 +460,22 @@ void showMessage(BOOL hasConsole, const char* title, const char* message, UINT t
     writeLog(type == MB_ICONERROR ? "ERROR" : "INFO", "%s: %s", title, message);
 }
 
+// Parse the jvm= config value / --jvm-* flags
+// Returns 1 for in-process (jvm.dll), 0 for java.exe, -1 if unrecognised
+int parseJvmMode(const char* value) {
+    if (_stricmp(value, "dll") == 0 || _stricmp(value, "jvmdll") == 0 ||
+        _stricmp(value, "jvm.dll") == 0 || _stricmp(value, "inprocess") == 0 ||
+        _stricmp(value, "in-process") == 0) {
+        return 1;
+    }
+    if (_stricmp(value, "exe") == 0 || _stricmp(value, "javaexe") == 0 ||
+        _stricmp(value, "java.exe") == 0 || _stricmp(value, "process") == 0 ||
+        _stricmp(value, "external") == 0) {
+        return 0;
+    }
+    return -1;
+}
+
 // Parse config file (.jrc format)
 // Returns 1 on success, 0 on failure
 int parseConfigFile(const char* configPath, LauncherConfig* config) {
@@ -384,6 +487,7 @@ int parseConfigFile(const char* configPath, LauncherConfig* config) {
     // Initialize config with defaults
     memset(config, 0, sizeof(LauncherConfig));
     config->enableAOT = -1;  // Not specified (use default or cmdline)
+    config->useJvmDll = -1;  // Not specified (use default or cmdline)
     config->logOverwrite = 0; // Append by default
     strcpy(config->logLevel, "info");
 
@@ -429,6 +533,14 @@ int parseConfigFile(const char* configPath, LauncherConfig* config) {
                 config->enableAOT = 0;
                 writeLog("INFO", "aot=false");
             }
+        } else if (_stricmp(key, "jvm") == 0 || _stricmp(key, "jvm.mode") == 0) {
+            int mode = parseJvmMode(value);
+            if (mode != -1) {
+                config->useJvmDll = mode;
+                writeLog("INFO", "jvm=%s", value);
+            } else {
+                writeLog("WARNING", "Unrecognised jvm mode '%s' (expected dll or exe)", value);
+            }
         }
     }
 
@@ -461,6 +573,12 @@ int createConfigFile(const char* configPath, const char* jarPath) {
 
     fprintf(f, "# AOT cache control (optional, default: true)\n");
     fprintf(f, "#aot=true\n\n");
+
+    fprintf(f, "# How the JVM is started (optional, default: exe)\n");
+    fprintf(f, "#   exe - spawn java.exe/javaw.exe as a child process\n");
+    fprintf(f, "#   dll - load jvm.dll into this process, so the app runs under\n");
+    fprintf(f, "#         this executable's own name and can be killed on its own\n");
+    fprintf(f, "#jvm=dll\n\n");
 
     fprintf(f, "# Debug logging (optional, only used when specified)\n");
     fprintf(f, "#log.file=launcher.log\n");
@@ -633,6 +751,246 @@ void extractJarPath(const char* args, char* jarPath, size_t jarPathSize) {
     jarPath[0] = '\0';
 }
 
+// ---------------------------------------------------------------------------
+// In-process JVM mode (jvm.dll instead of java.exe)
+//
+// java.exe is a ~30KB stub whose main() loads jli.dll and calls JLI_Launch(),
+// which in turn loads bin\server\jvm.dll. We do exactly the same thing from
+// this launcher, so the JVM runs inside *this* process: Task Manager shows
+// myapp.exe rather than yet another java.exe, and `taskkill /IM myapp.exe`
+// kills one application instead of every Java process on the machine.
+//
+// Going through jli.dll rather than JNI_CreateJavaVM directly is what keeps
+// every java.exe feature intact - -jar manifest handling (Main-Class,
+// Class-Path), -cp wildcard expansion, --module, @argfiles, JDK_JAVA_OPTIONS,
+// JAVA_TOOL_OPTIONS - none of it has to be reimplemented here.
+// ---------------------------------------------------------------------------
+
+// StdArg as declared in the JDK's jli_util.h. Only the first field is read, and
+// the layout assumption is validated at runtime before we act on it.
+typedef struct {
+    char* arg;
+    unsigned char has_wildcard;
+} JLI_StdArg;
+
+// The JDK declares these JNIEXPORT/JNICALL, i.e. __stdcall. On x64 there is
+// only one calling convention so this is cosmetic, but keep it faithful.
+typedef int (__stdcall *JLI_Launch_t)(int argc, char** argv,
+                                     int jargc, const char** jargv,
+                                     int appclassc, const char** appclassv,
+                                     const char* fullversion, const char* dotversion,
+                                     const char* pname, const char* lname,
+                                     unsigned char javaargs, unsigned char cpwildcard,
+                                     unsigned char javaw, int ergo);
+typedef void (__stdcall *JLI_CmdToArgs_t)(char* cmdline);
+typedef int (__stdcall *JLI_GetStdArgc_t)(void);
+typedef JLI_StdArg* (__stdcall *JLI_GetStdArgs_t)(void);
+
+// Version strings handed to JLI_Launch. Informational only (java.exe passes its
+// own build stamp here); the real version comes from the JVM that gets loaded.
+#define JLI_FULL_VERSION "jr"
+#define JLI_DOT_VERSION  "jr"
+
+int fileExists(const char* path) {
+    DWORD attrib = GetFileAttributesA(path);
+    return (attrib != INVALID_FILE_ATTRIBUTES && !(attrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+// Strip the filename, leaving the containing directory
+void getDirName(const char* path, char* outDir, size_t outDirSize) {
+    const char* lastSlash = strrchr(path, '\\');
+    if (!lastSlash) lastSlash = strrchr(path, '/');
+
+    if (lastSlash) {
+        size_t len = lastSlash - path;
+        if (len >= outDirSize) len = outDirSize - 1;
+        strncpy(outDir, path, len);
+        outDir[len] = '\0';
+    } else {
+        outDir[0] = '\0';
+    }
+}
+
+// Resolve symlinks/junctions, e.g. the Oracle javapath shim that puts a
+// java.exe on PATH with no jli.dll next to it
+int resolveRealPath(const char* path, char* outPath, size_t outPathSize) {
+    char buffer[MAX_PATH];
+    const char* p;
+    DWORD len;
+
+    HANDLE h = CreateFileA(path, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                           NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    if (h == INVALID_HANDLE_VALUE) return 0;
+
+    len = GetFinalPathNameByHandleA(h, buffer, (DWORD)sizeof(buffer), FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+    CloseHandle(h);
+
+    if (len == 0 || len >= sizeof(buffer)) return 0;
+
+    p = buffer;
+    if (strncmp(p, "\\\\?\\", 4) == 0) p += 4;  // drop the extended-length prefix
+
+    strncpy(outPath, p, outPathSize - 1);
+    outPath[outPathSize - 1] = '\0';
+    return 1;
+}
+
+// Locate jli.dll, given the java.exe/javaw.exe we already resolved
+int findJliDll(const char* javaExePath, char* outPath, size_t outPathSize) {
+    char dir[MAX_PATH];
+    char candidate[MAX_PATH];
+    char realPath[MAX_PATH];
+    const char* javaHomeEnv;
+
+    // Normally right next to java.exe (<jdk>\bin\jli.dll)
+    getDirName(javaExePath, dir, sizeof(dir));
+    if (dir[0]) {
+        snprintf(candidate, sizeof(candidate), "%s\\jli.dll", dir);
+        if (fileExists(candidate)) {
+            strncpy(outPath, candidate, outPathSize - 1);
+            outPath[outPathSize - 1] = '\0';
+            return 1;
+        }
+    }
+
+    // java.exe on PATH may be a symlink into the real JDK
+    if (resolveRealPath(javaExePath, realPath, sizeof(realPath))) {
+        getDirName(realPath, dir, sizeof(dir));
+        if (dir[0]) {
+            snprintf(candidate, sizeof(candidate), "%s\\jli.dll", dir);
+            if (fileExists(candidate)) {
+                strncpy(outPath, candidate, outPathSize - 1);
+                outPath[outPathSize - 1] = '\0';
+                return 1;
+            }
+        }
+    }
+
+    // Last resort: JAVA_HOME (bin for JDK 9+, jre\bin for the JDK 8 layout)
+    javaHomeEnv = getenv("JAVA_HOME");
+    if (javaHomeEnv && *javaHomeEnv) {
+        snprintf(candidate, sizeof(candidate), "%s\\bin\\jli.dll", javaHomeEnv);
+        if (fileExists(candidate)) {
+            strncpy(outPath, candidate, outPathSize - 1);
+            outPath[outPathSize - 1] = '\0';
+            return 1;
+        }
+        snprintf(candidate, sizeof(candidate), "%s\\jre\\bin\\jli.dll", javaHomeEnv);
+        if (fileExists(candidate)) {
+            strncpy(outPath, candidate, outPathSize - 1);
+            outPath[outPathSize - 1] = '\0';
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+// Run the JVM inside this process.
+// cmdLine is the very same string that would otherwise go to CreateProcess, so
+// argument and quoting behaviour is identical in both modes; expectedArgv0 is
+// the unquoted token at its head, used to sanity-check the StdArg layout.
+// Returns 1 if the JVM ran (exitCode receives the application's exit code), or 0
+// if the launch could not be set up - the caller then falls back to java.exe.
+// The exit code is reported separately because any int, -1 included, is a valid
+// application exit code and must not be mistaken for a setup failure.
+int launchInProcess(const char* jliPath, char* cmdLine, const char* expectedArgv0, BOOL guiMode, int* exitCode) {
+    HMODULE jli;
+    JLI_Launch_t jliLaunch;
+    JLI_CmdToArgs_t jliCmdToArgs;
+    JLI_GetStdArgc_t jliGetStdArgc;
+    JLI_GetStdArgs_t jliGetStdArgs;
+    JLI_StdArg* stdArgs;
+    char** margv;
+    int margc, i, ret;
+
+    // LOAD_WITH_ALTERED_SEARCH_PATH makes <jdk>\bin the first search directory,
+    // so jli.dll finds the CRT and helper DLLs the JDK ships beside it
+    jli = LoadLibraryExA(jliPath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+    if (!jli) {
+        writeLog("WARNING", "Could not load %s (error %lu)", jliPath, GetLastError());
+        return 0;
+    }
+
+    jliLaunch = (JLI_Launch_t)GetProcAddress(jli, "JLI_Launch");
+    jliCmdToArgs = (JLI_CmdToArgs_t)GetProcAddress(jli, "JLI_CmdToArgs");
+    jliGetStdArgc = (JLI_GetStdArgc_t)GetProcAddress(jli, "JLI_GetStdArgc");
+    jliGetStdArgs = (JLI_GetStdArgs_t)GetProcAddress(jli, "JLI_GetStdArgs");
+
+    if (!jliLaunch || !jliCmdToArgs || !jliGetStdArgc || !jliGetStdArgs) {
+        writeLog("WARNING", "%s does not export the expected JLI entry points", jliPath);
+        return 0;
+    }
+
+    // Tokenise exactly the way java.exe does, including @argfile handling
+    jliCmdToArgs(cmdLine);
+    margc = jliGetStdArgc();
+    stdArgs = jliGetStdArgs();
+
+    if (margc < 1 || !stdArgs) {
+        writeLog("WARNING", "JLI_CmdToArgs produced no arguments");
+        return 0;
+    }
+
+    margv = (char**)malloc((margc + 1) * sizeof(char*));
+    if (!margv) {
+        writeLog("ERROR", "Out of memory building argument vector");
+        return 0;
+    }
+
+    for (i = 0; i < margc; i++) {
+        if (!stdArgs[i].arg) {
+            writeLog("WARNING", "JLI argument %d is null - unexpected StdArg layout", i);
+            free(margv);
+            return 0;
+        }
+        margv[i] = stdArgs[i].arg;
+    }
+    margv[margc] = NULL;  // JLI_Launch expects a null-terminated vector
+
+    // Guard against a StdArg layout change in some future JDK: argv[0] has to
+    // be the token we ourselves put at the head of the command line
+    if (strcmp(margv[0], expectedArgv0) != 0) {
+        writeLog("WARNING", "Unexpected JLI argv[0] '%s' (wanted '%s') - not using in-process JVM",
+                 margv[0], expectedArgv0);
+        free(margv);
+        return 0;
+    }
+
+    writeLog("INFO", "Invoking in-process JVM via %s (%d args)", jliPath, margc);
+
+    // Mirrors the JDK's own main.c: no JAVA_ARGS, classpath wildcards enabled,
+    // javaw semantics (message boxes instead of console output) when GUI mode
+    ret = jliLaunch(margc, margv,
+                    0, NULL,
+                    0, NULL,
+                    JLI_FULL_VERSION,
+                    JLI_DOT_VERSION,
+                    "java",
+                    "java",
+                    0,                      // javaargs
+                    1,                      // cpwildcard
+                    guiMode ? 1 : 0,        // javaw
+                    0);                     // ergo (unused)
+
+    free(margv);
+    *exitCode = ret;
+    return 1;
+}
+
+// Remove a standalone flag (and one following space) from an argument string
+void removeFlagArg(char* args, const char* flag) {
+    char* pos = strstr(args, flag);
+    char* end;
+
+    if (!pos) return;
+
+    end = pos + strlen(flag);
+    if (*end == ' ') end++;
+    memmove(pos, end, strlen(end) + 1);
+    trim(args);
+}
+
 int main(int argc, char** argv) {
     char javaPath[MAX_PATH] = {0};
     char exeBaseName[MAX_PATH] = {0};
@@ -660,16 +1018,49 @@ int main(int argc, char** argv) {
         writeLog("INFO", "Launcher started: %s.exe", exeBaseName);
     }
 
+    // Get full command line
+    LPSTR fullCmdLine = GetCommandLineA();
+
+    // Determine how the JVM is started (priority: cmdline > config > default)
+    // Default stays java.exe so existing setups behave exactly as before
+    int useJvmDll = 0;
+    if (strstr(fullCmdLine, "--jvm-dll")) {
+        useJvmDll = 1;
+    } else if (strstr(fullCmdLine, "--jvm-exe")) {
+        useJvmDll = 0;
+    } else if (useConfig && config.useJvmDll != -1) {
+        useJvmDll = config.useJvmDll;
+    }
+
     // Detect if we're in GUI mode (double-clicked) or console mode (terminal)
     BOOL guiMode = isGuiMode();
     BOOL hasConsole = !guiMode;
     const char* javaExeName = hasConsole ? "java.exe" : "javaw.exe";
 
-    writeLog("INFO", "Execution mode: %s", hasConsole ? "Console" : "GUI");
-    writeLog("INFO", "Java executable: %s", javaExeName);
+    // Tell the app which way this went. It cannot reliably work this out for itself:
+    // the GUI path below calls FreeConsole and repoints the std streams, so from inside
+    // the JVM "no console" and "console I was detached from" look alike. Tools that hand
+    // a path back to a shell need to know the difference -- with no shell listening they
+    // have to open a terminal instead. Inherited by both launch paths (the in-process JVM
+    // shares this environment block; CreateProcess is called with a NULL environment).
+    SetEnvironmentVariableA("JR_LAUNCH_MODE", hasConsole ? "console" : "gui");
 
-    // Get full command line
-    LPSTR fullCmdLine = GetCommandLineA();
+    // Defaults; the AOT block below overwrites these when a cache is actually in play.
+    SetEnvironmentVariableA("JR_AOT_STATE", "off");
+    SetEnvironmentVariableA("JR_AOT_CACHE", "");
+
+    // Put back any redirection the console switch above discarded
+    restoreRedirectedStdHandles();
+
+    // An in-process JVM inherits our descriptors rather than being handed fresh
+    // ones, so the console ones have to be repaired too
+    if (useJvmDll) {
+        rebindConsoleStdStreams(hasConsole);
+    }
+
+    writeLog("INFO", "Execution mode: %s", hasConsole ? "Console" : "GUI");
+    writeLog("INFO", "Launch mode: %s", useJvmDll ? "in-process (jvm.dll)" : "child process (java.exe)");
+    writeLog("INFO", "Java executable: %s", javaExeName);
 
     // Check for --create-config flag
     if (strstr(fullCmdLine, "--create-config")) {
@@ -810,6 +1201,14 @@ int main(int argc, char** argv) {
                     snprintf(aotArg, sizeof(aotArg), "-XX:AOTCacheOutput=\"%s\"", aotCachePath);
                     writeLog("INFO", "Creating new AOT cache: %s", aotCachePath);
                 }
+
+                // Tell the app which of the two this run is. The JVM assembles the cache at
+                // EXIT, so a "creating" run is the only chance to influence what lands in it --
+                // an app that knows can exercise itself first and produce a cache worth having,
+                // rather than one trained on whatever the user happened to type first.
+                // JR_AOT_CACHE names the file, so the app can also regenerate it deliberately.
+                SetEnvironmentVariableA("JR_AOT_CACHE", aotCachePath);
+                SetEnvironmentVariableA("JR_AOT_STATE", aotExists ? "using" : "creating");
             }
         }
 
@@ -829,20 +1228,11 @@ int main(int argc, char** argv) {
             char tempArgs[MAX_CMD_LEN];
             strncpy(tempArgs, argsStart, sizeof(tempArgs) - 1);
             removeJavaHomeArg(tempArgs);
-            // Remove --disable-aot/--enable-aot flags
-            char* flag = strstr(tempArgs, "--disable-aot");
-            if (flag) {
-                char* end = flag + 13;
-                if (*end == ' ') end++;
-                memmove(flag, end, strlen(end) + 1);
-            }
-            flag = strstr(tempArgs, "--enable-aot");
-            if (flag) {
-                char* end = flag + 12;
-                if (*end == ' ') end++;
-                memmove(flag, end, strlen(end) + 1);
-            }
-            trim(tempArgs);
+            // Remove launcher-only flags so they never reach the JVM
+            removeFlagArg(tempArgs, "--disable-aot");
+            removeFlagArg(tempArgs, "--enable-aot");
+            removeFlagArg(tempArgs, "--jvm-dll");
+            removeFlagArg(tempArgs, "--jvm-exe");
             if (tempArgs[0]) {
                 strncpy(cmdLineArgs, tempArgs, sizeof(cmdLineArgs) - 1);
             }
@@ -886,12 +1276,27 @@ int main(int argc, char** argv) {
         // Trim leading spaces
         while (jarArgs && *jarArgs == ' ') jarArgs++;
 
-        if (!jarArgs || !*jarArgs) {
+        // Strip the launcher's own flags first, so that an invocation carrying
+        // nothing but flags (e.g. `jr --jvm-dll`) still lands on the help below
+        // instead of handing java.exe an empty -jar
+        char tempArgs[MAX_CMD_LEN] = {0};
+        if (jarArgs) {
+            strncpy(tempArgs, jarArgs, sizeof(tempArgs) - 1);
+            removeJavaHomeArg(tempArgs);
+            removeFlagArg(tempArgs, "--disable-aot");
+            removeFlagArg(tempArgs, "--enable-aot");
+            removeFlagArg(tempArgs, "--jvm-dll");
+            removeFlagArg(tempArgs, "--jvm-exe");
+            trim(tempArgs);
+        }
+
+        if (!tempArgs[0]) {
             // Show diagnostic/help information
             char info[2048];
             snprintf(info, sizeof(info),
                      "Java Runner (jr) - Smart Java Launcher\n\n"
                      "Execution Context: %s\n"
+                     "Launch Mode: %s\n"
                      "Java Executable: %s\n"
                      "Java Location: %s\n"
                      "Config File: %s (not found)\n\n"
@@ -899,40 +1304,26 @@ int main(int argc, char** argv) {
                      "  %s.exe <jar-file> [args...]\n"
                      "  %s.exe --create-config [jar-file]\n"
                      "  %s.exe --java-home=PATH <jar-file> [args...]\n\n"
+                     "Flags:\n"
+                     "  --jvm-dll        run the JVM inside this process (unique process name)\n"
+                     "  --jvm-exe        spawn java.exe as a child process (default)\n"
+                     "  --enable-aot / --disable-aot\n"
+                     "  --java-home=PATH\n\n"
                      "Examples:\n"
                      "  %s.exe myapp.jar\n"
+                     "  %s.exe --jvm-dll myapp.jar\n"
                      "  %s.exe --create-config myapp.jar\n"
                      "  %s.exe --java-home=C:\\Java\\jdk21 myapp.jar --verbose",
                      hasConsole ? "Console (terminal/cmd)" : "GUI (double-clicked)",
+                     useJvmDll ? "in-process (jvm.dll)" : "child process (java.exe)",
                      javaExeName,
                      javaPath,
                      configPath,
                      exeBaseName, exeBaseName, exeBaseName,
-                     exeBaseName, exeBaseName, exeBaseName);
+                     exeBaseName, exeBaseName, exeBaseName, exeBaseName);
             showMessage(hasConsole, "Java Runner - Help", info, MB_ICONINFORMATION);
             closeLog();
             return 1;
-        }
-
-        // Remove --java-home from args
-        char tempArgs[MAX_CMD_LEN];
-        strncpy(tempArgs, jarArgs, sizeof(tempArgs) - 1);
-        removeJavaHomeArg(tempArgs);
-
-        // Remove AOT flags
-        char* flag = strstr(tempArgs, "--disable-aot");
-        if (flag) {
-            char* end = flag + 13;
-            if (*end == ' ') end++;
-            memmove(flag, end, strlen(end) + 1);
-            trim(tempArgs);
-        }
-        flag = strstr(tempArgs, "--enable-aot");
-        if (flag) {
-            char* end = flag + 12;
-            if (*end == ' ') end++;
-            memmove(flag, end, strlen(end) + 1);
-            trim(tempArgs);
         }
 
         // Extract JAR file path
@@ -981,6 +1372,14 @@ int main(int argc, char** argv) {
                     snprintf(aotArg, sizeof(aotArg), "-XX:AOTCacheOutput=\"%s\"", aotCachePath);
                     writeLog("INFO", "Creating new AOT cache: %s", aotCachePath);
                 }
+
+                // Tell the app which of the two this run is. The JVM assembles the cache at
+                // EXIT, so a "creating" run is the only chance to influence what lands in it --
+                // an app that knows can exercise itself first and produce a cache worth having,
+                // rather than one trained on whatever the user happened to type first.
+                // JR_AOT_CACHE names the file, so the app can also regenerate it deliberately.
+                SetEnvironmentVariableA("JR_AOT_CACHE", aotCachePath);
+                SetEnvironmentVariableA("JR_AOT_STATE", aotExists ? "using" : "creating");
             }
         }
 
@@ -995,6 +1394,34 @@ int main(int argc, char** argv) {
     }
 
     writeLog("INFO", "Final command: %s", finalCmdLine);
+
+    // In-process mode: run the JVM inside this executable so the process keeps
+    // its own name. finalCmdLine is reused verbatim, so argument handling,
+    // quoting, AOT flags and config precedence are identical to java.exe mode.
+    if (useJvmDll) {
+        char jliPath[MAX_PATH] = {0};
+
+        if (findJliDll(javaPath, jliPath, sizeof(jliPath))) {
+            // jvmCmdLine is consumed destructively by the JLI tokeniser
+            char jvmCmdLine[MAX_CMD_LEN];
+            int exitCode = 0;
+
+            strncpy(jvmCmdLine, finalCmdLine, sizeof(jvmCmdLine) - 1);
+            jvmCmdLine[sizeof(jvmCmdLine) - 1] = '\0';
+
+            if (launchInProcess(jliPath, jvmCmdLine, javaPath, guiMode, &exitCode)) {
+                writeLog("INFO", "In-process JVM exited with code: %d", exitCode);
+                closeLog();
+                return exitCode;
+            }
+        } else {
+            writeLog("WARNING", "jli.dll not found next to %s", javaPath);
+        }
+
+        // Anything that stops the in-process launch falls back to java.exe
+        // rather than failing outright
+        writeLog("WARNING", "Falling back to child process mode (java.exe)");
+    }
 
     // Setup startup info
     STARTUPINFOA si = {sizeof(si)};

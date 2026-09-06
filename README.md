@@ -1,6 +1,6 @@
 # Java Runner (jr) - Make Your JARs Feel Like Native Windows Executables
 
-A tiny Windows launcher (23 KB) that makes JAR files executable like native .exe files - with automatic console/GUI detection, JDK 25 AOT cache support, and simple configuration.
+A tiny Windows launcher (40 KB, no runtime to install) that makes JAR files executable like native .exe files - with automatic console/GUI detection, JDK 25 AOT cache support, and simple configuration.
 
 ## What Makes jr Different?
 
@@ -10,24 +10,31 @@ A tiny Windows launcher (23 KB) that makes JAR files executable like native .exe
 2. **Automatic AOT cache (JDK 25+)** - 90% faster startup (20-30ms vs 200-300ms) with zero configuration
 3. **Smart console detection** - Automatically uses java.exe (console) or javaw.exe (GUI) based on how you launch it
 4. **Two modes**: Works as generic JAR launcher (no config needed) OR as dedicated app launcher with .jrc config files
-5. **Tiny size** - 23 KB (with vcredist) or 193 KB standalone, vs 500 KB (Launch4j) or 50+ MB (jpackage)
+5. **Your app gets its own process name** - with `jvm=dll` the JVM runs inside the launcher, so Task Manager shows `myapp.exe` instead of another anonymous `java.exe`
+6. **Tiny size, nothing to install** - 40 KB with no VC++ Redistributable, vs 500 KB (Launch4j) or 50+ MB (jpackage)
 
 **Key Features:**
 - Automatic console/GUI detection (no manual configuration like Launch4j/WinRun4J)
 - JDK 25 AOT cache support out of box (creates, uses, and cleans up cache automatically)
+- Optional in-process JVM (`jvm=dll`) so each app is its own killable, nameable process
 - Works without any config file (traditional mode) or with simple .jrc config (config mode)
 - Command-line arguments override config settings
 - Debug logging (opt-in only)
 - Finds Java from PATH or use `--java-home` to specify custom JDK
 
+## macOS and Linux
+
+`posix/jrmac` does the same job there, as a shell script rather than C — same `.jrc` format, so a config written for `jr.exe` works unchanged. `posix/install.sh <name> <jar>` installs a tool. See [posix/README.md](posix/README.md), which also explains why there is no compiled binary for those platforms and does not need one.
+
 ## Download
 
 **Pre-built executables are available in [GitHub Releases](../../releases):**
 
-- **`jr-standalone.exe`** (193 KB) - **Recommended** - No dependencies, works everywhere
-- **`jr.exe`** (23 KB) - Requires VC++ Redistributable 2015-2022
+- **`jr.exe`** (40 KB) - No dependencies to install, works on any Windows 10 or later
 
 Download, rename if desired, and start using immediately!
+
+There is only one build. It links the Universal CRT that ships inside Windows itself, so there is no VC++ Redistributable to chase and no 200 KB static build to trade against it. On Windows 7 or 8.1 it needs the UCRT update (KB2999226); the earlier separate `jr-standalone.exe` covered that case and is no longer produced.
 
 ## Building from Source
 
@@ -43,9 +50,15 @@ build-win.bat
 
 **Note:** For portable MSVC build tools without full Visual Studio install, see [PortableBuildTools](https://github.com/Data-Oriented-House/PortableBuildTools) (archived but functional).
 
-This produces both executables:
-- `jr.exe` (23 KB, requires VC++ Redistributable)
-- `jr-standalone.exe` (193 KB, no dependencies)
+This produces `jr.exe` (40 KB, no VC++ Redistributable required).
+
+The build uses a hybrid CRT: `/MT` links vcruntime statically, while `/NODEFAULTLIB:libucrt.lib /DEFAULTLIB:ucrt.lib` swaps the bulky static Universal CRT for the copy that already lives in Windows. That is what removes the `VCRUNTIME140.dll` import without paying the 200 KB a fully static build costs. To confirm it took effect:
+
+```batch
+dumpbin /dependents jr.exe
+```
+
+Expect only `USER32.dll`, `KERNEL32.dll` and the `api-ms-win-crt-*.dll` set. A `VCRUNTIME140.dll` line means the hybrid flags were dropped and you are back to needing the redistributable.
 
 ## Quick Start - Make JARs Executable System-Wide
 
@@ -117,6 +130,9 @@ jr.exe --disable-aot myapp.jar
 # Specify Java location
 jr.exe --java-home=C:\Java\jdk-21 myapp.jar
 
+# Run the JVM inside jr.exe itself, instead of spawning java.exe
+jr.exe --jvm-dll myapp.jar
+
 # Combined
 jr.exe --disable-aot --java-home=C:\Java\jdk-25 myapp.jar --verbose
 ```
@@ -167,6 +183,12 @@ app.args=--config myconfig.xml --verbose
 # AOT cache control (optional, default: true)
 aot=true
 
+# How the JVM is started (optional, default: exe)
+#   exe - spawn java.exe/javaw.exe as a child process
+#   dll - load jvm.dll into this process, so the app runs under this
+#         executable's own name and can be killed on its own
+jvm=dll
+
 # Debug logging (optional, only used when specified)
 log.file=myapp.log
 log.level=info
@@ -193,6 +215,7 @@ myapp.exe --extra-arg value
 | `java.args` | Java arguments (`-jar`, `-cp`, main class) | `-jar myapp.jar` or `-cp lib/*:app.jar com.Main` |
 | `app.args` | Application arguments (after jar/class) | `--config app.xml --verbose` |
 | `aot` | Enable/disable AOT cache | `true` or `false` |
+| `jvm` | How the JVM is started | `exe` (default) or `dll` |
 | `log.file` | Debug log file path | `myapp.log` |
 | `log.level` | Log verbosity | `info`, `warning`, `error`, `none` |
 | `log.overwrite` | Overwrite log on each run | `true` or `false` (default: append) |
@@ -233,6 +256,68 @@ myapp.exe --debug
 
 # Final command will have: --mode production --debug
 ```
+
+### Launch Mode: One Process Per App (`jvm=dll`)
+
+By default `jr` spawns `java.exe` as a child process. That works, but every Java
+application on the machine then shows up as an indistinguishable `java.exe`:
+
+```
+myapp.exe          <- the launcher, exits immediately in GUI mode
+  java.exe         <- your application actually lives here
+java.exe           <- somebody else's application
+java.exe           <- a build tool
+```
+
+Killing one application by name (`taskkill /IM java.exe`) kills all of them.
+
+Setting `jvm=dll` loads the JVM into the launcher process instead, so the
+application *is* the executable:
+
+```properties
+jvm=dll
+```
+
+```
+myapp.exe          <- the JVM and your application, one process
+otherapp.exe       <- a different application, separately killable
+```
+
+Now `taskkill /IM myapp.exe` targets exactly one application, Task Manager shows
+a meaningful name, and per-application firewall rules, window grouping and
+process monitoring all work the way they do for native programs.
+
+**How it works:** `java.exe` is itself a ~30 KB stub whose `main()` loads
+`jli.dll` and calls `JLI_Launch()`, which loads `bin\server\jvm.dll`. In
+`jvm=dll` mode `jr` does exactly the same thing from its own `main()`. Because
+the real JDK launcher does the work, every `java.exe` feature is preserved:
+`-jar` manifest handling (`Main-Class`, `Class-Path`), classpath wildcards,
+`--module`, `@argfiles`, `JDK_JAVA_OPTIONS`, AOT cache flags, exit codes,
+stdin/stdout/stderr and redirection.
+
+**Enable it per-application** in the `.jrc`, or per-invocation on the command
+line:
+
+```batch
+jr.exe --jvm-dll myapp.jar        # force in-process
+jr.exe --jvm-exe myapp.jar        # force child process (default)
+```
+
+Command-line flags override the `.jrc` setting.
+
+**Notes:**
+- `jli.dll` is located next to the `java.exe`/`javaw.exe` that was resolved from
+  `PATH` or `--java-home`, following symlinks (such as the Oracle `javapath`
+  shim) and falling back to `%JAVA_HOME%`.
+- If `jli.dll` cannot be found or loaded, `jr` logs a warning and falls back to
+  spawning `java.exe`, so enabling this can not stop an application from
+  starting.
+- In GUI mode there is no console, so the standard streams are pointed at `NUL`.
+  Unlike `javaw.exe`, `System.console()` is therefore non-null; writes to
+  `System.out` succeed and are discarded rather than failing.
+- The launcher no longer exits early in GUI mode - it can't, it is the
+  application. This is the point of the mode, but it means the process stays in
+  the process list for the application's whole lifetime.
 
 ### AOT Cache Management
 
@@ -317,6 +402,7 @@ Java Runner Log - 2025-11-21 17:05:06
 4. **Complex Launch Configurations** - Use `.jrc` files for applications requiring specific JVM settings
 5. **Desktop Shortcuts** - Create shortcuts that work both ways (console and GUI)
 6. **Batch Scripts** - Use in automation where you need proper exit codes
+7. **Individually manageable services/apps** - Set `jvm=dll` so each app is its own named process you can kill, monitor or firewall on its own
 
 ## Testing
 
@@ -330,6 +416,13 @@ build-test-jar.bat
 ```batch
 cd test-scripts
 TestJR.bat
+```
+
+**Run the launch-mode tests** (non-interactive, builds its own test JAR, prints
+PASS/FAIL per check - covers both `jvm=exe` and `jvm=dll`):
+```batch
+cd test-scripts
+TestJvmMode.bat
 ```
 
 This tests:
@@ -365,9 +458,12 @@ mytest.exe
 - **Dependencies**: Standard Windows libraries (kernel32.dll, user32.lib)
 - **Config Format**: Simple key=value properties format with comment support
 - **File Extension**: `.jrc` (Java Runner Config)
-- **Behavior**:
+- **Behavior** (`jvm=exe`, default):
   - Console mode: Waits for process, returns exit code
   - GUI mode: Launches and exits immediately
+- **Behavior** (`jvm=dll`):
+  - Both modes: the JVM runs in the launcher process, which returns the
+    application's exit code when the JVM is done
 - **Config File Naming**: Must match executable name (e.g., `myapp.exe` → `myapp.jrc`)
 - **Config Discovery**: Checks for `<exename>.jrc` in same directory as executable
 
@@ -412,8 +508,13 @@ The `.jrc` format follows industry standards:
 
 7. **Execution**:
    - Constructs command: `"path\to\java.exe" [timing-props] [vm.args] [aot-cache] [java.args] [app.args] [cmdline-args]`
-   - Uses `CreateProcessA()` with handle inheritance for proper I/O
-   - Waits for completion and returns the same exit code
+   - `jvm=exe` (default): runs it with `CreateProcessA()` using handle
+     inheritance for proper I/O, waits for completion and returns the same exit
+     code
+   - `jvm=dll`: hands the identical command string to the JDK's own
+     `JLI_CmdToArgs()` + `JLI_Launch()` in `jli.dll`, which loads
+     `bin\server\jvm.dll` into this process. Same string in both modes, so
+     argument parsing, quoting and precedence can not drift apart.
 
 ## Examples
 
@@ -467,14 +568,14 @@ app.args=--config production.xml
 ## Comparison with Other Tools
 
 **vs Launch4j / WinRun4J:**
-- Much smaller (23 KB vs 500 KB for Launch4j)
+- Much smaller (40 KB vs 500 KB for Launch4j), with nothing to install alongside it
 - Automatic AOT cache support (90% faster startup with JDK 25+)
 - Automatic console/GUI detection (no manual config needed)
 - Works without config files (can also work with config when needed)
 - Actively maintained (Launch4j: 2017, WinRun4J: 2018, both inactive)
 
 **vs jpackage (bundled JRE approach):**
-- 2000x smaller (doesn't bundle JRE - 23 KB vs 50+ MB)
+- 1000x smaller (doesn't bundle JRE - 40 KB vs 50+ MB)
 - Users can use any Java version they want
 - Easier updates (just replace JAR, no need to rebuild entire package)
 - Still gets AOT performance benefits with JDK 25+
@@ -527,6 +628,27 @@ Contributions welcome! Please ensure:
 - Code follows existing style
 - Test on Windows 10/11
 - Update documentation for new features
+
+## aot/ — making the cache worth having (child project)
+
+`aot=true` in a `.jrc` tells jr to build an AOT cache, but jr cannot decide *what goes in it*: the JVM
+assembles the cache from whatever the training run happened to load. A cache trained on `mytool --help` is
+worse than no cache at all, because naming a cache also switches off the default CDS archive.
+
+`aot/` is the Java side of that — a dependency-free library (`io.github.littlejlib:littlejlib-aot`) an
+application uses to load itself on purpose during jr's training run. It is what jr signals with
+`JR_AOT_STATE=creating`. See **[aot/README.md](aot/README.md)** for how to wire it in, how to choose what to
+load (measured: bigger is *not* automatically better), how to record method profiles as well as classes
+(JEP 515), and how to build the cache in the Maven lifecycle.
+
+Two things documented there that bite in `jr` itself:
+
+- **jr's AOT is jar-only, and that is a JVM restriction, not a jr one.** The JVM refuses to dump a cache
+  when the classpath holds a non-empty directory (`Cannot have non-empty directory in paths`). So a `.jrc`
+  with `aot=true` that launches `-cp target\classes;lib\*` has never had a cache. Worth surfacing in jr:
+  today it silently does nothing.
+- The cache is keyed on the jar's size and mtime (`<name>.<size>.<mtime>.aot`), which is why it retrains
+  automatically after a rebuild.
 
 ## Support
 
