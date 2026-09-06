@@ -1,0 +1,97 @@
+#!/bin/bash
+# jrmac - jr.exe's idea (a jar behaves like a native binary, with JDK 25's AOT cache
+# managed automatically) on macOS and Linux, as a plain shell script instead of C.
+#
+# The name is historical - it was written for a Mac - but nothing here is macOS-specific
+# and it runs the same on Linux. It is deliberately not renamed: every installed tool is
+# a symlink pointing at this filename.
+#
+# What it does NOT carry over from jr.exe, and why: there is no console/GUI executable
+# split to detect (a Windows-only distinction), and no jvm=dll in-process-JVM mode. That
+# mode exists on Windows so Task Manager shows the app's own name rather than another
+# anonymous java.exe; here `exec -a` below buys the same thing for one line, because ps
+# reports argv[0].
+#
+# Everything else jr does for a cli-style tool, this does: find the jar from a sibling
+# .jrc named after whatever this script was invoked as, train an AOT cache on the first
+# real run, reuse it after, retrain automatically when the jar changes.
+#
+# Install a tool with ./install.sh, which does both steps below and refuses to get them
+# subtly wrong:
+#   ln -s /path/to/jrmac ~/my-tools/bin/mytool
+#   cat > ~/my-tools/bin/mytool.jrc <<'EOF'
+#   jar=../jars/mytool.jar
+#   aot=true
+#   EOF
+#
+# A SYMLINK, never a copy. One file then carries every fix to every tool at once; copies
+# drift silently and the one left behind is discovered months later. `cp` on an installed
+# tool follows the link and produces exactly that stale copy - use install.sh instead.
+#
+# .jrc keys (only these three; anything else is ignored):
+#   jar=<path>     required. Relative paths resolve against the .jrc's own directory.
+#   main=<class>   optional. If set, runs `java -cp jar main` instead of `java -jar jar`.
+#   aot=true|false optional, default true. Set false for a long-running daemon or UI
+#                  process - the AOT cache is written at normal JVM exit, so it never
+#                  captures anything useful from a process that gets killed instead.
+
+set -euo pipefail
+
+SCRIPT="$0"
+NAME="$(basename "$SCRIPT")"
+DIR="$(cd "$(dirname "$SCRIPT")" && pwd)"
+JRC="$DIR/$NAME.jrc"
+
+if [ ! -f "$JRC" ]; then
+    echo "jrmac: no config found at $JRC (expected one named after this symlink)" >&2
+    exit 1
+fi
+
+JAR=""
+MAIN=""
+AOT="true"
+while IFS='=' read -r key val; do
+    case "$key" in
+        jar) JAR="$val" ;;
+        main) MAIN="$val" ;;
+        aot) AOT="$val" ;;
+    esac
+done < <(grep -Ev '^\s*(#|$)' "$JRC")
+
+if [ -z "$JAR" ]; then
+    echo "jrmac: $JRC has no jar= line" >&2
+    exit 1
+fi
+case "$JAR" in
+    /*) ;;
+    *) JAR="$DIR/$JAR" ;;
+esac
+if [ ! -f "$JAR" ]; then
+    echo "jrmac: jar not found: $JAR" >&2
+    exit 1
+fi
+
+JAVA_FLAGS=()
+if [ "$AOT" = "true" ]; then
+    CACHE="${JAR%.jar}.aot"
+    if [ -f "$CACHE" ] && [ "$CACHE" -nt "$JAR" ]; then
+        JAVA_FLAGS+=("-XX:AOTCache=$CACHE")
+    else
+        rm -f "$CACHE"
+        JAVA_FLAGS+=("-XX:AOTCacheOutput=$CACHE")
+    fi
+fi
+
+# `exec -a "$NAME"` is what makes the tool its own named process. Without it every one of
+# these is `java -jar /long/path/x.jar` in ps and in Activity Monitor, so a machine running
+# six of them shows six identical anonymous JVMs and the question "which one is which"
+# has no answer. argv[0] is what ps reports, and it costs one flag. It does not change the
+# executable the kernel runs, so java.home still resolves off the real binary.
+#
+# macOS ships bash 3.2 (GPLv3), where "${arr[@]}" on an EMPTY array throws "unbound
+# variable" under set -u - fixed only in bash 4.4+. This guard is the standard workaround.
+if [ -n "$MAIN" ]; then
+    exec -a "$NAME" java ${JAVA_FLAGS[@]+"${JAVA_FLAGS[@]}"} -cp "$JAR" "$MAIN" "$@"
+else
+    exec -a "$NAME" java ${JAVA_FLAGS[@]+"${JAVA_FLAGS[@]}"} -jar "$JAR" "$@"
+fi
