@@ -1,0 +1,48 @@
+# The POSIX surface the Linux/macOS port of jr binds. THIS FILE IS THE SOURCE OF TRUTH: PosixApi.java
+# and PosixOffsets.java are generated from it by gen-bindings-posix.sh - never hand-edit them.
+# --- functions (C name, Java name) ---
+exit exit
+getenv getenv
+setenv setenv
+fopen fopen
+fputs fputs
+fflush fflush
+fclose fclose
+fread fread
+fwrite fwrite
+malloc malloc
+free free
+memset memset
+time time
+clock_gettime clockGettime
+stat stat
+access access
+unlink unlink
+rename rename
+mkdir mkdir
+rmdir rmdir
+opendir opendir
+readdir readdir
+closedir closedir
+realpath realpath
+getcwd getcwd
+posix_spawn posixSpawn
+waitpid waitpid
+isatty isatty
+uname uname
+jx_wexitstatus wexitstatus
+jx_wifexited wifexited
+jx_environ getEnviron
+# --- constants ---
+O_RDONLY
+F_OK
+X_OK
+CLOCK_MONOTONIC
+PATH_MAX
+EINTR
+DT_DIR
+# --- structs ---
+struct:stat stat_t
+struct:timespec timespec
+struct:dirent dirent
+struct:utsname utsname

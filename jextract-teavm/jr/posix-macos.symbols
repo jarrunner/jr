@@ -1,0 +1,4 @@
+# macOS only: there is no /proc/self/exe (that's how ExeInfo finds its own path on Linux), so macOS
+# needs _NSGetExecutablePath from mach-o/dyld.h (jr-posix-macos.h pulls that header in). Part of
+# libSystem, always linked, no extra -l flag.
+_NSGetExecutablePath nsGetExecutablePath

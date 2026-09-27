@@ -1,0 +1,3 @@
+# build-posix.sh's per-target output (classes, generated C, the compiled binary) - matches the
+# jextract-teavm/.gitignore convention for posix/demo's and windemo's build-*/ dirs.
+build-posix-*/
