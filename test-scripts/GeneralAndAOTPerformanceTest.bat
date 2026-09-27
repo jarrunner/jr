@@ -52,7 +52,7 @@ for /L %%i in (1,1,%RUNS%) do (
     )
 
     REM Run without AOT - suppress output
-    jarrunner.exe --disable-aot test-scripts\GeneralAndAOTPerformanceTest.jar >nul 2>&1
+    jarrunner.exe -Xjr:aot=false test-scripts\GeneralAndAOTPerformanceTest.jar >nul 2>&1
 
     REM Capture end time
     for /f "tokens=1-4 delims=:.," %%a in ("!time: =0!") do (
@@ -219,7 +219,7 @@ echo ===========================================================================
 echo.
 echo For detailed timing breakdown, run:
 echo   jarrunner.exe test-scripts\GeneralAndAOTPerformanceTest.jar
-echo   jarrunner.exe --enable-aot test-scripts\GeneralAndAOTPerformanceTest.jar
+echo   jarrunner.exe -Xjr:aot=true test-scripts\GeneralAndAOTPerformanceTest.jar
 echo.
 
 pause

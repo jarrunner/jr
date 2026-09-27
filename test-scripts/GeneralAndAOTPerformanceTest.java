@@ -271,11 +271,11 @@ public class GeneralAndAOTPerformanceTest {
             if (aotMode.contains("CREATE")) {
                 System.out.println("║                                                                             ║");
                 System.out.println("║  This is the FIRST RUN - creating AOT cache.                               ║");
-                System.out.println("║  Run again with --enable-aot to see performance improvement!               ║");
+                System.out.println("║  Run again with -Xjr:aot=true to see performance improvement!               ║");
             } else if (aotMode.contains("USE")) {
                 System.out.println("║                                                                             ║");
                 System.out.println("║  Using AOT cache - startup should be SIGNIFICANTLY faster!                 ║");
-                System.out.println("║  Compare this timing with a run WITHOUT --enable-aot flag.                 ║");
+                System.out.println("║  Compare this timing with a run WITHOUT -Xjr:aot=true flag.                 ║");
             }
 
             System.out.println("╚═════════════════════════════════════════════════════════════════════════════╝");

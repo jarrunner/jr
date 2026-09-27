@@ -23,7 +23,7 @@ echo ===========================================================================
 echo TEST 1: WITHOUT AOT (Disabled)
 echo ================================================================================
 echo.
-jarrunner.exe --disable-aot test-scripts\GeneralAndAOTPerformanceTest.jar | findstr /C:"AOT Status:" /C:"Enabled:" /C:"Mode:" /C:"GRAND TOTAL" /C:"Library loading:" /C:"Guava" /C:"Commons" /C:"Jackson"
+jarrunner.exe -Xjr:aot=false test-scripts\GeneralAndAOTPerformanceTest.jar | findstr /C:"AOT Status:" /C:"Enabled:" /C:"Mode:" /C:"GRAND TOTAL" /C:"Library loading:" /C:"Guava" /C:"Commons" /C:"Jackson"
 
 echo.
 echo.

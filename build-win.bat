@@ -48,7 +48,13 @@ REM Requires Windows 10+, or KB2999226 on Windows 7/8.1.
 REM
 REM Size flags: /O1 (favour size) /GS- (no security cookies) /Gy (COMDAT functions)
 REM Link flags: /OPT:REF (drop unused) /OPT:ICF (merge identical) /MERGE:.rdata=.text
-cl /nologo /O1 /GS- /Gy /MT /Fe:jr.exe launcher.c /link /SUBSYSTEM:CONSOLE /NODEFAULTLIB:libucrt.lib /DEFAULTLIB:ucrt.lib /OPT:REF /OPT:ICF /MERGE:.rdata=.text user32.lib kernel32.lib
+REM javainstall.c (the Java auto-install feature, PRP-09) pulls in winhttp.lib,
+REM bcrypt.lib and comctl32.lib itself via #pragma comment(lib,...) - all three are
+REM OS-provided DLLs (winhttp.dll/bcrypt.dll/comctl32.dll), not redistributable-requiring
+REM static libs, so this does not reopen the PRP-06 size/redistributable work.
+REM resedit.c (resource editing + signing, PRP-13) likewise pulls in crypt32.lib and
+REM version.lib, and loads mssign32.dll at run time - all OS components too.
+cl /nologo /O1 /GS- /Gy /MT /Fe:jr.exe launcher.c javainstall.c resedit.c /link /SUBSYSTEM:CONSOLE /NODEFAULTLIB:libucrt.lib /DEFAULTLIB:ucrt.lib /OPT:REF /OPT:ICF /MERGE:.rdata=.text user32.lib kernel32.lib
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
@@ -63,6 +69,8 @@ if %ERRORLEVEL% NEQ 0 (
 
 REM Clean up intermediate files
 if exist launcher.obj del launcher.obj
+if exist javainstall.obj del javainstall.obj
+if exist resedit.obj del resedit.obj
 
 echo.
 echo ========================================

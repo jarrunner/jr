@@ -54,7 +54,7 @@ type myapp.log
 
 ```batch
 cd ..
-jr.exe --create-config test-scripts\TestStartupTiming.jar
+jr.exe -Xjr:create-config=test-scripts\TestStartupTiming.jar
 
 # This creates jr.jrc - edit and test
 jr.exe

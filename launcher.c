@@ -8,6 +8,9 @@
 #include <io.h>
 #include <fcntl.h>
 
+#include "javainstall.h"
+#include "resedit.h"
+
 #define MAX_PATH_LEN 32768
 #define MAX_CMD_LEN 32768
 #define MAX_CONFIG_LINE 4096
@@ -22,6 +25,10 @@ typedef struct {
     int logOverwrite;              // Overwrite log file (1) or append (0)
     int enableAOT;                 // Enable AOT cache (1=yes, 0=no, -1=not specified)
     int useJvmDll;                 // Load the JVM in-process (1=yes, 0=no, -1=not specified)
+    char javaHome[MAX_PATH];       // Explicit JDK home (skips PATH lookup and the version check); empty = not specified
+    int javaVersion;                // Required major version (0=not specified: any Java will do, install the default)
+    int javaVersionAtLeast;         // 1 if written "NN+" (NN or newer), 0 if "NN" (exactly NN) - same convention as jbang's //JAVA
+    int javaAutoInstall;            // Auto-install a JDK if none is found (1=yes, 0=no, -1=not specified)
 } LauncherConfig;
 
 // Global log file handle
@@ -195,6 +202,21 @@ int getFileInfo(const char* path, unsigned long long* size, unsigned long long* 
     return 1;
 }
 
+// Bounded copy: like strcpy but can never overrun destSize, and logs (rather than
+// silently truncating) if the source didn't fit - PRP-11's memory-safety pass replaced
+// every strcpy-into-a-fixed-stack-buffer call site with this, since a MAX_PATH buffer is
+// only safe as long as every caller's input is ALSO within MAX_PATH, an invariant that
+// held by convention but was never checked at the point of copying.
+static void safeCopy(char* dest, size_t destSize, const char* src) {
+    size_t len = strlen(src);
+    if (len >= destSize) {
+        writeLog("WARNING", "safeCopy: truncating %zu-byte value to fit %zu-byte buffer", len, destSize);
+        len = destSize - 1;
+    }
+    memcpy(dest, src, len);
+    dest[len] = '\0';
+}
+
 // Build AOT cache filename: <jarname>.<size_base52>.<modtime_base52>.aot
 void buildAOTCacheName(const char* jarPath, char* aotPath, size_t aotPathSize) {
     unsigned long long size, modTime;
@@ -212,12 +234,15 @@ void buildAOTCacheName(const char* jarPath, char* aotPath, size_t aotPathSize) {
 
     if (lastSlash) {
         size_t dirLen = lastSlash - jarPath;
+        if (dirLen >= sizeof(dirPath)) {
+            dirLen = sizeof(dirPath) - 1;
+        }
         strncpy(dirPath, jarPath, dirLen);
         dirPath[dirLen] = '\0';
-        strcpy(baseName, lastSlash + 1);
+        safeCopy(baseName, sizeof(baseName), lastSlash + 1);
     } else {
         dirPath[0] = '\0';
-        strcpy(baseName, jarPath);
+        safeCopy(baseName, sizeof(baseName), jarPath);
     }
 
     // Remove .jar extension
@@ -251,12 +276,15 @@ void cleanupOldAOTFiles(const char* jarPath, const char* currentAOTPath) {
 
     if (lastSlash) {
         size_t dirLen = lastSlash - jarPath;
+        if (dirLen >= sizeof(dirPath)) {
+            dirLen = sizeof(dirPath) - 1;
+        }
         strncpy(dirPath, jarPath, dirLen);
         dirPath[dirLen] = '\0';
-        strcpy(baseName, lastSlash + 1);
+        safeCopy(baseName, sizeof(baseName), lastSlash + 1);
     } else {
         GetCurrentDirectoryA(sizeof(dirPath), dirPath);
-        strcpy(baseName, jarPath);
+        safeCopy(baseName, sizeof(baseName), jarPath);
     }
 
     // Remove .jar extension
@@ -478,18 +506,63 @@ int parseJvmMode(const char* value) {
 
 // Parse config file (.jrc format)
 // Returns 1 on success, 0 on failure
-int parseConfigFile(const char* configPath, LauncherConfig* config) {
-    FILE* f = fopen(configPath, "r");
-    if (!f) return 0;
-
-    writeLog("INFO", "Loading config file: %s", configPath);
-
-    // Initialize config with defaults
+void initConfig(LauncherConfig* config) {
     memset(config, 0, sizeof(LauncherConfig));
     config->enableAOT = -1;  // Not specified (use default or cmdline)
     config->useJvmDll = -1;  // Not specified (use default or cmdline)
     config->logOverwrite = 0; // Append by default
+    config->javaVersion = 0;      // Not specified (use built-in default)
+    config->javaAutoInstall = -1; // Not specified (use built-in default: enabled)
     strcpy(config->logLevel, "info");
+}
+
+// Apply one setting. The .jrc file and the -Xjr:key=value command-line options
+// both come through here, so every .jrc key can also be given on the command line
+// and there is only one list of keys. Returns 0 for an unknown key.
+int applyConfigKey(LauncherConfig* config, const char* key, const char* value) {
+    if (_stricmp(key, "vm.args") == 0) {
+        safeCopy(config->vmArgs, sizeof(config->vmArgs), value);
+    } else if (_stricmp(key, "java.args") == 0) {
+        safeCopy(config->javaArgs, sizeof(config->javaArgs), value);
+    } else if (_stricmp(key, "app.args") == 0) {
+        safeCopy(config->appArgs, sizeof(config->appArgs), value);
+    } else if (_stricmp(key, "log.file") == 0) {
+        safeCopy(config->logFile, sizeof(config->logFile), value);
+    } else if (_stricmp(key, "log.level") == 0) {
+        safeCopy(config->logLevel, sizeof(config->logLevel), value);
+    } else if (_stricmp(key, "log.overwrite") == 0) {
+        config->logOverwrite = (_stricmp(value, "true") == 0 || strcmp(value, "1") == 0);
+    } else if (_stricmp(key, "aot") == 0) {
+        if (_stricmp(value, "true") == 0 || strcmp(value, "1") == 0) {
+            config->enableAOT = 1;
+        } else if (_stricmp(value, "false") == 0 || strcmp(value, "0") == 0) {
+            config->enableAOT = 0;
+        } else {
+            writeLog("WARNING", "Unrecognised aot value '%s' (expected true or false)", value);
+        }
+    } else if (_stricmp(key, "jvm") == 0 || _stricmp(key, "jvm.mode") == 0) {
+        int mode = parseJvmMode(value);
+        if (mode != -1) {
+            config->useJvmDll = mode;
+        } else {
+            writeLog("WARNING", "Unrecognised jvm mode '%s' (expected dll or exe)", value);
+        }
+    } else if (_stricmp(key, "java.home") == 0) {
+        safeCopy(config->javaHome, sizeof(config->javaHome), value);
+    } else if (_stricmp(key, "java.version") == 0) {
+        config->javaVersion = atoi(value);
+        config->javaVersionAtLeast = (strchr(value, '+') != NULL);
+    } else if (_stricmp(key, "java.autoinstall") == 0) {
+        config->javaAutoInstall = (_stricmp(value, "true") == 0 || strcmp(value, "1") == 0);
+    } else {
+        return 0;
+    }
+    return 1;
+}
+
+int parseConfigFile(const char* configPath, LauncherConfig* config) {
+    FILE* f = fopen(configPath, "r");
+    if (!f) return 0;
 
     char line[MAX_CONFIG_LINE];
     while (fgets(line, sizeof(line), f)) {
@@ -509,39 +582,9 @@ int parseConfigFile(const char* configPath, LauncherConfig* config) {
         trim(key);
         trim(value);
 
-        // Parse known keys (matching WinRun4J/jpackage style)
-        if (_stricmp(key, "vm.args") == 0) {
-            strncpy(config->vmArgs, value, sizeof(config->vmArgs) - 1);
-            writeLog("INFO", "vm.args=%s", value);
-        } else if (_stricmp(key, "java.args") == 0) {
-            strncpy(config->javaArgs, value, sizeof(config->javaArgs) - 1);
-            writeLog("INFO", "java.args=%s", value);
-        } else if (_stricmp(key, "app.args") == 0) {
-            strncpy(config->appArgs, value, sizeof(config->appArgs) - 1);
-            writeLog("INFO", "app.args=%s", value);
-        } else if (_stricmp(key, "log.file") == 0) {
-            strncpy(config->logFile, value, sizeof(config->logFile) - 1);
-        } else if (_stricmp(key, "log.level") == 0) {
-            strncpy(config->logLevel, value, sizeof(config->logLevel) - 1);
-        } else if (_stricmp(key, "log.overwrite") == 0) {
-            config->logOverwrite = (_stricmp(value, "true") == 0 || strcmp(value, "1") == 0);
-        } else if (_stricmp(key, "aot") == 0) {
-            if (_stricmp(value, "true") == 0 || strcmp(value, "1") == 0) {
-                config->enableAOT = 1;
-                writeLog("INFO", "aot=true");
-            } else if (_stricmp(value, "false") == 0 || strcmp(value, "0") == 0) {
-                config->enableAOT = 0;
-                writeLog("INFO", "aot=false");
-            }
-        } else if (_stricmp(key, "jvm") == 0 || _stricmp(key, "jvm.mode") == 0) {
-            int mode = parseJvmMode(value);
-            if (mode != -1) {
-                config->useJvmDll = mode;
-                writeLog("INFO", "jvm=%s", value);
-            } else {
-                writeLog("WARNING", "Unrecognised jvm mode '%s' (expected dll or exe)", value);
-            }
-        }
+        // Unknown keys are ignored here (a .jrc may be shared with a newer jr);
+        // on the command line they are an error, see parseJrOptions
+        applyConfigKey(config, key, value);
     }
 
     fclose(f);
@@ -555,7 +598,9 @@ int createConfigFile(const char* configPath, const char* jarPath) {
 
     fprintf(f, "# Java Runner Configuration (.jrc format)\n");
     fprintf(f, "# Lines starting with # are comments\n");
-    fprintf(f, "# Format follows WinRun4J/jpackage conventions\n\n");
+    fprintf(f, "# Format follows WinRun4J/jpackage conventions\n");
+    fprintf(f, "# Any key can also be overridden for one run on the command line, before\n");
+    fprintf(f, "# the app's own arguments: myapp.exe -Xjr:jvm=dll -Xjr:aot=false [app args]\n\n");
 
     fprintf(f, "# VM arguments (passed before -jar, launcher auto-injects AOT flags here)\n");
     fprintf(f, "#vm.args=-Xmx512m -Xms128m -Dapp.mode=production\n\n");
@@ -583,7 +628,16 @@ int createConfigFile(const char* configPath, const char* jarPath) {
     fprintf(f, "# Debug logging (optional, only used when specified)\n");
     fprintf(f, "#log.file=launcher.log\n");
     fprintf(f, "#log.level=info\n");
-    fprintf(f, "#log.overwrite=false\n");
+    fprintf(f, "#log.overwrite=false\n\n");
+
+    fprintf(f, "# Required Java version: 21 = exactly 21, 21+ = 21 or newer (same convention as jbang).\n");
+    fprintf(f, "# If the Java in PATH doesn't match (or there is none), jr offers to download a matching\n");
+    fprintf(f, "# Eclipse Temurin JDK into %%USERPROFILE%%\\.jbang\\cache\\jdks\\<version> (same cache jbang itself uses).\n");
+    fprintf(f, "#java.version=21+\n");
+    fprintf(f, "#java.autoinstall=true\n\n");
+
+    fprintf(f, "# Use this JDK and nothing else (no PATH lookup, no version check, no install)\n");
+    fprintf(f, "#java.home=C:\\Java\\jdk-25\n");
 
     fclose(f);
     return 1;
@@ -620,93 +674,6 @@ void getExeFullPathWithoutExt(char* fullPath, size_t size) {
     if (dotPos && _stricmp(dotPos, ".exe") == 0) {
         *dotPos = '\0';
     }
-}
-
-// Function to parse --java-home argument
-char* extractJavaHome(const char* cmdLine) {
-    const char* javaHomeArg = strstr(cmdLine, "--java-home=");
-    if (!javaHomeArg) {
-        javaHomeArg = strstr(cmdLine, "--java-home ");
-        if (javaHomeArg) {
-            javaHomeArg += 12; // Skip "--java-home "
-            // Find the end (next space or quote)
-            const char* end = strchr(javaHomeArg, ' ');
-            if (!end) end = javaHomeArg + strlen(javaHomeArg);
-
-            size_t len = end - javaHomeArg;
-            char* result = (char*)malloc(len + 1);
-            if (result) {
-                strncpy(result, javaHomeArg, len);
-                result[len] = '\0';
-            }
-            return result;
-        }
-        return NULL;
-    }
-
-    javaHomeArg += 12; // Skip "--java-home="
-
-    // Handle quoted paths
-    if (*javaHomeArg == '"') {
-        javaHomeArg++;
-        const char* endQuote = strchr(javaHomeArg, '"');
-        if (!endQuote) return NULL;
-
-        size_t len = endQuote - javaHomeArg;
-        char* result = (char*)malloc(len + 1);
-        if (result) {
-            strncpy(result, javaHomeArg, len);
-            result[len] = '\0';
-        }
-        return result;
-    }
-
-    // Unquoted path - find next space
-    const char* end = strchr(javaHomeArg, ' ');
-    if (!end) end = javaHomeArg + strlen(javaHomeArg);
-
-    size_t len = end - javaHomeArg;
-    char* result = (char*)malloc(len + 1);
-    if (result) {
-        strncpy(result, javaHomeArg, len);
-        result[len] = '\0';
-    }
-    return result;
-}
-
-// Function to remove --java-home from command line
-void removeJavaHomeArg(char* cmdLine) {
-    char* javaHomeArg = strstr(cmdLine, "--java-home");
-    if (!javaHomeArg) return;
-
-    // Find the end of the argument
-    char* argEnd = javaHomeArg;
-    if (strncmp(javaHomeArg, "--java-home=", 12) == 0) {
-        argEnd += 12;
-        // Skip quoted or unquoted path
-        if (*argEnd == '"') {
-            argEnd = strchr(argEnd + 1, '"');
-            if (argEnd) argEnd++;
-        } else {
-            while (*argEnd && *argEnd != ' ') argEnd++;
-        }
-    } else {
-        argEnd += 11; // Skip "--java-home"
-        while (*argEnd == ' ') argEnd++; // Skip spaces
-        // Skip the path value
-        if (*argEnd == '"') {
-            argEnd = strchr(argEnd + 1, '"');
-            if (argEnd) argEnd++;
-        } else {
-            while (*argEnd && *argEnd != ' ') argEnd++;
-        }
-    }
-
-    // Skip trailing space
-    if (*argEnd == ' ') argEnd++;
-
-    // Remove by shifting the rest of the string
-    memmove(javaHomeArg, argEnd, strlen(argEnd) + 1);
 }
 
 // Extract JAR file path from command line arguments
@@ -886,6 +853,58 @@ int findJliDll(const char* javaExePath, char* outPath, size_t outPathSize) {
     return 0;
 }
 
+// Major version from a JDK home's "release" file: JAVA_VERSION="25.0.1" -> 25,
+// JAVA_VERSION="1.8.0_402" -> 8. Returns 0 if there is no readable release file.
+static int readReleaseMajor(const char* jdkHome) {
+    char releasePath[MAX_PATH];
+    char line[512];
+    int major = 0;
+    FILE* f;
+
+    snprintf(releasePath, sizeof(releasePath), "%s\\release", jdkHome);
+    f = fopen(releasePath, "r");
+    if (!f) return 0;
+
+    while (fgets(line, sizeof(line), f)) {
+        if (strncmp(line, "JAVA_VERSION=", 13) == 0) {
+            const char* v = line + 13;
+            if (*v == '"') v++;
+            major = atoi(v);
+            if (major == 1) {  // legacy 1.x numbering
+                const char* dot = strchr(v, '.');
+                major = dot ? atoi(dot + 1) : 0;
+            }
+            break;
+        }
+    }
+
+    fclose(f);
+    return major;
+}
+
+// Major version of a java.exe/javaw.exe, read from <home>\release rather than by
+// spawning "java -version" (which would cost a whole JVM start on every launch).
+// Follows a symlink, e.g. the Oracle javapath shim, when the direct parent has no
+// release file. Returns 0 if it cannot be determined.
+static int detectJavaMajor(const char* javaExePath) {
+    char binDir[MAX_PATH];
+    char home[MAX_PATH];
+    char realPath[MAX_PATH];
+    int major = 0;
+
+    getDirName(javaExePath, binDir, sizeof(binDir));
+    getDirName(binDir, home, sizeof(home));
+    if (home[0]) major = readReleaseMajor(home);
+
+    if (major == 0 && resolveRealPath(javaExePath, realPath, sizeof(realPath))) {
+        getDirName(realPath, binDir, sizeof(binDir));
+        getDirName(binDir, home, sizeof(home));
+        if (home[0]) major = readReleaseMajor(home);
+    }
+
+    return major;
+}
+
 // Run the JVM inside this process.
 // cmdLine is the very same string that would otherwise go to CreateProcess, so
 // argument and quoting behaviour is identical in both modes; expectedArgv0 is
@@ -978,17 +997,182 @@ int launchInProcess(const char* jliPath, char* cmdLine, const char* expectedArgv
     return 1;
 }
 
-// Remove a standalone flag (and one following space) from an argument string
-void removeFlagArg(char* args, const char* flag) {
-    char* pos = strstr(args, flag);
-    char* end;
+// ---------------------------------------------------------------------------
+// jr's own command-line options, in the style of java's -X options:
+//
+//   -Xjr:<key>=<value>            any .jrc key, overriding the .jrc (-Xjr:jvm=dll)
+//   -Xjr:yes                      don't ask before auto-installing Java
+//   -Xjr:help                     show help
+//   -Xjr:create-config[=<jar>]    write a sample <exe>.jrc
+//
+// Only a LEADING run of -Xjr: tokens belongs to jr. Parsing stops at the first
+// token that is not one, and everything from there on goes to the app exactly
+// as typed. So no app argument can ever be taken for a jr option, whatever it
+// says, and jr never removes anything from the app's arguments. The .jrc file
+// stays the preferred place for settings; these are for one-off overrides.
+// ---------------------------------------------------------------------------
 
-    if (!pos) return;
+typedef struct {
+    int assumeYes;
+    int help;
+    int createConfig;
+    char createConfigJar[MAX_PATH];
+    ReStamp stamp;                 // -Xjr:make/edit/icon/version/sign... (resedit.c)
+    char error[512];               // non-empty = a bad option, message for the user
+} JrOptions;
 
-    end = pos + strlen(flag);
-    if (*end == ' ') end++;
-    memmove(pos, end, strlen(end) + 1);
-    trim(args);
+// Skip argv[0] (quoted or not) in a raw Windows command line
+static const char* skipExeName(const char* cmdLine) {
+    const char* p = cmdLine;
+    if (*p == '"') {
+        p = strchr(p + 1, '"');
+        p = p ? p + 1 : cmdLine + strlen(cmdLine);
+    } else {
+        while (*p && *p != ' ' && *p != '\t') p++;
+    }
+    while (*p == ' ' || *p == '\t') p++;
+    return p;
+}
+
+// Copy one whitespace-delimited token into out with its quotes removed (a quote
+// only toggles whether a space ends the token, as on a Windows command line), so
+// both "-Xjr:java.home=C:\Program Files\x" and -Xjr:java.home="C:\Program Files\x"
+// work. Returns the position just after the token.
+static const char* readToken(const char* p, char* out, size_t outSize) {
+    size_t n = 0;
+    int inQuotes = 0;
+    while (*p && (inQuotes || (*p != ' ' && *p != '\t'))) {
+        if (*p == '"') inQuotes = !inQuotes;
+        else if (n + 1 < outSize) out[n++] = *p;
+        p++;
+    }
+    out[n] = '\0';
+    return p;
+}
+
+// Consume the leading -Xjr: options. Returns where the app's arguments start.
+static const char* parseJrOptions(const char* args, LauncherConfig* config, JrOptions* opts) {
+    char token[MAX_CONFIG_LINE];
+    const char* p = args;
+
+    for (;;) {
+        const char* tokenStart;
+        char* opt;
+        char* eq;
+
+        while (*p == ' ' || *p == '\t') p++;
+        tokenStart = p;
+        if (!*p) return p;
+
+        p = readToken(p, token, sizeof(token));
+        if (strncmp(token, "-Xjr:", 5) != 0) return tokenStart;
+
+        opt = token + 5;
+        eq = strchr(opt, '=');
+
+        {
+            int r = reParseOption(&opts->stamp, opt, opts->error, sizeof(opts->error));
+            if (r < 0) return tokenStart;
+            if (r > 0) continue;
+        }
+
+        if (_stricmp(opt, "yes") == 0) {
+            opts->assumeYes = 1;
+        } else if (_stricmp(opt, "help") == 0) {
+            opts->help = 1;
+        } else if (_strnicmp(opt, "create-config", 13) == 0 && (opt[13] == '\0' || opt[13] == '=')) {
+            opts->createConfig = 1;
+            if (opt[13] == '=') safeCopy(opts->createConfigJar, sizeof(opts->createConfigJar), opt + 14);
+        } else if (eq) {
+            *eq = '\0';
+            if (!applyConfigKey(config, opt, eq + 1)) {
+                snprintf(opts->error, sizeof(opts->error),
+                         "Unknown jr option: -Xjr:%s=...\n\nThe keys are the same as in the .jrc file "
+                         "(vm.args, java.args, app.args, aot, jvm, java.home, java.version, "
+                         "java.autoinstall, log.file, log.level, log.overwrite).", opt);
+                return tokenStart;
+            }
+        } else {
+            snprintf(opts->error, sizeof(opts->error),
+                     "Unknown jr option: -Xjr:%s\n\nOptions: -Xjr:<key>=<value>, -Xjr:yes, "
+                     "-Xjr:help, -Xjr:create-config[=<jar>]", opt);
+            return tokenStart;
+        }
+    }
+}
+
+// jr's flags used to be --jvm-dll, --java-home=... and so on. They are gone,
+// because they were matched anywhere on the command line and collided with the
+// app's own arguments. Without a java.args the first argument must be the jar, so
+// an old flag there is unambiguous and gets pointed at its replacement rather
+// than being handed to java as a jar name.
+static const char* oldFlagReplacement(const char* appArgs) {
+    static const char* map[][2] = {
+        {"--jvm-dll", "-Xjr:jvm=dll"}, {"--jvm-exe", "-Xjr:jvm=exe"},
+        {"--enable-aot", "-Xjr:aot=true"}, {"--disable-aot", "-Xjr:aot=false"},
+        {"--java-home", "-Xjr:java.home=PATH"}, {"--yes", "-Xjr:yes"},
+        {"--create-config", "-Xjr:create-config[=<jar>]"},
+    };
+    size_t i;
+    for (i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
+        size_t n = strlen(map[i][0]);
+        if (strncmp(appArgs, map[i][0], n) == 0 &&
+            (appArgs[n] == '\0' || appArgs[n] == ' ' || appArgs[n] == '=')) {
+            return map[i][1];
+        }
+    }
+    return NULL;
+}
+
+static void showHelp(BOOL hasConsole, int useJvmDll, const char* javaExeName,
+                     const char* configPath, int configFound, const char* exeBaseName) {
+    char javaPath[MAX_PATH] = {0};
+    char info[4096];
+
+    if (!findJavaInPath(javaExeName, javaPath, sizeof(javaPath))) {
+        safeCopy(javaPath, sizeof(javaPath), "(none in PATH)");
+    }
+
+    snprintf(info, sizeof(info),
+             "Java Runner (jr) - Smart Java Launcher\n\n"
+             "Execution Context: %s\n"
+             "Launch Mode: %s\n"
+             "Java Executable: %s\n"
+             "Java Location: %s\n"
+             "Config File: %s (%s)\n\n"
+             "Usage:\n"
+             "  %s.exe [-Xjr:options] <jar-file> [args...]\n"
+             "  %s.exe [-Xjr:options] [args...]     (with java.args in the .jrc)\n\n"
+             "jr options must come first; everything after them goes to the app untouched.\n"
+             "  -Xjr:<key>=<value>          any .jrc key, overriding the .jrc\n"
+             "                              e.g. -Xjr:jvm=dll  -Xjr:aot=false  -Xjr:java.home=PATH\n"
+             "  -Xjr:yes                    don't ask before auto-installing Java\n"
+             "  -Xjr:create-config[=<jar>]  write a sample %s.jrc\n"
+             "  -Xjr:help                   this help\n\n"
+             "Making a branded launcher (no Java involved):\n"
+             "  -Xjr:make=<out.exe> | -Xjr:edit=<exe>    copy this exe, or edit one in place, then:\n"
+             "  -Xjr:icon=<file.ico>        -Xjr:version=<a.b.c.d>   -Xjr:version.<Name>=<text>\n"
+             "  -Xjr:manifest=<file>        -Xjr:execution-level=asInvoker|highestAvailable|requireAdministrator\n"
+             "  -Xjr:string.<id>=<text>     -Xjr:resource.<type>.<name>=<file>\n"
+             "  -Xjr:sign=<file.pfx> (password in JR_SIGN_PASSWORD) | -Xjr:sign.thumbprint=<sha1>\n"
+             "  -Xjr:sign.timestamp=<url>   -Xjr:list-resources=<exe>\n\n"
+             "If Java is not found, or the .jrc's java.version (NN = exactly NN,\n"
+             "NN+ = NN or newer) doesn't match the one in PATH, jr offers to download\n"
+             "a matching Eclipse Temurin JDK into %%USERPROFILE%%\\.jbang\\cache\\jdks\\<version>\n"
+             "(same cache jbang itself uses). Disable via .jrc: java.autoinstall=false\n\n"
+             "Examples:\n"
+             "  %s.exe myapp.jar\n"
+             "  %s.exe -Xjr:jvm=dll myapp.jar\n"
+             "  %s.exe -Xjr:create-config=myapp.jar\n"
+             "  %s.exe -Xjr:java.home=C:\\Java\\jdk21 myapp.jar --verbose",
+             hasConsole ? "Console (terminal/cmd)" : "GUI (double-clicked)",
+             useJvmDll ? "in-process (jvm.dll)" : "child process (java.exe)",
+             javaExeName,
+             javaPath,
+             configPath, configFound ? "found" : "not found",
+             exeBaseName, exeBaseName, exeBaseName,
+             exeBaseName, exeBaseName, exeBaseName, exeBaseName);
+    showMessage(hasConsole, "Java Runner - Help", info, MB_ICONINFORMATION);
 }
 
 int main(int argc, char** argv) {
@@ -1009,28 +1193,37 @@ int main(int argc, char** argv) {
     getExeFullPathWithoutExt(configPath, sizeof(configPath));
     strncat(configPath, ".jrc", sizeof(configPath) - strlen(configPath) - 1);
 
-    // Try to load config file
+    // Settings, lowest priority first: defaults < .jrc < env vars < -Xjr: options.
+    // useConfig only records whether a .jrc exists; every setting is read from
+    // config, whichever of those it came from.
+    initConfig(&config);
     useConfig = parseConfigFile(configPath, &config);
 
+    // Env hook for automation (not in --help), sits between the .jrc and the command line
+    const char* autoInstallEnv = getenv("JR_JAVA_AUTOINSTALL");
+    if (autoInstallEnv) {
+        config.javaAutoInstall = !(strcmp(autoInstallEnv, "0") == 0 || _stricmp(autoInstallEnv, "false") == 0);
+    }
+
+    LPSTR fullCmdLine = GetCommandLineA();
+    JrOptions opts;
+    memset(&opts, 0, sizeof(opts));
+    // The app's arguments, verbatim, after jr's leading -Xjr: options
+    const char* appArgs = parseJrOptions(skipExeName(fullCmdLine), &config, &opts);
+
     // Initialize logging if configured
-    if (useConfig && config.logFile[0]) {
+    if (config.logFile[0]) {
         initLog(config.logFile, config.logOverwrite);
         writeLog("INFO", "Launcher started: %s.exe", exeBaseName);
+        writeLog("INFO", "Config file: %s (%s)", configPath, useConfig ? "found" : "not found");
+        writeLog("INFO", "vm.args=%s", config.vmArgs);
+        writeLog("INFO", "java.args=%s", config.javaArgs);
+        writeLog("INFO", "app.args=%s", config.appArgs);
+        writeLog("INFO", "App arguments from command line: %s", appArgs);
     }
 
-    // Get full command line
-    LPSTR fullCmdLine = GetCommandLineA();
-
-    // Determine how the JVM is started (priority: cmdline > config > default)
     // Default stays java.exe so existing setups behave exactly as before
-    int useJvmDll = 0;
-    if (strstr(fullCmdLine, "--jvm-dll")) {
-        useJvmDll = 1;
-    } else if (strstr(fullCmdLine, "--jvm-exe")) {
-        useJvmDll = 0;
-    } else if (useConfig && config.useJvmDll != -1) {
-        useJvmDll = config.useJvmDll;
-    }
+    int useJvmDll = (config.useJvmDll == 1);
 
     // Detect if we're in GUI mode (double-clicked) or console mode (terminal)
     BOOL guiMode = isGuiMode();
@@ -1062,39 +1255,59 @@ int main(int argc, char** argv) {
     writeLog("INFO", "Launch mode: %s", useJvmDll ? "in-process (jvm.dll)" : "child process (java.exe)");
     writeLog("INFO", "Java executable: %s", javaExeName);
 
-    // Check for --create-config flag
-    if (strstr(fullCmdLine, "--create-config")) {
-        // Extract JAR path if provided
-        char jarPath[MAX_PATH] = {0};
-        char* jarArg = strstr(fullCmdLine, "--create-config");
-        jarArg += 15; // Skip "--create-config"
-        while (*jarArg == ' ') jarArg++;
+    if (opts.error[0]) {
+        writeLog("ERROR", "%s", opts.error);
+        showMessage(hasConsole, "Invalid jr Option", opts.error, MB_ICONERROR);
+        closeLog();
+        return 1;
+    }
 
-        if (*jarArg && *jarArg != '-') {
-            // JAR path provided
-            if (*jarArg == '"') {
-                jarArg++;
-                char* endQuote = strchr(jarArg, '"');
-                if (endQuote) {
-                    size_t len = endQuote - jarArg;
-                    if (len < sizeof(jarPath)) {
-                        strncpy(jarPath, jarArg, len);
-                        jarPath[len] = '\0';
-                    }
-                }
-            } else {
-                char* end = strchr(jarArg, ' ');
-                if (!end) end = jarArg + strlen(jarArg);
-                size_t len = end - jarArg;
-                if (len < sizeof(jarPath)) {
-                    strncpy(jarPath, jarArg, len);
-                    jarPath[len] = '\0';
-                }
-            }
+    // Resource editing / signing (resedit.c): a tool action, runs no Java at all
+    if (reHasAction(&opts.stamp)) {
+        char* report = (char*)malloc(65536);
+        int ok = report ? reRun(&opts.stamp, report, 65536) : 0;
+        if (!report) {
+            showMessage(hasConsole, "Error", "Out of memory", MB_ICONERROR);
+        } else if (hasConsole) {
+            fprintf(ok ? stdout : stderr, "%s%s", report, report[0] && report[strlen(report) - 1] == '\n' ? "" : "\n");
+        } else {
+            showMessage(hasConsole, ok ? "jr" : "jr - Error", report, ok ? MB_ICONINFORMATION : MB_ICONERROR);
         }
+        free(report);
+        closeLog();
+        return ok ? 0 : 1;
+    }
+    if (reHasEdits(&opts.stamp)) {
+        showMessage(hasConsole, "Invalid jr Option",
+                    "Resource and signing options (-Xjr:icon, -Xjr:version..., -Xjr:sign...) need a target:\n"
+                    "-Xjr:make=<new.exe> (a copy of this exe) or -Xjr:edit=<existing.exe>.", MB_ICONERROR);
+        closeLog();
+        return 1;
+    }
 
-        // Create config file
-        if (createConfigFile(configPath, jarPath[0] ? jarPath : NULL)) {
+    // Nothing to run (or help asked for): show help before any Java lookup, so a
+    // bare `jr` on a machine without Java never triggers the install prompt
+    if (opts.help || (!opts.createConfig && !config.javaArgs[0] && !*appArgs)) {
+        showHelp(hasConsole, useJvmDll, javaExeName, configPath, useConfig, exeBaseName);
+        closeLog();
+        return opts.help ? 0 : 1;
+    }
+
+    if (!config.javaArgs[0] && !opts.createConfig) {
+        const char* replacement = oldFlagReplacement(appArgs);
+        if (replacement) {
+            char msg[512];
+            snprintf(msg, sizeof(msg),
+                     "jr's --flags have been replaced by -Xjr: options, which must come before the jar.\n\n"
+                     "Use %s instead. See -Xjr:help.", replacement);
+            showMessage(hasConsole, "Invalid jr Option", msg, MB_ICONERROR);
+            closeLog();
+            return 1;
+        }
+    }
+
+    if (opts.createConfig) {
+        if (createConfigFile(configPath, opts.createConfigJar[0] ? opts.createConfigJar : NULL)) {
             char msg[1024];
             snprintf(msg, sizeof(msg), "Created config file: %s\n\nEdit this file to customize launcher behavior.", configPath);
             showMessage(hasConsole, "Config Created", msg, MB_ICONINFORMATION);
@@ -1109,55 +1322,122 @@ int main(int argc, char** argv) {
         }
     }
 
-    // Determine AOT setting (priority: cmdline > config > default)
-    int enableAOT = 1; // Default: enabled
-    if (strstr(fullCmdLine, "--disable-aot")) {
-        enableAOT = 0;
-    } else if (strstr(fullCmdLine, "--enable-aot")) {
-        enableAOT = 1;
-    } else if (useConfig && config.enableAOT != -1) {
-        enableAOT = config.enableAOT;
-    }
+    int enableAOT = (config.enableAOT != 0); // Default: enabled
 
     writeLog("INFO", "AOT enabled: %s", enableAOT ? "true" : "false");
 
-    // Check for --java-home override
-    char* javaHome = extractJavaHome(fullCmdLine);
+    // Auto-install settings. See javainstall.c and prp/09-prp-java_auto_install.md. The env vars are
+    // deliberately test/automation hooks, not documented in --help: JR_TEST_FORCE_NO_JAVA
+    // pretends Java isn't there so the install path can be exercised on a machine that
+    // already has one; JR_JDK_CACHE_DIR redirects the install location away from the
+    // real %USERPROFILE%\.jbang\cache\jdks so testing never touches it.
+    // requiredVersion 0 = the .jrc names no version, so any Java found is accepted
+    // and the default is only what gets installed when none is found at all.
+    int requiredVersion = config.javaVersion > 0 ? config.javaVersion : 0;
+    int requireAtLeast = requiredVersion > 0 && config.javaVersionAtLeast;
+    int javaVersion = requiredVersion > 0 ? requiredVersion : 25; // Default: latest LTS, and the first with the AOT cache options jr uses
 
-    if (javaHome) {
-        // Use the specified Java home
-        snprintf(javaPath, sizeof(javaPath), "%s\\bin\\%s", javaHome, javaExeName);
-        writeLog("INFO", "Using custom Java home: %s", javaHome);
+    int autoInstallEnabled = (config.javaAutoInstall != 0); // Default: enabled
+
+    BOOL assumeYes = opts.assumeYes || (getenv("JR_ASSUME_YES") != NULL);
+    const char* jdkCacheOverride = getenv("JR_JDK_CACHE_DIR");
+
+    if (config.javaHome[0]) {
+        // An explicit Java home (java.home in the .jrc or -Xjr:java.home=) is taken as is
+        snprintf(javaPath, sizeof(javaPath), "%s\\bin\\%s", config.javaHome, javaExeName);
+        writeLog("INFO", "Using custom Java home: %s", config.javaHome);
 
         // Verify the path exists
         DWORD attrib = GetFileAttributesA(javaPath);
         if (attrib == INVALID_FILE_ATTRIBUTES || (attrib & FILE_ATTRIBUTE_DIRECTORY)) {
             char error[1024];
             snprintf(error, sizeof(error),
-                     "Java not found at specified location:\n%s\n\nPlease check your --java-home path.",
+                     "Java not found at specified location:\n%s\n\nPlease check java.home (.jrc) or -Xjr:java.home=.",
                      javaPath);
             showMessage(hasConsole, "Java Not Found", error, MB_ICONERROR);
-            free(javaHome);
             closeLog();
             return 1;
         }
 
-        free(javaHome);
     } else {
         // Try to find Java in PATH
-        if (!findJavaInPath(javaExeName, javaPath, sizeof(javaPath))) {
+        int found = findJavaInPath(javaExeName, javaPath, sizeof(javaPath));
+
+        // Test-only override: pretend nothing was found, so the auto-install path
+        // can be exercised on a machine that already has a real JDK on PATH.
+        if (found && getenv("JR_TEST_FORCE_NO_JAVA")) {
+            writeLog("WARNING", "JR_TEST_FORCE_NO_JAVA set - ignoring Java found in PATH (test mode)");
+            found = 0;
+        }
+
+        // A Java in PATH that doesn't satisfy java.version counts as not found, so
+        // the cache lookup / auto-install below gets its chance at the right one.
+        char mismatch[MAX_PATH + 256] = {0};
+        if (found && requiredVersion > 0) {
+            int foundMajor = detectJavaMajor(javaPath);
+            if (foundMajor == 0) {
+                writeLog("WARNING", "Could not determine the version of %s; using it anyway", javaPath);
+            } else if (requireAtLeast ? foundMajor < requiredVersion : foundMajor != requiredVersion) {
+                snprintf(mismatch, sizeof(mismatch),
+                         "This application needs Java %d%s, but the Java in PATH is version %d:\n%s",
+                         requiredVersion, requireAtLeast ? " or newer" : "", foundMajor, javaPath);
+                writeLog("INFO", "Java %d in PATH does not satisfy java.version=%d%s",
+                         foundMajor, requiredVersion, requireAtLeast ? "+" : "");
+                found = 0;
+            } else {
+                writeLog("INFO", "Java %d in PATH satisfies java.version=%d%s",
+                         foundMajor, requiredVersion, requireAtLeast ? "+" : "");
+            }
+        }
+
+        if (!found && autoInstallEnabled) {
+            char installedHome[MAX_PATH];
+            writeLog("INFO", "Attempting auto-install (version %d%s)", javaVersion, requireAtLeast ? "+" : "");
+            if (autoInstallJava(javaVersion, requireAtLeast, mismatch[0] ? mismatch : NULL,
+                                 hasConsole, guiMode, assumeYes, jdkCacheOverride,
+                                 installedHome, sizeof(installedHome))) {
+                snprintf(javaPath, sizeof(javaPath), "%s\\bin\\%s", installedHome, javaExeName);
+                found = 1;
+                writeLog("INFO", "Using auto-installed Java: %s", javaPath);
+            } else {
+                writeLog("WARNING", "Auto-install did not complete (declined or failed)");
+            }
+        }
+
+        if (!found && mismatch[0]) {
+            char error[1024];
+            snprintf(error, sizeof(error),
+                     "%s\n\nInstall Java %d%s, or set java.home in the .jrc (or -Xjr:java.home=C:\\path\\to\\jdk).",
+                     mismatch, requiredVersion, requireAtLeast ? " or newer" : "");
+            showMessage(hasConsole, "Wrong Java Version", error, MB_ICONERROR);
+            closeLog();
+            return 1;
+        }
+
+        if (!found) {
             char error[1024];
             snprintf(error, sizeof(error),
                      "Java not found in PATH.\n\n"
                      "Please ensure Java is installed and added to PATH,\n"
-                     "or use --java-home=C:\\path\\to\\jdk to specify location.\n\n"
+                     "or set java.home in the .jrc (or -Xjr:java.home=C:\\path\\to\\jdk).\n\n"
                      "Looking for: %s",
                      javaExeName);
             showMessage(hasConsole, "Java Not Found", error, MB_ICONERROR);
             closeLog();
             return 1;
         }
-        writeLog("INFO", "Found Java in PATH: %s", javaPath);
+        writeLog("INFO", "Using Java: %s", javaPath);
+    }
+
+    // -XX:AOTCache / -XX:AOTCacheOutput exist from JDK 25 on. An older JVM refuses
+    // to start at all on an option it does not know, so leave them out for it
+    // (a version that cannot be read is given the benefit of the doubt).
+    if (enableAOT) {
+        int major = detectJavaMajor(javaPath);
+        if (major > 0 && major < 25) {
+            enableAOT = 0;
+            writeLog("INFO", "AOT cache skipped: Java %d predates the JDK 25 AOT options", major);
+        }
     }
 
     // Build final command line
@@ -1174,7 +1454,7 @@ int main(int argc, char** argv) {
              "-Djarrunner.start.micros=%lld -Djarrunner.beforejvm.micros=%lld",
              startTimeMicros, beforeJVMInvokeMicros);
 
-    if (useConfig && config.javaArgs[0]) {
+    if (config.javaArgs[0]) {
         // Config mode: build command from config
         writeLog("INFO", "Using config-based mode");
 
@@ -1212,31 +1492,9 @@ int main(int argc, char** argv) {
             }
         }
 
-        // Get command-line args (skip past exe name)
+        // The app's own command-line arguments, exactly as typed
         char cmdLineArgs[MAX_CMD_LEN] = {0};
-        char* argsStart = fullCmdLine;
-        if (*argsStart == '"') {
-            argsStart = strchr(argsStart + 1, '"');
-            if (argsStart) argsStart += 2;
-        } else {
-            argsStart = strchr(argsStart, ' ');
-            if (argsStart) argsStart++;
-        }
-        if (argsStart) {
-            while (*argsStart == ' ') argsStart++;
-            // Remove --java-home if present
-            char tempArgs[MAX_CMD_LEN];
-            strncpy(tempArgs, argsStart, sizeof(tempArgs) - 1);
-            removeJavaHomeArg(tempArgs);
-            // Remove launcher-only flags so they never reach the JVM
-            removeFlagArg(tempArgs, "--disable-aot");
-            removeFlagArg(tempArgs, "--enable-aot");
-            removeFlagArg(tempArgs, "--jvm-dll");
-            removeFlagArg(tempArgs, "--jvm-exe");
-            if (tempArgs[0]) {
-                strncpy(cmdLineArgs, tempArgs, sizeof(cmdLineArgs) - 1);
-            }
-        }
+        safeCopy(cmdLineArgs, sizeof(cmdLineArgs), appArgs);
 
         // Build final command: java [timing] [vm.args] [aot] [java.args] [app.args] [cmdline-args]
         int pos = snprintf(finalCmdLine, sizeof(finalCmdLine), "\"%s\" %s", javaPath, timingProps);
@@ -1261,96 +1519,16 @@ int main(int argc, char** argv) {
 
     } else {
         // Traditional mode: JAR as first argument
-        writeLog("INFO", "Using traditional mode (no config file)");
+        writeLog("INFO", "Using traditional mode (no java.args)");
 
-        // Skip past the executable name in command line
-        char* jarArgs = fullCmdLine;
-        if (*jarArgs == '"') {
-            jarArgs = strchr(jarArgs + 1, '"');
-            if (jarArgs) jarArgs += 2;
-        } else {
-            jarArgs = strchr(jarArgs, ' ');
-            if (jarArgs) jarArgs++;
-        }
-
-        // Trim leading spaces
-        while (jarArgs && *jarArgs == ' ') jarArgs++;
-
-        // Strip the launcher's own flags first, so that an invocation carrying
-        // nothing but flags (e.g. `jr --jvm-dll`) still lands on the help below
-        // instead of handing java.exe an empty -jar
+        // Everything after jr's own -Xjr: options: <jar> [app args...], exactly as typed.
+        // Help for an empty one was already shown above.
         char tempArgs[MAX_CMD_LEN] = {0};
-        if (jarArgs) {
-            strncpy(tempArgs, jarArgs, sizeof(tempArgs) - 1);
-            removeJavaHomeArg(tempArgs);
-            removeFlagArg(tempArgs, "--disable-aot");
-            removeFlagArg(tempArgs, "--enable-aot");
-            removeFlagArg(tempArgs, "--jvm-dll");
-            removeFlagArg(tempArgs, "--jvm-exe");
-            trim(tempArgs);
-        }
+        safeCopy(tempArgs, sizeof(tempArgs), appArgs);
+        trim(tempArgs);
 
-        if (!tempArgs[0]) {
-            // Show diagnostic/help information
-            char info[2048];
-            snprintf(info, sizeof(info),
-                     "Java Runner (jr) - Smart Java Launcher\n\n"
-                     "Execution Context: %s\n"
-                     "Launch Mode: %s\n"
-                     "Java Executable: %s\n"
-                     "Java Location: %s\n"
-                     "Config File: %s (not found)\n\n"
-                     "Usage:\n"
-                     "  %s.exe <jar-file> [args...]\n"
-                     "  %s.exe --create-config [jar-file]\n"
-                     "  %s.exe --java-home=PATH <jar-file> [args...]\n\n"
-                     "Flags:\n"
-                     "  --jvm-dll        run the JVM inside this process (unique process name)\n"
-                     "  --jvm-exe        spawn java.exe as a child process (default)\n"
-                     "  --enable-aot / --disable-aot\n"
-                     "  --java-home=PATH\n\n"
-                     "Examples:\n"
-                     "  %s.exe myapp.jar\n"
-                     "  %s.exe --jvm-dll myapp.jar\n"
-                     "  %s.exe --create-config myapp.jar\n"
-                     "  %s.exe --java-home=C:\\Java\\jdk21 myapp.jar --verbose",
-                     hasConsole ? "Console (terminal/cmd)" : "GUI (double-clicked)",
-                     useJvmDll ? "in-process (jvm.dll)" : "child process (java.exe)",
-                     javaExeName,
-                     javaPath,
-                     configPath,
-                     exeBaseName, exeBaseName, exeBaseName,
-                     exeBaseName, exeBaseName, exeBaseName, exeBaseName);
-            showMessage(hasConsole, "Java Runner - Help", info, MB_ICONINFORMATION);
-            closeLog();
-            return 1;
-        }
-
-        // Extract JAR file path
-        extractJarPath(tempArgs, jarFilePath, sizeof(jarFilePath));
-        if (!jarFilePath[0]) {
-            // Maybe it's just a direct JAR path (not -jar format)
-            char* firstArg = tempArgs;
-            if (*firstArg == '"') {
-                firstArg++;
-                char* endQuote = strchr(firstArg, '"');
-                if (endQuote) {
-                    size_t len = endQuote - firstArg;
-                    if (len < sizeof(jarFilePath)) {
-                        strncpy(jarFilePath, firstArg, len);
-                        jarFilePath[len] = '\0';
-                    }
-                }
-            } else {
-                char* end = strchr(firstArg, ' ');
-                if (!end) end = firstArg + strlen(firstArg);
-                size_t len = end - firstArg;
-                if (len < sizeof(jarFilePath)) {
-                    strncpy(jarFilePath, firstArg, len);
-                    jarFilePath[len] = '\0';
-                }
-            }
-        }
+        // The jar is the first token - never searched for inside the app's arguments
+        readToken(tempArgs, jarFilePath, sizeof(jarFilePath));
 
         // Build AOT cache path if enabled
         if (enableAOT && jarFilePath[0]) {

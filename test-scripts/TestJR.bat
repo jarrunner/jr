@@ -21,7 +21,7 @@ pause
 
 echo Test 3: Create config file
 echo ----------------------------------------
-jr.exe --create-config test-scripts\TestStartupTiming.jar
+jr.exe -Xjr:create-config=test-scripts\TestStartupTiming.jar
 echo.
 pause
 
@@ -61,16 +61,16 @@ if exist mytest.log (
 echo.
 pause
 
-echo Test 7: Test with --disable-aot flag
+echo Test 7: Test with -Xjr:aot=false flag
 echo ----------------------------------------
-jr.exe --disable-aot test-scripts\TestStartupTiming.jar
+jr.exe -Xjr:aot=false test-scripts\TestStartupTiming.jar
 echo.
 pause
 
 echo Test 8: Test with custom Java home (if available)
 echo ----------------------------------------
 REM Uncomment if you have multiple JDKs
-REM jr.exe --java-home=C:\Java\jdk-21 test-scripts\TestStartupTiming.jar
+REM jr.exe -Xjr:java.home=C:\Java\jdk-21 test-scripts\TestStartupTiming.jar
 echo Skipped (uncomment in script if needed)
 echo.
 

@@ -20,7 +20,7 @@ A tiny Windows launcher (40 KB, no runtime to install) that makes JAR files exec
 - Works without any config file (traditional mode) or with simple .jrc config (config mode)
 - Command-line arguments override config settings
 - Debug logging (opt-in only)
-- Finds Java from PATH or use `--java-home` to specify custom JDK
+- Finds Java from PATH or set `java.home` (`.jrc`, or `-Xjr:java.home=` for one run) to use a specific JDK
 
 ## macOS and Linux
 
@@ -113,6 +113,24 @@ myapp arg1 arg2
 
 ## Usage
 
+### jr's own options: `-Xjr:`
+
+The `.jrc` file is the place for settings. For a one-off override, jr takes options in the style of java's own `-X` options, and they must come **first**, before the jar or the app's arguments:
+
+```batch
+jr.exe [-Xjr:options] <jar-file> [app args...]
+myapp.exe [-Xjr:options] [app args...]          (java.args set in myapp.jrc)
+```
+
+- `-Xjr:<key>=<value>` sets any `.jrc` key for this run, overriding the `.jrc`: `-Xjr:jvm=dll`, `-Xjr:aot=false`, `-Xjr:java.home=C:\Java\jdk-25`, `-Xjr:java.version=25+`. Quote values with spaces either way: `"-Xjr:java.home=C:\Program Files\Java\jdk-25"` or `-Xjr:java.home="C:\Program Files\Java\jdk-25"`.
+- `-Xjr:yes` don't ask before auto-installing Java.
+- `-Xjr:create-config[=<jar>]` write a sample `<exe>.jrc`.
+- `-Xjr:help` show help.
+
+jr reads only the leading run of `-Xjr:` tokens and stops at the first token that is not one. Everything from there on goes to the app exactly as typed, so an app's own `--yes`, `-jar` or even `-Xjr:...` argument is never taken for a jr option and never removed. An unknown `-Xjr:` option is an error, not silently ignored.
+
+These replace the old `--jvm-dll`, `--jvm-exe`, `--enable-aot`, `--disable-aot`, `--java-home=`, `--yes` and `--create-config` flags, which were matched anywhere on the command line and collided with apps' own arguments. Passing one of them where the jar should be gives an error naming its replacement.
+
 ### Mode 1: Traditional Mode (Simple JAR Launcher)
 
 Use `jr.exe` directly to launch any JAR file:
@@ -125,16 +143,19 @@ jr.exe myapp.jar
 jr.exe myapp.jar --arg1 value1 --arg2 value2
 
 # Disable AOT cache
-jr.exe --disable-aot myapp.jar
+jr.exe -Xjr:aot=false myapp.jar
 
 # Specify Java location
-jr.exe --java-home=C:\Java\jdk-21 myapp.jar
+jr.exe -Xjr:java.home=C:\Java\jdk-21 myapp.jar
 
 # Run the JVM inside jr.exe itself, instead of spawning java.exe
-jr.exe --jvm-dll myapp.jar
+jr.exe -Xjr:jvm=dll myapp.jar
+
+# No Java found? jr offers to download one - skip the prompt for unattended use
+jr.exe -Xjr:yes myapp.jar
 
 # Combined
-jr.exe --disable-aot --java-home=C:\Java\jdk-25 myapp.jar --verbose
+jr.exe -Xjr:aot=false -Xjr:java.home=C:\Java\jdk-25 myapp.jar --verbose
 ```
 
 **How it works:**
@@ -150,7 +171,7 @@ For applications you run frequently, create a configuration file:
 
 ```batch
 # Generate template config file
-jr.exe --create-config myapp.jar
+jr.exe -Xjr:create-config=myapp.jar
 
 # This creates jr.jrc in the same directory
 ```
@@ -219,6 +240,9 @@ myapp.exe --extra-arg value
 | `log.file` | Debug log file path | `myapp.log` |
 | `log.level` | Log verbosity | `info`, `warning`, `error`, `none` |
 | `log.overwrite` | Overwrite log on each run | `true` or `false` (default: append) |
+| `java.version` | Required Java: `NN` = exactly NN, `NN+` = NN or newer (jbang's convention). A Java in PATH that doesn't match is treated as missing | `25`, `21+` (default: any Java; installs 25 if none) |
+| `java.autoinstall` | Enable/disable auto-installing a missing JDK | `true` (default) or `false` |
+| `java.home` | Use exactly this JDK: no PATH lookup, no version check, no install | `C:\Java\jdk-25` |
 
 #### Complex Java Arguments Examples
 
@@ -299,15 +323,15 @@ stdin/stdout/stderr and redirection.
 line:
 
 ```batch
-jr.exe --jvm-dll myapp.jar        # force in-process
-jr.exe --jvm-exe myapp.jar        # force child process (default)
+jr.exe -Xjr:jvm=dll myapp.jar        # force in-process
+jr.exe -Xjr:jvm=exe myapp.jar        # force child process (default)
 ```
 
-Command-line flags override the `.jrc` setting.
+`-Xjr:` options override the `.jrc` setting.
 
 **Notes:**
 - `jli.dll` is located next to the `java.exe`/`javaw.exe` that was resolved from
-  `PATH` or `--java-home`, following symlinks (such as the Oracle `javapath`
+  `PATH` or `java.home`, following symlinks (such as the Oracle `javapath`
   shim) and falling back to `%JAVA_HOME%`.
 - If `jli.dll` cannot be found or loaded, `jr` logs a warning and falls back to
   spawning `java.exe`, so enabling this can not stop an application from
@@ -346,7 +370,7 @@ The launcher automatically manages AOT (Ahead-of-Time) cache files for JDK 25+:
 
 ```batch
 # Disable for a single run (command-line)
-jr.exe --disable-aot myapp.jar
+jr.exe -Xjr:aot=false myapp.jar
 
 # Disable permanently (config file)
 aot=false
@@ -354,6 +378,84 @@ aot=false
 # Enable explicitly (config file, overrides default)
 aot=true
 ```
+
+### Automatic Java Installation
+
+If no Java is found (not on PATH, no `java.home`, no matching config), or the Java on PATH doesn't satisfy the `.jrc`'s `java.version`, jr offers to download one instead of just failing:
+
+```batch
+# Normal use - asks first (console: Y/n prompt, GUI: Yes/No dialog)
+jr.exe myapp.jar
+
+# Skip the prompt (unattended/scripted use)
+jr.exe -Xjr:yes myapp.jar
+```
+
+**How it works:**
+1. Downloads a matching **Eclipse Temurin** build for the requested major version (default: 25) via the [Foojay Disco API](https://api.foojay.io) - the same API [jbang](https://www.jbang.dev/) itself uses.
+2. Installs it into `%USERPROFILE%\.jbang\cache\jdks\<version>\` - **the exact same cache location jbang uses**, so the two tools share downloads. If jbang already installed that version, jr uses it directly with no download; if jr installs one first, `jbang jdk list` picks it up automatically.
+3. Verifies the download's SHA256 checksum before extracting anything.
+4. Extracts with the `tar.exe` already bundled with Windows (10 1803+) - no bundled archive library.
+5. Shows progress matching how jr was launched: a text progress bar in console mode, a small native progress window in GUI mode.
+
+This makes a shipped `jr.exe` + shaded jar + `.jrc` a genuinely standalone distributable - it works even on a machine with no JDK installed at all.
+
+**Control it (`.jrc` file):**
+```properties
+# Required Java version (optional). Same convention as jbang's //JAVA line:
+#   25   exactly 25 - Java 23 or 26 on PATH is not accepted
+#   25+  25 or newer - Java 26 on PATH is accepted, 23 is not
+# When the Java on PATH doesn't satisfy it, jr looks in the jbang cache first
+# (for 25+, the newest cached version >= 25), and only then offers to download.
+# The version is read from the JDK's own "release" file, so the check costs no
+# extra JVM start. Not set: any Java on PATH is used, and 25 is installed if none.
+# java.home is an explicit choice and is never version-checked.
+java.version=25+
+
+# Turn the whole feature off - fail immediately like before (optional, default: true)
+java.autoinstall=false
+```
+
+### Branding a Launcher: Icon, Version Info, Signing
+
+jr can turn a copy of itself into a branded launcher - its own icon, its own name in Task Manager, its own version, signed - with no rcedit or signtool. It uses only Windows' own machinery (the resource-update API, and `mssign32.dll`, which is what signtool itself calls), so it adds no dependency.
+
+```batch
+# A branded copy of jr.exe: icon, version info, and the name Task Manager shows
+jr.exe -Xjr:make=myapp.exe -Xjr:icon=myapp.ico -Xjr:version=1.4.0.0 ^
+       "-Xjr:version.FileDescription=My App" -Xjr:version.ProductName=MyApp ^
+       "-Xjr:version.CompanyName=Example Ltd"
+
+# ...and signed, with a timestamp (password comes from the environment, never the command line)
+set JR_SIGN_PASSWORD=...
+jr.exe -Xjr:make=myapp.exe -Xjr:icon=myapp.ico -Xjr:sign=codesign.pfx -Xjr:sign.timestamp=http://timestamp.digicert.com
+
+# Edit an existing exe in place instead of making a copy
+jr.exe -Xjr:edit=myapp.exe -Xjr:version=1.4.1.0
+
+# See what is in an exe
+jr.exe -Xjr:list-resources=myapp.exe
+```
+
+Then put `myapp.jrc` next to `myapp.exe` as usual. With `jvm=dll`, Task Manager shows the app under its own description and icon.
+
+| Option | What it does |
+|--------|--------------|
+| `-Xjr:make=<out.exe>` | Copy this exe to `out.exe`, then apply the options below |
+| `-Xjr:edit=<exe>` | Apply them to an existing exe, in place |
+| `-Xjr:icon=<file.ico>` | Replace the main icon (the one Explorer and the taskbar show) |
+| `-Xjr:version=<a.b.c.d>` | File and product version; `-Xjr:file-version=` / `-Xjr:product-version=` set one |
+| `-Xjr:version.<Name>=<text>` | Any version string: `FileDescription` (Task Manager's name), `ProductName`, `CompanyName`, `LegalCopyright`, `OriginalFilename`, ... |
+| `-Xjr:manifest=<file>` | The application manifest |
+| `-Xjr:execution-level=<level>` | `asInvoker`, `highestAvailable` or `requireAdministrator` - changed inside the existing manifest, or a minimal one is generated |
+| `-Xjr:string.<id>=<text>` | A string-table entry |
+| `-Xjr:resource.<type>.<name>=<file>` | Any other resource, raw from a file. Type: a number, `RCDATA`, `HTML`, `MANIFEST`, or a custom name |
+| `-Xjr:sign=<file.pfx>` | Authenticode-sign (SHA-256). Password from `JR_SIGN_PASSWORD`. The key is used in memory only and never lands in the Windows key store |
+| `-Xjr:sign.thumbprint=<sha1>` | Sign with a certificate from the Windows Personal store (current user, then machine) instead - e.g. one on a hardware token |
+| `-Xjr:sign.timestamp=<url>` | RFC 3161 timestamp server, so the signature outlives the certificate |
+| `-Xjr:list-resources=<exe>` | Print an exe's resources |
+
+The order is always copy, remove any old signature, resources, sign. Signing comes last because any later change to the file invalidates the signature. For the same reason, editing an already-signed exe removes its signature (and says so), rather than leaving a broken one behind. Existing resources are replaced in their own language rather than duplicated, and version fields you don't set are kept.
 
 ### Debug Logging
 
@@ -398,7 +500,7 @@ Java Runner Log - 2025-11-21 17:05:06
 
 **Other Use Cases:**
 2. **Branded Application Launchers** - Rename `jr.exe` to `yourapp.exe`, add `.jrc` config, distribute together
-3. **Multi-Java Environments** - Test JARs with different Java versions using `--java-home`
+3. **Multi-Java Environments** - Test JARs with different Java versions using `-Xjr:java.home=`
 4. **Complex Launch Configurations** - Use `.jrc` files for applications requiring specific JVM settings
 5. **Desktop Shortcuts** - Create shortcuts that work both ways (console and GUI)
 6. **Batch Scripts** - Use in automation where you need proper exit codes
@@ -442,7 +544,7 @@ jr.exe
 jr.exe test-scripts\TestStartupTiming.jar
 
 # Test config creation
-jr.exe --create-config test-scripts\TestStartupTiming.jar
+jr.exe -Xjr:create-config=test-scripts\TestStartupTiming.jar
 
 # Test config mode
 copy jr.exe mytest.exe
@@ -485,7 +587,7 @@ The `.jrc` format follows industry standards:
    - No console → uses `javaw.exe`
 
 3. **Java Location**:
-   - If `--java-home` provided → uses `%JAVA_HOME%\bin\java[w].exe`
+   - If `java.home` is set (`.jrc` or `-Xjr:java.home=`) → uses `<java.home>\bin\java[w].exe`
    - Otherwise → searches PATH environment variable
 
 4. **Config File Loading**:
@@ -553,7 +655,7 @@ log.overwrite=true
 
 Run with custom JDK:
 ```batch
-devtool.exe --java-home=C:\Java\jdk-21
+devtool.exe -Xjr:java.home=C:\Java\jdk-21
 ```
 
 ### Example 3: Classpath-Based Application
