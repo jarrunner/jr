@@ -1,0 +1,100 @@
+# Builds jr.exe from source, signs it through SignPath Foundation, and publishes it as a
+# GitHub release. Run by pushing a tag vX.Y.Z (or by hand, from the Actions tab).
+#
+# Signing needs, in the repository settings:
+#   secret   SIGNPATH_API_TOKEN        a SignPath CI user's API token
+#   variable SIGNPATH_ORGANIZATION_ID  the SignPath organization id
+# Until the secret exists the signing step is skipped and the release is published unsigned.
+# Every signing request waits for a manual approval in SignPath before it completes.
+#
+# Order matters: the version resource is compiled in at build time, and nothing may touch the
+# exe after SignPath returns it, because any change to the file invalidates the signature.
+
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version, X.Y.Z (a tag vX.Y.Z is created on publish)'
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version from the tag
+        id: ver
+        shell: pwsh
+        run: |
+          $v = if ('${{ github.event_name }}' -eq 'workflow_dispatch') { '${{ inputs.version }}' } else { '${{ github.ref_name }}'.TrimStart('v') }
+          if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "version must be X.Y.Z, got '$v'" }
+          "version=$v"        >> $env:GITHUB_OUTPUT
+          "JR_VER=$($v -replace '\.', ','),0" >> $env:GITHUB_ENV
+          "JR_VER_STR=$v.0"   >> $env:GITHUB_ENV
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build
+        shell: cmd
+        run: build-win.bat
+
+      - name: Check metadata
+        shell: pwsh
+        run: |
+          $i = (Get-Item jr.exe).VersionInfo
+          if ($i.ProductName -ne 'jr' -or $i.ProductVersion -ne $env:JR_VER_STR) { throw "bad version resource: $($i.ProductName) $($i.ProductVersion)" }
+          New-Item -ItemType Directory -Force unsigned | Out-Null
+          Copy-Item jr.exe unsigned\jr.exe
+
+      - name: Upload unsigned
+        id: upload-unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: jr-unsigned
+          path: unsigned/jr.exe
+          if-no-files-found: error
+
+      - name: Sign with SignPath
+        if: env.SIGNPATH_API_TOKEN != ''
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: jr
+          signing-policy-slug: release-signing
+          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed
+
+      - name: Pick the release binary
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          if (Test-Path signed\jr.exe) {
+            $s = Get-AuthenticodeSignature signed\jr.exe
+            if ($s.Status -ne 'Valid') { throw "signature is $($s.Status)" }
+            Copy-Item signed\jr.exe out\jr.exe
+          } else {
+            Write-Host 'SignPath not configured: releasing unsigned'
+            Copy-Item unsigned\jr.exe out\jr.exe
+          }
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = 'v${{ steps.ver.outputs.version }}'
+          gh release create $tag out\jr.exe --title "jr ${{ steps.ver.outputs.version }}" --generate-notes --target $env:GITHUB_SHA

@@ -54,7 +54,16 @@ REM OS-provided DLLs (winhttp.dll/bcrypt.dll/comctl32.dll), not redistributable-
 REM static libs, so this does not reopen the PRP-06 size/redistributable work.
 REM resedit.c (resource editing + signing, PRP-13) likewise pulls in crypt32.lib and
 REM version.lib, and loads mssign32.dll at run time - all OS components too.
-cl /nologo /O1 /GS- /Gy /MT /Fe:jr.exe launcher.c javainstall.c resedit.c /link /SUBSYSTEM:CONSOLE /NODEFAULTLIB:libucrt.lib /DEFAULTLIB:ucrt.lib /OPT:REF /OPT:ICF /MERGE:.rdata=.text user32.lib kernel32.lib
+REM jr.rc carries the version resource (product name + version), which SignPath requires on
+REM signed binaries. CI sets JR_VER=1,2,3,0 and JR_VER_STR=1.2.3.0 from the release tag.
+set RCDEFS=
+if defined JR_VER set RCDEFS=/d "JR_VER=%JR_VER%" /d "JR_VER_STR=\"%JR_VER_STR%\""
+rc /nologo %RCDEFS% /fo jr.res jr.rc
+if %ERRORLEVEL% NEQ 0 (
+    echo BUILD FAILED: jr.rc
+    exit /b 1
+)
+cl /nologo /O1 /GS- /Gy /MT /Fe:jr.exe launcher.c javainstall.c resedit.c jr.res /link /SUBSYSTEM:CONSOLE /NODEFAULTLIB:libucrt.lib /DEFAULTLIB:ucrt.lib /OPT:REF /OPT:ICF /MERGE:.rdata=.text user32.lib kernel32.lib
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
@@ -71,6 +80,7 @@ REM Clean up intermediate files
 if exist launcher.obj del launcher.obj
 if exist javainstall.obj del javainstall.obj
 if exist resedit.obj del resedit.obj
+if exist jr.res del jr.res
 
 echo.
 echo ========================================

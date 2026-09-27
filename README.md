@@ -716,13 +716,30 @@ Without AOT:
 
 - **No Embedded Paths**: Executable doesn't contain build machine paths
 - **Portable**: Can be moved between directories/systems
-- **No Telemetry**: No data collection or phone-home features
+- **No Telemetry**: No data collection or phone-home features; the only network access is the Java auto-install, and only after you say yes (see [Privacy](#privacy))
 - **Source Available**: Full C source code provided for review
-- **Signing**: Unsigned by default; sign with your own certificate for distribution
+- **Signing**: Release builds are signed through SignPath Foundation (see [Code signing policy](#code-signing-policy)); `-Xjr:sign` signs copies you brand yourself
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+Release binaries (`jr.exe`) are built from this repository's source by GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)) and signed only after a maintainer manually approves each signing request. Nothing built outside that pipeline is signed.
+
+Team roles:
+
+- Committers and reviewers: [ivan-velikanov](https://github.com/ivan-velikanov)
+- Approvers: [ivan-velikanov](https://github.com/ivan-velikanov)
+
+Changes from anyone outside the team are reviewed by a committer before they are merged.
+
+### Privacy
+
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The one network feature is the Java auto-install: when no suitable JDK is found, jr asks first (console Y/n or a dialog), and only on a yes contacts the [Foojay Disco API](https://api.foojay.io) and downloads an Eclipse Temurin JDK. It can be turned off with `java.autoinstall=false`.
 
 ## License
 
-This project is open source. See license file for details.
+Apache License 2.0 - see [LICENSE](LICENSE).
 
 ## Contributing
 
