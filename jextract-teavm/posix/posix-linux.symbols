@@ -1,0 +1,3 @@
+# Linux only: glibc's wait-status macros take any int expression, so they bind as macros.
+macro:WEXITSTATUS wexitstatus (int)
+macro:WIFEXITED wifexited (int)

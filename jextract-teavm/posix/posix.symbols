@@ -1,0 +1,50 @@
+# --- functions ---
+getenv
+setenv
+open open
+open open3 int
+read
+write
+close
+stat
+access
+realpath
+readlink
+getcwd
+execv
+fork
+posix_spawn
+waitpid
+dlopen
+dlsym
+dlclose
+opendir
+readdir
+closedir
+mkdir
+unlink
+rename
+time
+clock_gettime
+isatty
+# --- constants ---
+O_RDONLY
+O_WRONLY
+O_CREAT
+O_TRUNC
+RTLD_NOW
+PATH_MAX
+F_OK
+X_OK
+CLOCK_MONOTONIC
+EINTR
+# --- structs ---
+struct:stat stat_t
+struct:timespec timespec
+struct:dirent dirent
+exit
+# --- PRP-19: callback type from a function's parameter (qsort's comparator has no typedef on macOS), function-like macros ---
+qsort
+qsort(4) QsortCompar
+macro:S_ISDIR s_isdir (int)
+macro:S_ISREG s_isreg (int)

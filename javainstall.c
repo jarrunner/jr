@@ -530,6 +530,52 @@ static int jiFindCachedAtLeast(const char* cacheRoot, int minVersion, char* outD
     return 1;
 }
 
+// ---------------------------------------------------------------------------
+// Native machine architecture (prp/17-prp-native_machine_architecture_for_jdk_auto-install.md)
+// ---------------------------------------------------------------------------
+
+typedef BOOL (WINAPI *JiIsWow64Process2Fn)(HANDLE hProcess, USHORT* pProcessMachine, USHORT* pNativeMachine);
+
+// The machine's own architecture as Foojay spells it: "aarch64" or "x64". Always the NATIVE one, even
+// when this jr.exe is x64 running under emulation on ARM64 - the same choice jbang makes for the cache
+// we share with it. (An in-process jvm.dll launch of a foreign-architecture JDK fails to load, and the
+// launcher already falls back to java.exe mode, which runs it natively.)
+// IsWow64Process2 is looked up at run time rather than imported: it exists only on Windows 10 1709+,
+// and a direct import would stop jr loading on anything older. Without it the machine is x64, since
+// every ARM64 Windows has it.
+static const char* jiNativeArch(void) {
+    // Test-only override, not in --help: exercises the ARM64 path on an x64 machine.
+    const char* forced = getenv("JR_TEST_NATIVE_ARCH");
+    HMODULE kernel32;
+    JiIsWow64Process2Fn isWow64Process2;
+    USHORT processMachine = 0, nativeMachine = 0;
+
+    if (forced && _stricmp(forced, "aarch64") == 0) return "aarch64";
+    if (forced && _stricmp(forced, "x64") == 0) return "x64";
+
+    kernel32 = GetModuleHandleA("kernel32.dll");
+    isWow64Process2 = kernel32 ? (JiIsWow64Process2Fn)(void*)GetProcAddress(kernel32, "IsWow64Process2") : NULL;
+    if (isWow64Process2 && isWow64Process2(GetCurrentProcess(), &processMachine, &nativeMachine) &&
+        nativeMachine == IMAGE_FILE_MACHINE_ARM64) {
+        return "aarch64";
+    }
+    return "x64";
+}
+
+// Which build to fetch, in order. Temurin first everywhere. On ARM64 Temurin publishes a Windows zip
+// for some versions only (21 but not 17 or 25, as of 2026-09), so Azul Zulu comes next - the one ARM64
+// build on Foojay with a SHA-256 checksum, which Step 4 insists on - then Temurin x64 under emulation.
+typedef struct { const char* distro; const char* arch; const char* vendor; } JiBuild;
+
+static const JiBuild JI_BUILDS_X64[] = {
+    {"temurin", "x64", "Eclipse Temurin"},
+};
+static const JiBuild JI_BUILDS_ARM64[] = {
+    {"temurin", "aarch64", "Eclipse Temurin"},
+    {"zulu", "aarch64", "Azul Zulu"},
+    {"temurin", "x64", "Eclipse Temurin (x64, emulated)"},
+};
+
 int autoInstallJava(int majorVersion, int atLeast, const char* reason,
                      BOOL hasConsole, BOOL guiMode, BOOL assumeYes,
                      const char* cacheRootOverride, char* outJdkHome, size_t outJdkHomeSize) {
@@ -551,6 +597,12 @@ int autoInstallJava(int majorVersion, int atLeast, const char* reason,
     char filename[256];
     char subdirName[MAX_PATH];
     char extractedJdkPath[MAX_PATH];
+    int arm64 = strcmp(jiNativeArch(), "aarch64") == 0;
+    const JiBuild* builds = arm64 ? JI_BUILDS_ARM64 : JI_BUILDS_X64;
+    size_t buildCount = arm64 ? sizeof(JI_BUILDS_ARM64) / sizeof(JI_BUILDS_ARM64[0])
+                              : sizeof(JI_BUILDS_X64) / sizeof(JI_BUILDS_X64[0]);
+    const JiBuild* build = NULL;
+    size_t b;
 
     if (majorVersion <= 0) majorVersion = JI_DEFAULT_VERSION;
 
@@ -578,20 +630,26 @@ int autoInstallJava(int majorVersion, int atLeast, const char* reason,
     if (!assumeYes) {
         char prompt[1024];
         snprintf(prompt, sizeof(prompt),
-                 "%s\n\nDownload and install Eclipse Temurin JDK %d (~200 MB) to:\n%s\n\nProceed?",
+                 arm64 ? "%s\n\nDownload and install JDK %d for ARM64 (Eclipse Temurin, or Azul Zulu where"
+                         " Temurin has no ARM64 build; ~200 MB) to:\n%s\n\nProceed?"
+                       : "%s\n\nDownload and install Eclipse Temurin JDK %d (~200 MB) to:\n%s\n\nProceed?",
                  reason ? reason : "Java was not found.", majorVersion, targetDir);
         if (!jiConfirmYesNo(hasConsole, prompt)) {
             return 0;
         }
     }
 
-    // Step 1: resolve the package id for this major version (Windows x64 Temurin GA build)
-    snprintf(apiUrl, sizeof(apiUrl),
-             "https://api.foojay.io/disco/v3.0/packages?distro=temurin&javafx_bundled=false&libc_type=c_std_lib"
-             "&directly_downloadable=true&archive_type=zip&operating_system=windows&package_type=jdk"
-             "&release_status=ga&architecture=x64&latest=available&version=%d", majorVersion);
-    if (!jiHttpGetToBuffer(apiUrl, apiResponse, sizeof(apiResponse))) return 0;
-    if (!jiJsonExtractString(apiResponse, "\"id\":\"", pkgId, sizeof(pkgId))) return 0;
+    // Step 1: resolve the package id for this major version - the first build in the list Foojay has
+    for (b = 0; b < buildCount && !build; b++) {
+        snprintf(apiUrl, sizeof(apiUrl),
+                 "https://api.foojay.io/disco/v3.0/packages?distro=%s&javafx_bundled=false&libc_type=c_std_lib"
+                 "&directly_downloadable=true&archive_type=zip&operating_system=windows&package_type=jdk"
+                 "&release_status=ga&architecture=%s&latest=available&version=%d",
+                 builds[b].distro, builds[b].arch, majorVersion);
+        if (!jiHttpGetToBuffer(apiUrl, apiResponse, sizeof(apiResponse))) return 0;
+        if (jiJsonExtractString(apiResponse, "\"id\":\"", pkgId, sizeof(pkgId))) build = &builds[b];
+    }
+    if (!build) return 0;
 
     // Step 2: resolve the direct download URL + expected checksum for that package
     snprintf(idUrl, sizeof(idUrl), "https://api.foojay.io/disco/v3.0/ids/%s", pkgId);
@@ -611,7 +669,7 @@ int autoInstallJava(int majorVersion, int atLeast, const char* reason,
     {
         JiProgress ps;
         char label[160];
-        snprintf(label, sizeof(label), "Downloading Eclipse Temurin JDK %d...", majorVersion);
+        snprintf(label, sizeof(label), "Downloading %s JDK %d...", build->vendor, majorVersion);
         jiProgressInit(&ps, guiMode, hasConsole, label);
         {
             int dlOk = jiHttpDownloadToFile(downloadUrl, zipPath, &ps);

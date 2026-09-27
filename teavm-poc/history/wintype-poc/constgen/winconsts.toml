@@ -1,0 +1,16 @@
+# Spec for WinConstGen.java - real string-macro constants used by pocapp.jr.Sha256 (PRP-09).
+# Add a name+header here instead of hand-typing the string in Java - the actual value comes from
+# asking the real compiler what the macro expands to, so a wrong guess (like PRP-09's actual
+# "HashLength" instead of "HashDigestLength") can never be written down as Java source at all.
+
+[[wconst]]
+name = "BCRYPT_OBJECT_LENGTH"
+header = "bcrypt.h"
+
+[[wconst]]
+name = "BCRYPT_HASH_LENGTH"
+header = "bcrypt.h"
+
+[[wconst]]
+name = "BCRYPT_ALGORITHM_NAME"
+header = "bcrypt.h"

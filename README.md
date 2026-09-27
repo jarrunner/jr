@@ -392,7 +392,7 @@ jr.exe -Xjr:yes myapp.jar
 ```
 
 **How it works:**
-1. Downloads a matching **Eclipse Temurin** build for the requested major version (default: 25) via the [Foojay Disco API](https://api.foojay.io) - the same API [jbang](https://www.jbang.dev/) itself uses.
+1. Downloads a matching **Eclipse Temurin** build for the requested major version (default: 25), for the machine's native architecture, via the [Foojay Disco API](https://api.foojay.io) - the same API [jbang](https://www.jbang.dev/) itself uses. On Windows on ARM64 it installs a native ARM64 JDK: Temurin where one is published, otherwise **Azul Zulu** (Temurin has no Windows ARM64 build of some versions, 25 among them), and Temurin x64 under emulation only if neither exists.
 2. Installs it into `%USERPROFILE%\.jbang\cache\jdks\<version>\` - **the exact same cache location jbang uses**, so the two tools share downloads. If jbang already installed that version, jr uses it directly with no download; if jr installs one first, `jbang jdk list` picks it up automatically.
 3. Verifies the download's SHA256 checksum before extracting anything.
 4. Extracts with the `tar.exe` already bundled with Windows (10 1803+) - no bundled archive library.
@@ -735,7 +735,7 @@ Changes from anyone outside the team are reviewed by a committer before they are
 
 ### Privacy
 
-This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The one network feature is the Java auto-install: when no suitable JDK is found, jr asks first (console Y/n or a dialog), and only on a yes contacts the [Foojay Disco API](https://api.foojay.io) and downloads an Eclipse Temurin JDK. It can be turned off with `java.autoinstall=false`.
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The one network feature is the Java auto-install: when no suitable JDK is found, jr asks first (console Y/n or a dialog), and only on a yes contacts the [Foojay Disco API](https://api.foojay.io) and downloads an Eclipse Temurin JDK (on Windows on ARM64, an Azul Zulu JDK where Temurin publishes no ARM64 build). It can be turned off with `java.autoinstall=false`.
 
 ## License
 

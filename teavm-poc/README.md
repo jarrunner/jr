@@ -1,0 +1,77 @@
+TeaVM proof-of-concept for PRP 07 (see ../prp/07-prp-try_teavm_tcc.md and ../prp/07-prp.02.step1-findings.md for the actual findings - read that file, not just this one, before touching the toolchain), extended in PRP 09 (../prp/09-prp-java_auto_install.md, ../prp/09-prp.02.teavm-port.md) with a java auto-install feature built in parallel with launcher.c's own version, for the same size/functionality comparison. Global TeaVM+C-backend gotchas (not specific to this project) are maintained at $claudeprompts\guidelines.teavmcpp.md - read that too before writing any new TeaVM code elsewhere.
+
+Goal: Java -> TeaVM C backend -> a real native compiler -> native .exe, with no MSVC/GCC/JVM involved at the far end, to compare functionality and size against jr's hand-written launcher.c.
+
+Three apps here, in order of how far the port goes:
+- `pocapp.Main` - trivial hello-world, used to validate the pipeline itself.
+- `pocapp.JrLite` - a partial equivalent of launcher.c: console/GUI detection, find java.exe on PATH or via --java-home, spawn it and propagate its exit code.
+- `pocapp.jr.Jr` (package `pocapp.jr`, ~55 classes) - the FULL port, feature-for-feature with launcher.c: .jrc config file, `-Xjr:<key>=<value>`/`-Xjr:yes`/`-Xjr:help`/`-Xjr:create-config[=<jar>]` command-line options (replacing the old `--flags`, which now redirect to their `-Xjr:` equivalent), java.version NN/NN+ matching against `<jdkhome>\release` with auto-install on mismatch, the AOT cache gated to JDK 25+ (base52-named, staleness cleanup), correct argument requoting for CreateProcessA (PRP-20 phase 1 - TeaVM's args[] arrives pre-split by the OS/CRT, unlike launcher.c's own re-parsed GetCommandLineA string, so a "two words"-style argument has to be requoted rather than just rejoined), full help text, java.home (.jrc key or `-Xjr:java.home=`), jvm-dll in-process mode (JLI_Launch via @Import + GetProcAddress function pointers), JR_LAUNCH_MODE/JR_AOT_* env vars, opt-in file logging with a from-scratch UTC calendar formatter, (PRP-09) auto-install of a missing JDK via the Foojay Disco API into jbang's own cache, with a console/GUI progress bar, and (PRP-20 phase 2) resedit.c's whole branded-launcher toolkit - `-Xjr:make`/`edit`/`list-resources`, icon replacement (RT_ICON/RT_GROUP_ICON rebuild), VS_VERSIONINFO (file/product version, arbitrary version strings, carrying over what a target already has), manifest/execution-level patching, the RT_STRING block format, arbitrary raw resources, PE security-directory stripping, and Authenticode signing (SHA-256, PFX or a cert-store thumbprint, optional RFC 3161 timestamp) through mssign32!SignerSignEx2 - see `EnumResourceNamesW`/`-LanguagesW`/`-TypesW`'s callbacks in `ReCallbacks.java`, jextract-teavm's "Callbacks: C calling Java". This is the one to build from now - JrLite is kept only as the smaller worked example.
+
+Pre-built binaries of the full port (including the PRP-09 java-install feature, PRP-20 phase 1's -Xjr: options/java.version matching/AOT-JDK25 gate/argument requoting, and phase 2's resedit.c port) are kept at `dist\jr-teavm.exe` (882,688 bytes, plain `-O2`) and `dist\jr-teavm-opt.exe` (369,664 bytes, size-optimized; 1.5 KB of that since PRP-16 moved struct access onto the generated typed accessors, 4 KB since PRP-17 added native-architecture detection, 6.5 KB since PRP-18 moved every native buffer off the GC heap, ~106 KB since PRP-20 phase 2 added the whole branded-launcher/signing toolkit) so there's no need to rerun the whole pipeline just to try it - both are gitignored (`*.exe`, matching how `jr.exe` itself is handled) but persist locally. Rebuild them here if the source changes. These are ~50-60% smaller than the PRP-09 numbers (1,312,768 / 604,672) after PRP-11's size work - see `../prp/11-prp.01.size-experiments.md`: two `String.split()`/`toLowerCase()`-style calls were unconditionally dragging in java.util.regex and Unicode case-folding tables regardless of their actual (ASCII-only) arguments, plus `TeaVMOptimizationLevel.ADVANCED` (now the `BuildDriver` default) beats both `SIMPLE` and `FULL`.
+
+## Toolchain: llvm-mingw (this is the one that works)
+Installed at `C:\user\Apps\cmdtools\llvm-mingw-msvcrt-x86_64\` and its `bin\` is on the user's PATH (added 2026-09-11, checked for name collisions first - none found). Get a fresh copy from the official releases if needed: https://github.com/mstorsjo/llvm-mingw/releases - grab the `msvcrt-x86_64` asset specifically, NOT `ucrt` (msvcrt avoids a vcredist dependency, matching PRP-06's own requirement).
+
+tcc (`C:\user\Apps\tcc-0.9.27-win64\tcc.exe`) does NOT work - hits a structural `#pragma once` bug against TeaVM's per-class header layout. Kept installed since it's tiny and the findings doc records exactly where it breaks, in case a newer tcc build is ever worth retrying.
+
+## Build recipe
+From this folder:
+
+  mvn -q compile
+  mvn -q dependency:build-classpath -Dmdep.outputFile=cp.txt
+
+Resolve the four extra jars TeaVMTool's own classpath needs (teavm-classlib, teavm-interop, teavm-platform, teavm-core - see BuildDriver's javadoc for why), then generate the C:
+
+  java -cp "%CP%;target\classes" pocapp.BuildDriver target\classes target\c pocapp.jr.Jr "%CLASSLIB_JARS%"
+
+Patch the generated tree for clang/mingw (see the findings doc and guidelines.teavmcpp.md for exactly what and why - this now also inserts `#include <Windows.h>`/`#include <time.h>`/`#include <winhttp.h>`/`#include <bcrypt.h>`/`#include <commctrl.h>`/`#include "mssign.h"` into definitions.h, and copies `bindings\mssign.h` next to `all.c`, so no `-include` compiler flags are needed any more):
+
+  powershell -File postprocess.ps1 -Dir target\c
+
+Compile - the java-install feature (PRP-09) needs three extra libs linked (winhttp/bcrypt/comctl32), and the resource-editing/signing port (PRP-20 phase 2) needs three more (version/crypt32/mssign32 - all six OS-provided, no vcredist implication, same reasoning as PRP-06). `-Wno-error=incompatible-function-pointer-types` is required by jextract-teavm's own callback convention (see "Callbacks: C calling Java" in `../jextract-teavm/README.md`) - clang 16+ makes that mismatch an error by default, and the ABI is the same either way:
+
+  x86_64-w64-mingw32-clang -O2 -Wno-error=incompatible-function-pointer-types -o jr.exe target\c\all.c -lwinhttp -lbcrypt -lcomctl32 -lversion -lcrypt32 -lmssign32
+
+For a size-optimized build (matches the numbers in 09-prp.02.teavm-port.md):
+
+  x86_64-w64-mingw32-clang -Oz -flto -ffunction-sections -fdata-sections -Wl,--gc-sections -s -Wno-error=incompatible-function-pointer-types -o jr.exe target\c\all.c -lwinhttp -lbcrypt -lcomctl32 -lversion -lcrypt32 -lmssign32
+
+Verified end-to-end against real jars in `../test-scripts/` - not just "it compiles": correct help text, AOT cache auto-created on first run (matching launcher.c's base52 naming exactly), correct exit-code passthrough on both success and a real thrown exception, correct arg passthrough, and (PRP-09) a real 195MB JDK download+checksum+extract+install+launch cycle against jbang's cache layout. See the findings docs for the actual runs.
+
+## Java auto-install (PRP-09)
+If Java isn't found, offers to download a matching Eclipse Temurin JDK for the native architecture (Azul Zulu on ARM64 where Temurin has none - PRP-17) via the Foojay Disco API (the same one jbang uses) into `%USERPROFILE%\.jbang\cache\jdks\<version>` - jbang's own cache layout, so the two tools share downloads. `.jrc` keys: `java.version=NN`, `java.autoinstall=false`. `--yes` skips the confirmation prompt. Test-only hooks (not in `--help`): `JR_TEST_FORCE_NO_JAVA=1` (pretend nothing was found even if a real JDK is on PATH), `JR_JDK_CACHE_DIR=<path>` (redirect the install root away from the real jbang cache, for testing), `JR_ASSUME_YES=1` (same as `--yes`). See `09-prp.02.teavm-port.md` for the full implementation writeup and the two real bugs found building this (WPARAM/LPARAM typing, BCRYPT_HASH_LENGTH's actual string value).
+
+## Resource editing and Authenticode signing (PRP-20 phase 2)
+Ports resedit.c's whole branded-launcher toolkit onto TeaVM: `-Xjr:make=<out.exe>`/`-Xjr:edit=<exe>` (copy or edit in place), `-Xjr:list-resources=<exe>`, `-Xjr:icon=`, `-Xjr:version=`/`version.<Name>=`, `-Xjr:manifest=`/`execution-level=`, `-Xjr:string.<id>=`, `-Xjr:resource.<type>.<name>=<file>`, and `-Xjr:sign=<pfx>`/`sign.thumbprint=`/`sign.timestamp=`. Source is `Re*.java` (`ReStamp` the parsed options, `ReEntries` the pending resource-update list, `ReIcon`/`ReVersionInfo`/`ReManifest`/`ReStrings`/`ReRawResource` each resource kind, `ReApply` the BeginUpdateResource/UpdateResource/EndUpdateResource orchestration, `RePe`/`ReSign` the PE-signature strip and Authenticode signing, `ReList`/`ReRun` list-resources and the entry point) plus `ReCallbacks`, `ResId`, `ReBuf`, `ReError`, `ReVersionNumber`.
+
+Verified parity against the real `jr.exe` (`../resedit.c`), all byte-for-byte or byte-compatible: `-Xjr:list-resources`, icon/version/manifest/execution-level/string-table/raw-resource editing (report text identical; version info additionally cross-checked with `Get-Item .VersionInfo`, Windows' own reader), signing with both a PFX and a cert-store thumbprint (cross-checked with `Get-AuthenticodeSignature` - same chain status, same subject), signature stripping on re-edit, and every error path tried (wrong PFX password, malformed thumbprint, `sign.timestamp` without `sign=`, a missing `-Xjr:list-resources` target) down to the identical Win32 error code.
+
+Three things worth knowing for anyone extending this:
+- **`bindings/mssign.h`** hand-declares mssign32.dll's documented-but-unheadered structs and `SignerSignEx2`/`SignerFreeSignerContext` (the same shapes resedit.c itself hand-declares, for the same reason - no SDK ships them), so jextract-teavm can still generate and verify their offsets against this exact target rather than anyone typing them by hand. `jr.h` includes it for the generator's own parsing; `postprocess.ps1` copies it next to the real build's `all.c` and includes it there too, or `SignerSignEx2`/`SignerFreeSignerContext` are undeclared in the actual compile ("implicit function declaration") even though the generated Java binding itself compiles fine. Unlike the C original, llvm-mingw DOES ship `libmssign32.a`, so these bind as plain `@Import`s rather than needing `LoadLibrary`/`GetProcAddress`.
+- **`SetFilePointerEx` cannot be bound**: it takes its distance BY VALUE (a `LARGE_INTEGER` union), and TeaVM cannot pass a struct by value in either direction (`NOT BOUND: ... passed BY VALUE`, see jextract-teavm's README "Structs by value"). `RePe.java` uses the older `SetFilePointer` (32-bit) instead - every seek here is to a PE header field or the security directory, always well under 2 GB even for a large signed exe.
+- **`EnumResourceNamesW`/`-LanguagesW`/`-TypesW`'s callback parameter came out typed as plain `Address`, not a generated `Function` subclass** - on this target `ENUMRES*PROCW` resolves through mingw's `FARPROC` fallback branch, not its function-pointer one, so jextract had nothing to recognise. `ReCallbacks.java` hand-declares the three `Function` subclasses instead (their `invoke()` signature is all `Function.get` actually checks - jextract's own generated ones are no different under the hood), which is why the compile needs `-Wno-error=incompatible-function-pointer-types`.
+
+## WinAPI bindings are generated (PRP-16)
+`pocapp.jr.WinApi` (every `@Import` native and WinAPI constant) and `pocapp.jr.WinOffsets` (struct sizes, field offsets and typed field accessors) are GENERATED from the real mingw headers by `../jextract-teavm`. Never hand-edit them. The source of truth is `bindings/winapi.symbols`, a plain list of C names: functions, constants and structs alike. To add one, add its name there and run:
+
+  bindings\gen-bindings.cmd
+
+This takes about 20 s. It rewrites both Java files, then has llvm-mingw's clang re-check every size, offset, width and value through `bindings/verify-win.c` (a regenerated file; it names this machine's path, so do not commit it). A name that cannot be bound, for example a function that the headers declare only for a newer `_WIN32_WINNT` than mingw's default `0x601`, is printed as `NOT BOUND: <name>: <why>`, and the script exits 1. Read struct fields through the generated accessors (`WinOffsets.STARTUPINFOA.dwFlags(addr, v)`), not `addr.add(offset).getInt()`, so the width comes from the header too. One-time setup of the generator is in `../jextract-teavm/README.md`. `bindings/jr.h` lists the headers the bindings are parsed against, and it must stay in step with the `#include`s that `postprocess.ps1` puts into `definitions.h`.
+
+This replaced PRP-08's `offsetgen/` (struct offsets only) and PRP-11's `wintype-poc/` (type checking via an annotation processor), both superseded by `../prp/12-prp.01.report.md` and kept as history in `history/`.
+
+## Native memory: always through N (PRP-18)
+TeaVM's GC frees or moves any Java array known only through an `Address`, so `Address.ofData(javaArray)` passed to native code is a use-after-free waiting for the next GC (measured in `../memsafe-lab`, write-up in `../prp/18-prp.01.lab-findings-and-api-proposal.md`). Every string, buffer, struct and out-parameter handed to WinApi therefore comes from `pocapp.jr.N`, which allocates off the GC heap (`Arena`: one malloc'd 64 KB block plus malloc'd overflow chunks):
+
+    import static pocapp.jr.N.*;
+
+    var si = alloc(WinOffsets.STARTUPINFOA.SIZE);            // zeroed struct
+    WinApi.createProcessA(NULL, cstr(cmdLine), NULL, NULL, 0, 0, NULL, NULL, si, pi);
+    var exitCode = intVar();                                  // out-parameter
+    WinApi.getExitCodeProcess(process, exitCode);
+    return exitCode.getInt();
+
+`cstr` (ANSI) and `wcstr` (UTF-16) convert strings, `string(p)` / `string(p, max)` read them back, `alloc` / `intVar` / `longVar` / `ptrVar` give zeroed memory, and `NULL` is NULL. Memory lives for the whole program unless the code is inside `memScoped(() -> ...)`, which frees everything allocated in it on exit and fills it with 0xDD. Use `memScoped` only where memory would otherwise pile up (loops, recursion, per-log-line and per-chunk paths, big buffers), because each one costs about 340 bytes of exe. The rules: never `Address.ofData` a Java array for native code, never keep a pointer from `N` in a field or past its scope (WinAPI handles are fine), and check with `java ../memsafe-lab/lint/AddressLint.java src/main/java`, which must report 0 and 0.
+
+## If you hit a segfault with no compiler diagnostic
+Bisect by inserting `fprintf(stderr, "CKPT n\n"); fflush(stderr);` checkpoints directly into the GENERATED `.c` file (not the Java source - that's what's actually crashing, and it's plain readable C once you're in it). This found two real bugs in this PRP in under 10 minutes each. See guidelines.teavmcpp.md for the specific bug this technique already caught (Address values in an Address[] array).

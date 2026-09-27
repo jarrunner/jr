@@ -1,0 +1,14 @@
+# Every line here must be REFUSED with its reason (run-negative.sh checks the count and the messages).
+macro:LOWROD loword (int)
+macro:MAKELONG makeLong (int)
+macro:LOWORD loword long(int)
+macro:JX_STMT stmt (int)
+macro:JX_OBJECT obj ()
+macro:JX_STRUCT st (int)
+macro:LOWORD loword (integer)
+macro:LOWORD
+JX_BYVALUE_CB
+JX_VARIADIC_CB
+EnumWindows(3)
+EnumWindows(2)
+macro:JX_LVALUE lv (int)

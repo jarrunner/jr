@@ -1,0 +1,42 @@
+# WinAPI structs whose field offsets the TeaVM port (pocapp.jr.*) needs for Address-based
+# marshaling (see ../../prp/08-prp-teavm_struct_offset_generator.md). Add a struct by adding a
+# [[struct]] block below and re-running OffsetGen.java - nothing else needs to change.
+#
+# `header` is the system header OffsetGen.java's generated C probe includes to see the real
+# struct definition; `fields` is the full field list in declaration order (harmless to list
+# fields jr's Java code doesn't currently read/write - offsetof() on them is free and it
+# documents the whole layout for whoever adds the next field).
+
+[[struct]]
+name = "FILETIME"
+header = "windows.h"
+fields = ["dwLowDateTime", "dwHighDateTime"]
+
+[[struct]]
+name = "WIN32_FILE_ATTRIBUTE_DATA"
+header = "windows.h"
+fields = ["dwFileAttributes", "ftCreationTime", "ftLastAccessTime", "ftLastWriteTime", "nFileSizeHigh", "nFileSizeLow"]
+
+[[struct]]
+name = "STARTUPINFOA"
+header = "windows.h"
+fields = ["cb", "lpReserved", "lpDesktop", "lpTitle", "dwX", "dwY", "dwXSize", "dwYSize", "dwXCountChars", "dwYCountChars", "dwFillAttribute", "dwFlags", "wShowWindow", "cbReserved2", "lpReserved2", "hStdInput", "hStdOutput", "hStdError"]
+
+[[struct]]
+name = "PROCESS_INFORMATION"
+header = "windows.h"
+fields = ["hProcess", "hThread", "dwProcessId", "dwThreadId"]
+
+[[struct]]
+name = "WIN32_FIND_DATAA"
+header = "windows.h"
+fields = ["dwFileAttributes", "ftCreationTime", "ftLastAccessTime", "ftLastWriteTime", "nFileSizeHigh", "nFileSizeLow", "dwReserved0", "dwReserved1", "cFileName", "cAlternateFileName"]
+
+# Needed for the GUI progress window's PeekMessage/TranslateMessage/DispatchMessage loop
+# (PRP-09, java auto-install). Only SIZE is actually used - jr never reads MSG's own fields,
+# just hands the buffer to Windows and passes it straight on - but the full field list is kept
+# for documentation, matching every other struct here.
+[[struct]]
+name = "MSG"
+header = "windows.h"
+fields = ["hwnd", "message", "wParam", "lParam", "time", "pt"]

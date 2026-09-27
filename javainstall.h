@@ -11,7 +11,8 @@
 // no network access at all; with atLeast set, any cached <N> >= majorVersion will do
 // (the newest is taken). Otherwise asks the user (unless assumeYes), then
 // downloads the matching Eclipse Temurin build from the Foojay Disco API (the same
-// API jbang itself uses), verifies its SHA256, extracts it with the tar.exe already
+// API jbang itself uses) for the machine's native architecture - on ARM64, Azul Zulu
+// where Temurin has no ARM64 build - verifies its SHA256, extracts it with the tar.exe already
 // bundled with Windows, and moves it into place.
 //
 // cacheRootOverride, when non-NULL/non-empty, replaces the default
