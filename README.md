@@ -38,9 +38,12 @@ There is only one build. It links the Universal CRT that ships inside Windows it
 
 ## Building from Source
 
+This is the original C implementation, now under `jr_legacy_c/` (see that folder's own files and this repo's `CLAUDE.md` for the platform decision - a Java/TeaVM implementation under `jr/` is becoming the primary one; see `jr/README.md` for its own build recipe).
+
 Build from source using Microsoft Visual C++:
 
 ```batch
+cd jr_legacy_c
 build-win.bat
 ```
 

@@ -1,6 +1,10 @@
 # Builds jr.exe from source, signs it through SignPath Foundation, and publishes it as a
 # GitHub release. Run by pushing a tag vX.Y.Z (or by hand, from the Actions tab).
 #
+# Still builds jr_legacy_c (the C implementation) - the Java/TeaVM port under jr/ is not wired
+# into this workflow yet. See this repo's CLAUDE.md for the platform decision and jr/README.md
+# for the Java build recipe.
+#
 # Signing needs, in the repository settings:
 #   secret   SIGNPATH_API_TOKEN        a SignPath CI user's API token
 #   variable SIGNPATH_ORGANIZATION_ID  the SignPath organization id
@@ -47,15 +51,16 @@ jobs:
 
       - name: Build
         shell: cmd
+        working-directory: jr_legacy_c
         run: build-win.bat
 
       - name: Check metadata
         shell: pwsh
         run: |
-          $i = (Get-Item jr.exe).VersionInfo
+          $i = (Get-Item jr_legacy_c\jr.exe).VersionInfo
           if ($i.ProductName -ne 'jr' -or $i.ProductVersion -ne $env:JR_VER_STR) { throw "bad version resource: $($i.ProductName) $($i.ProductVersion)" }
           New-Item -ItemType Directory -Force unsigned | Out-Null
-          Copy-Item jr.exe unsigned\jr.exe
+          Copy-Item jr_legacy_c\jr.exe unsigned\jr.exe
 
       - name: Upload unsigned
         id: upload-unsigned

@@ -1,0 +1,19 @@
+[package]
+name = "jr.full"
+version = "0.1.0"
+
+[[bin]]
+name = "jr"
+main = "main"
+
+# Size-tuned, mirroring the TeaVM side's -Oz/-flto/-Wl,--gc-sections/-s recipe
+# (PRP-07/09) so the two "how small can this go" numbers are comparable.
+# Tier-0 default is opt-level=3/lto=thin/codegen-units=1/strip=symbols; this
+# overrides opt-level and lto for size instead of speed. panic="abort" is
+# left OFF (Cargo default "unwind") since Jux try/catch lowers to
+# panic_any+catch_unwind and this program does not use try/catch anyway, so
+# it costs nothing either way - see JUX-BUILD-SYSTEM-ADDENDUM.md.
+[profile.release]
+opt-level = "z"
+lto = "fat"
+panic = "abort"

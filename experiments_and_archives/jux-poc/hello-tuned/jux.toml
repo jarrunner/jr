@@ -1,0 +1,12 @@
+[package]
+name = "hello.tuned"
+version = "0.1.0"
+
+[[bin]]
+name = "hello"
+main = "main"
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+panic = "abort"

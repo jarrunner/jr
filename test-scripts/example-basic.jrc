@@ -1,9 +1,0 @@
-# Example Basic Configuration
-# This shows a minimal .jrc configuration file
-# Usage: Copy jr.exe to myapp.exe, create myapp.jrc with this content
-
-# Java arguments - the JAR file to run
-java.args=-jar TestStartupTiming.jar
-
-# That's it! This is the minimal config needed.
-# AOT is enabled by default, no logging by default.
