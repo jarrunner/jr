@@ -24,7 +24,7 @@ denies the write - "Cannot open for writing (error 32)", a sharing violation, no
 throwaway copy of the x86_64 build always does the editing, whichever architecture is the target.
 
 Usage: powershell -File build-win.ps1 [-Arch x86_64,arm64] [-NoIcon] [-DistDir dist]
-  -Arch     comma-separated list of littlejlib.jr architectures to build (default: both).
+  -Arch     comma-separated list of jarrunner.jr architectures to build (default: both).
             Maps to clang target triples: x86_64 -> x86_64-w64-mingw32, arm64 -> aarch64-w64-mingw32.
   -NoIcon   skip icon stamping entirely (e.g. while icon/jr-icon.ico is mid-edit elsewhere).
   -DistDir  where the named, ready-to-ship exes land (default: dist, next to the existing
@@ -70,7 +70,7 @@ $extraClasspath = $teavmJars -join ';'
 
 Write-Host '[3/4] generating C (TeaVM, once - architecture-agnostic)'
 if (Test-Path target/c) { Remove-Item -Recurse -Force target/c }
-java -cp "$fullCp;target/classes" littlejlib.jr.build.BuildDriver target/classes target/c littlejlib.jr.Jr $extraClasspath
+java -cp "$fullCp;target/classes" jarrunner.jr.build.BuildDriver target/classes target/c jarrunner.jr.Jr $extraClasspath
 if ($LASTEXITCODE -ne 0) { throw 'BuildDriver failed' }
 powershell -File postprocess.ps1 -Dir target/c
 if ($LASTEXITCODE -ne 0) { throw 'postprocess.ps1 failed' }

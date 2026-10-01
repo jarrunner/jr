@@ -16,6 +16,7 @@ buildNumber.properties
 
 # Gradle build directories
 build/
+!**/src/main/**/build/
 .gradle/
 gradle/
 gradlew

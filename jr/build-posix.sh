@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds littlejlib.jr.PosixJr for one Linux/macOS target, entirely on this Windows machine:
+# Builds jarrunner.jr.PosixJr for one Linux/macOS target, entirely on this Windows machine:
 #   javac (src/main/java-posix) -> TeaVM C backend (BuildDriver, same driver as the Windows build)
 #   -> zig cc for the target, with jr-posix.h force-included so every @Import call is prototyped.
 # Real-gcc verification (not just zig's bundled clang) is a separate step - see PRP-21's status
@@ -22,6 +22,6 @@ CLASSLIB="$M2\\teavm-classlib\\$V\\teavm-classlib-$V.jar;$M2\\teavm-interop\\$V\
 B=build-posix-$T
 rm -rf "$B" && mkdir -p "$B/classes"
 javac -d "$B/classes" -cp "$CP" $(find src/main/java-posix -name '*.java') || exit 1
-java -cp "$CP;$B/classes" littlejlib.jr.build.BuildDriver "$B/classes" "$B/c" littlejlib.jr.PosixJr "$CLASSLIB" > "$B/teavm.log" 2>&1 || { tail -30 "$B/teavm.log"; exit 1; }
+java -cp "$CP;$B/classes" jarrunner.jr.build.BuildDriver "$B/classes" "$B/c" jarrunner.jr.PosixJr "$CLASSLIB" > "$B/teavm.log" 2>&1 || { tail -30 "$B/teavm.log"; exit 1; }
 "$ZIG" cc -target $ZT -O2 -w -D_GNU_SOURCE -include "$(cygpath -w "$PWD/bindings/posix/jr-posix.h")" -o "$B/jr-posix" "$B/c/all.c" > "$B/zig.log" 2>&1 || { grep -m20 error "$B/zig.log"; exit 1; }
 echo "$T: built $B/jr-posix ($(wc -c < "$B/jr-posix") bytes)"

@@ -1,11 +1,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>io.github.littlejlib</groupId>
-  <artifactId>littlejlib-jr</artifactId>
+  <groupId>io.github.jarrunner</groupId>
+  <artifactId>jr</artifactId>
   <version>1.0</version>
   <packaging>jar</packaging>
 
-  <description>littlejlib-jr - jr, a Java/TeaVM launcher that picks java.exe/javaw.exe (or posix_spawn's java on Linux/macOS), reads a sibling .jrc config, manages an AOT cache, and auto-installs a matching JDK on Windows. Supersedes jr_legacy_c, the original C implementation, as the primary implementation - see this repo's CLAUDE.md for the platform decision.</description>
+  <description>jr, a Java/TeaVM launcher that picks java.exe/javaw.exe (or posix_spawn's java on Linux/macOS), reads a sibling .jrc config, manages an AOT cache, and auto-installs a matching JDK on Windows. Supersedes jr_legacy_c, the original C implementation, as the primary implementation - see this repo's CLAUDE.md for the platform decision.</description>
   <properties>
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>

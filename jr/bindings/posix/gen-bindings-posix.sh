@@ -4,7 +4,7 @@
 # REAL libc headers (Zig's bundled cross-compile sysroots) so every width/offset/constant is that
 # platform's own, then a DIFFERENT compiler (llvm-mingw's clang) independently re-checks the
 # generated _Static_asserts.
-# Output: gen/<target>/littlejlib/jr/{PosixApi,PosixOffsets}.java - same package as the Windows
+# Output: gen/<target>/jarrunner/jr/{PosixApi,PosixOffsets}.java - same package as the Windows
 # WinApi/WinOffsets, so PosixJr.java and its POSIX-specific helper classes compile unchanged
 # against whichever target's generated files are on the classpath. Only linux_x64's output is
 # currently adopted into ../../src/main/java-posix - see PRP-21's status file.
@@ -15,7 +15,7 @@ run() { # $1 target dir name, $2 clang triple, rest: clang include/define args
   hdr=jr-posix.h; extra=""
   case $pkg in macos_*) hdr=jr-posix-macos.h; extra="--symbols posix-macos.symbols" ;; esac
   echo "== $triple"
-  cmd //c "..\\..\\..\\jextract_teavm\\jextract-teavm.cmd $hdr --symbols posix.symbols $extra --target $triple $* --package littlejlib.jr --api-class PosixApi --structs-class PosixOffsets -o gen/$pkg --diagnostics $pkg-clang.log --verify-c verify-posix-$pkg.c" 2>&1 | grep -v '^wrote gen'
+  cmd //c "..\\..\\..\\jextract_teavm\\jextract-teavm.cmd $hdr --symbols posix.symbols $extra --target $triple $* --package jarrunner.jr --api-class PosixApi --structs-class PosixOffsets -o gen/$pkg --diagnostics $pkg-clang.log --verify-c verify-posix-$pkg.c" 2>&1 | grep -v '^wrote gen'
   if clang --target="$triple" -fsyntax-only -w "$@" "verify-posix-$pkg.c" > "verify-posix-$pkg.log" 2>&1
   then echo "   independent check (clang $(clang -dumpversion) --target=$triple): all assertions hold"
   else echo "   independent check FAILED:"; grep -E "error" "verify-posix-$pkg.log" | head -10

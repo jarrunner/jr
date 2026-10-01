@@ -1,5 +1,5 @@
 @echo off
-rem Regenerates littlejlib.jr.WinApi and littlejlib.jr.WinOffsets from winapi.symbols against the real mingw
+rem Regenerates jarrunner.jr.WinApi and jarrunner.jr.WinOffsets from winapi.symbols against the real mingw
 rem headers (jr.h lists them), then has llvm-mingw's clang re-check every size, offset, width and value the
 rem generator wrote (verify-win.c). One command, run from anywhere: bindings\windows\gen-bindings.cmd
 rem Needs ..\..\..\jextract_teavm built once (see its README). JEXTRACT_TEAVM and LLVM_MINGW override where they are.
@@ -9,7 +9,7 @@ if "%LLVM_MINGW%"=="" set "LLVM_MINGW=C:\user\Apps\cmdtools\llvm-mingw-msvcrt-x8
 rem Run from this folder so the generated javadoc names jr.h, not an absolute path on this machine.
 pushd "%~dp0"
 call "%JEXTRACT_TEAVM%" jr.h --symbols winapi.symbols ^
-  -I "%LLVM_MINGW%\include" --package littlejlib.jr --api-class WinApi --structs-class WinOffsets ^
+  -I "%LLVM_MINGW%\include" --package jarrunner.jr --api-class WinApi --structs-class WinOffsets ^
   -o ..\..\src\main\java --verify-c verify-win.c
 if errorlevel 1 (echo gen-bindings: generation FAILED, see NOT BOUND lines above & popd & exit /b 1)
 "%LLVM_MINGW%\bin\x86_64-w64-mingw32-clang" -fsyntax-only -w verify-win.c
