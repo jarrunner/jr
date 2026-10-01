@@ -15,7 +15,7 @@ public final class CmdLineBuilder {
         var aotArg = aotArg(jarPath, enableAOT);
 
         var sb = new StringBuilder();
-        sb.append('"').append(javaPath).append('"').append(' ').append(timingProps());
+        sb.append('"').append(javaPath).append('"').append(' ').append(jrProps(config));
         if (!config.vmArgs.isBlank()) {
             sb.append(' ').append(config.vmArgs);
         }
@@ -42,7 +42,7 @@ public final class CmdLineBuilder {
         var aotArg = aotArg(jarPath, enableAOT);
 
         var sb = new StringBuilder();
-        sb.append('"').append(javaPath).append('"').append(' ').append(timingProps());
+        sb.append('"').append(javaPath).append('"').append(' ').append(jrProps(null));
         if (!aotArg.isEmpty()) {
             sb.append(' ').append(aotArg);
         }
@@ -75,8 +75,28 @@ public final class CmdLineBuilder {
         return "-XX:AOTCacheOutput=\"" + cachePath + "\"";
     }
 
-    private static String timingProps() {
-        return "-Djarrunner.start.micros=" + Timing.startMicros()
-                + " -Djarrunner.beforejvm.micros=" + Timing.elapsedMicros();
+    /** What jr tells the app about itself, as -Dio.github.jarrunner.jr.* properties (PRP-30): start
+     *  timings, its own exe path, and from a jrc-json the app id/version and update source, which an
+     *  app-side update notice reads. Config may be null (no config: traditional mode). */
+    private static String jrProps(Config c) {
+        var sb = new StringBuilder();
+        prop(sb, "startMicros", Long.toString(Timing.startMicros()));
+        prop(sb, "beforeJvmMicros", Long.toString(Timing.elapsedMicros()));
+        prop(sb, "exe", ExeInfo.fullPath());
+        if (c != null) {
+            prop(sb, "app.id", c.appId);
+            prop(sb, "app.version", c.appVersion);
+            prop(sb, "update.url", c.updateUrl);
+            prop(sb, "update.channel", c.updateChannel);
+        }
+        return sb.toString();
     }
+
+    private static void prop(StringBuilder sb, String key, String value) {
+        if (value == null || value.isEmpty()) return;
+        if (sb.length() > 0) sb.append(' ');
+        sb.append(WinQuote.quote(PROP_PREFIX + key + "=" + value));
+    }
+
+    private static final String PROP_PREFIX = "-Dio.github.jarrunner.jr.";
 }

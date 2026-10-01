@@ -483,7 +483,7 @@ Java Runner Log - 2025-11-21 17:05:06
 [INFO] Found Java in PATH: C:\Java\jdk-25\bin\java.exe
 [INFO] Using config-based mode
 [INFO] Creating new AOT cache: myapp.g2.4ZBZgN.aot
-[INFO] Final command: "C:\Java\jdk-25\bin\java.exe" -Djarrunner.start.micros=0 ...
+[INFO] Final command: "C:\Java\jdk-25\bin\java.exe" -Dio.github.jarrunner.jr.startMicros=0 ...
 [INFO] Java process started successfully (PID: 2680)
 [INFO] Java process exited with code: 0
 ========================================
@@ -608,7 +608,7 @@ The `.jrc` format follows industry standards:
 6. **Performance Timing**:
    - Records start time using high-resolution performance counter
    - Records time before JVM invocation
-   - Passes timing data via `-Djarrunner.start.micros` and `-Djarrunner.beforejvm.micros`
+   - Passes `-Dio.github.jarrunner.jr.*` properties: `startMicros`, `beforeJvmMicros`, `exe` (its own path), and from a jrc-json `app.id`, `app.version`, `update.url`, `update.channel` (the C launcher, `jr_legacy_c`, still passes the old `jarrunner.start.micros` / `jarrunner.beforejvm.micros`)
    - Java code can read these properties to measure launcher overhead
 
 7. **Execution**:

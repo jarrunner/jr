@@ -15,7 +15,7 @@ public final class PosixCmdLineBuilder {
             int javaMajor) {
         var jarPath = JarPath.fromArgsString(config.javaArgs);
         var out = new ArrayList<String>();
-        addTimingProps(out);
+        addJrProps(out, config);
         addWhitespaceSplit(out, config.vmArgs);
         addAotArg(out, jarPath, enableAOT, javaMajor);
         addWhitespaceSplit(out, config.javaArgs);
@@ -27,7 +27,7 @@ public final class PosixCmdLineBuilder {
     public static List<String> buildTraditionalMode(List<String> tokens, boolean enableAOT, int javaMajor) {
         var jarPath = JarPath.fromTokens(tokens);
         var out = new ArrayList<String>();
-        addTimingProps(out);
+        addJrProps(out, null);
         addAotArg(out, jarPath, enableAOT, javaMajor);
         out.add("-jar");
         out.addAll(tokens);
@@ -58,9 +58,12 @@ public final class PosixCmdLineBuilder {
         }
     }
 
-    private static void addTimingProps(List<String> out) {
-        out.add("-Djarrunner.start.micros=" + Timing.startMicros());
-        out.add("-Djarrunner.beforejvm.micros=" + Timing.elapsedMicros());
+    /** Same -Dio.github.jarrunner.jr.* properties as the Windows CmdLineBuilder (PRP-30). The POSIX
+     *  Config has no jrc-json fields yet, so only timings and the exe path. */
+    private static void addJrProps(List<String> out, Config config) {
+        out.add("-Dio.github.jarrunner.jr.startMicros=" + Timing.startMicros());
+        out.add("-Dio.github.jarrunner.jr.beforeJvmMicros=" + Timing.elapsedMicros());
+        out.add("-Dio.github.jarrunner.jr.exe=" + ExeInfo.fullPath());
     }
 
     /** Same hand-rolled tokenizer as JarPath - a raw .jrc string (vm.args/java.args/app.args) has
