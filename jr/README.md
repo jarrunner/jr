@@ -136,7 +136,9 @@ The update file (one per app, at a fixed https address you control):
 - `-Xjr:update` downloads the exe for this machine (`windows-x86_64` or `windows-aarch64`, falling back to x86_64 on ARM64), tries each https url in turn, and checks the sha256 before touching anything. It then renames the running exe to `<exe>.jr-replaced` (Windows allows renaming a running exe, not overwriting it) and moves the new one into place, putting the old one back if that fails. The next launch deletes the `.jr-replaced` file. It works even when the app's own jar is broken.
 - `format` lets a future jr refuse a file it does not understand instead of misreading it.
 
-Verified 2026-10-01 against a local update file and a real GitHub release asset: all channel and version cases of `-Xjr:update-check`, a full `-Xjr:update` falling through an unreachable first url, a sha256 mismatch leaving the exe byte-identical, and the leftover cleanup.
+**Worked example, live:** `examples/hello` in this repo, published at https://jarrunner.github.io/hello (repo `jarrunner/jarrunner.github.io`, GitHub Pages). Its exe, built by `jr-maven-plugin`, downloads its jar from there on first run and updates itself from `hello/update.json`; `publish.ps1` adds a build to the site. Verified 2026-10-01 from an empty folder: download the 1.0.0 exe, first run fetches and verifies the jar, `-Xjr:update-check` reports 1.1.0 (exit 10), `-Xjr:update` swaps the exe, the next launch runs 1.1.0 and removes the leftover. GitHub Pages caches files for up to 10 minutes, so a just-published release can take that long to be seen.
+
+Also verified 2026-10-01 against a local update file and a real GitHub release asset: all channel and version cases of `-Xjr:update-check`, a full `-Xjr:update` falling through an unreachable first url, a sha256 mismatch leaving the exe byte-identical, and the leftover cleanup.
 
 **`-Xjr:json-dump=<file>`** prints a JSON file as jr reads it, in one canonical form (compact, keys in source order, numbers as written, pure ASCII). The JVM side prints the same form, so both can be compared on the sample files in `src/test/resources/json`.
 
