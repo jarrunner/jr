@@ -22,6 +22,7 @@ public final class JrOptions {
     public boolean help;
     public boolean createConfig;
     public String createConfigJar = "";
+    public String jsonDump; // -Xjr:json-dump=<file>: parse with jr's own reader, print canonical JSON
     public String error; // non-null = a bad option, message for the user
     public List<String> appArgs = new ArrayList<>();
     public final ReStamp stamp = new ReStamp(); // -Xjr:make/edit/icon/version/sign... (PRP-20 phase 2)
@@ -49,7 +50,9 @@ public final class JrOptions {
                 continue;
             }
 
-            if (opt.equals("yes")) {
+            if (opt.startsWith("json-dump=")) {
+                opts.jsonDump = opt.substring("json-dump=".length());
+            } else if (opt.equals("yes")) {
                 opts.assumeYes = true;
             } else if (opt.equals("help")) {
                 opts.help = true;

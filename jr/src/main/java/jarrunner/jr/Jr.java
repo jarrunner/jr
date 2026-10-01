@@ -78,6 +78,13 @@ public final class Jr {
             return;
         }
 
+        if (opts.jsonDump != null) {
+            var code = JsonDump.run(opts.jsonDump);
+            Log.close();
+            WinApi.exit(code);
+            return;
+        }
+
         // Resource editing / signing (PRP-20 phase 2): a tool action, runs no Java at all
         if (opts.stamp.hasAction()) {
             var result = ReRun.run(opts.stamp);

@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "app": "io.github.example:mytool",
+  "channels": { "stable": "0.4.0", "beta": "0.5.0-beta.1" },
+  "releases": [
+    { "version": "0.5.0-beta.1", "released": "2026-10-05T04:45:12Z",
+      "exe": { "windows-x86_64": { "sha256": "aa11", "urls": ["https://example.org/a.exe", "https://mirror.example.org/a.exe"] },
+               "windows-aarch64": { "sha256": "bb22", "urls": ["https://example.org/b.exe"] } },
+      "notes": "beta \"quoted\" note" },
+    { "version": "0.3.9", "retracted": "crashes on first run", "futureField": {"x": [1, -2.5, 3e8, true, false, null], "y": {}},
+      "exe": { "windows-x86_64": { "sha256": "cc33", "urls": [] } } }
+  ]
+}
