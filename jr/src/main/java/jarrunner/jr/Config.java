@@ -36,11 +36,15 @@ public class Config {
     }
 
     public static Config load(String path) {
+        // PRP-30: the embedded config wins and a file beside the exe is then ignored completely, so
+        // nobody can change a signed exe's behaviour by planting a file next to it. A key=value .jrc
+        // on disk is still read for an exe with nothing embedded, until the launchers in use are
+        // re-rolled with the maven plugin; then .jrc support goes. A jrc-json is never read from disk.
         var config = new Config();
-        var text = FileIo.readAll(path);
+        var text = loadEmbedded();
+        config.embedded = text != null;
         if (text == null) {
-            text = loadEmbedded();
-            config.embedded = text != null;
+            text = FileIo.readAll(path);
         }
         if (text == null) {
             return config;
@@ -49,7 +53,9 @@ public class Config {
         Log.info("Loading config: " + (config.embedded ? "embedded RCDATA/JRC resource" : path));
         if (JrcJson.looksLikeJson(text)) {
             config.json = true;
-            config.loadError = JrcJson.load(text, config);
+            config.loadError = config.embedded ? JrcJson.load(text, config)
+                    : "A jrc-json is read only when it is baked into the exe; bake it in with\n"
+                    + "jr.exe -Xjr:edit=<this.exe> -Xjr:resource.RCDATA.JRC=<file>";
             return config;
         }
         for (var rawLine : Lines.split(text)) {
@@ -115,8 +121,8 @@ public class Config {
 
     /** PRP-24: an exe with no sibling .jrc file can carry its config embedded instead, as an
      *  RT_RCDATA resource named JRC, stamped with the generic raw-resource option:
-     *  {@code jr.exe -Xjr:edit=app.exe -Xjr:resource.RCDATA.JRC=app.jrc}. A .jrc file on disk
-     *  always wins; this is only consulted when there is none. Opens its own file as a data file,
+     *  {@code jr.exe -Xjr:edit=app.exe -Xjr:resource.RCDATA.JRC=app.jrc}. Since PRP-30 the embedded
+     *  config wins over any file on disk (see load). Opens its own file as a data file,
      *  the same way -Xjr:list-resources opens a target, and asks which language the resource was
      *  stamped under rather than assuming one. Relies on WinApi being initialized first - see the
      *  top of Jr.main. */

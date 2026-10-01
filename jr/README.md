@@ -67,7 +67,7 @@ The image path resolves the same way any relative java arg does (relative to jr'
 ## A single-file exe: embedded .jrc and remote run targets (PRP-24)
 Two features which together let one exe carry nothing but itself.
 
-**Embedded .jrc.** If no `<exe>.jrc` sits next to the exe, jr reads its config from its own `RCDATA` resource named `JRC`. Stamp it with the generic raw-resource option, no dedicated flag: `jr.exe -Xjr:edit=app.exe -Xjr:resource.RCDATA.JRC=app.jrc`. A `.jrc` file on disk still wins, so a deployed exe can be overridden without re-stamping. `-Xjr:help` and the log say which one was used ("Config: embedded in this exe").
+**Embedded .jrc.** jr reads its config from its own `RCDATA` resource named `JRC`. Stamp it with the generic raw-resource option, no dedicated flag: `jr.exe -Xjr:edit=app.exe -Xjr:resource.RCDATA.JRC=app.jrc`. Since PRP-30 the embedded config wins: a `.jrc` beside an exe that has one embedded is ignored, so nobody can change a signed exe's behaviour by planting a file next to it (`-Xjr:` flags typed on the command line still apply). A key=value `<exe>.jrc` on disk is read only for an exe with nothing embedded, until the launchers in use are rebuilt with the maven plugin; then `.jrc` support goes. `-Xjr:help` and the log say which one was used ("Config: embedded in this exe").
 
 **Remote run targets.** Instead of `java.args`, a `.jrc` can name the jar remotely:
 
@@ -89,7 +89,7 @@ Not done, by the PRP's own call: putting the shaded jar itself inside the exe.
 
 ## The config as JSON: jrc-json (PRP-30)
 
-A config whose first character is `{` (after an optional UTF-8 BOM) is read as JSON, embedded or as a `<exe>.jrc` file; anything else is the key=value `.jrc` above, which keeps working unchanged. The JSON maps onto the same settings:
+An embedded config whose first character is `{` (after an optional UTF-8 BOM) is read as JSON; anything else is the key=value `.jrc` above. A jrc-json is only ever read from inside the exe: one found as a file on disk is refused with a message saying how to bake it in. The JSON maps onto the same settings:
 
 ```json
 {
