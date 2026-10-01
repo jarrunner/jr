@@ -41,7 +41,7 @@ mvn -Djr.installDir=<dir> package    also copies the exe to <dir>
 - `jar` (`jr.jar`): the jar to launch, default `target/<finalName>.jar`.
 - `name` (`jr.name`): the exe's name, default the artifactId.
 - `source` (`jr.source`): where the exe finds its jar: `path` (default, the local build), `maven`, or `url`. With `maven` or `url` the exe downloads the jar and checks it against the baked SHA-256.
-- `jarPath`, `mavenCoords` (default the project's own coordinates), `jarUrl`: the location for each source.
+- `jarPath`, `mavenCoords` (default the project's own coordinates), `jarUrl`: the location for each source. `jarUrl` may contain `{sha8}`, replaced by the first 8 hex digits of the jar's SHA-256 (`app-win-{sha8}.jar` -> `app-win-a0c0b76e.jar`): every build of the jar then has its own file name, so a stale exe asks for a file that is not there instead of downloading another build and failing its check, and the release page shows which jar belongs to which exe. The release folder uses the resolved name.
 - `jarVerify` (`jr.jarVerify`): the check on every run for a downloaded jar: `crc32` (default, against the CRC32 baked into the exe), `sha256`, or `none`.
 - `appId` (default `groupId:artifactId`), `appVersion` (default the project version): the update feature matches on these.
 - `updateUrl`, `updateChannel`: where `-Xjr:update` and `-Xjr:update-check` read the update file (format in jr's README), and which channel.

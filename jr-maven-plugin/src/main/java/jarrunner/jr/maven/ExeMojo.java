@@ -46,7 +46,10 @@ public final class ExeMojo extends AbstractMojo {
     @Parameter(property = "jr.source", defaultValue = "path") String source;
     @Parameter String jarPath;
     @Parameter String mavenCoords;
+    /** May contain {sha8}, replaced by the first 8 hex digits of the jar's SHA-256, so each build of
+     *  the jar has its own file name and a stale exe asks for a file that is not there. */
     @Parameter String jarUrl;
+    String resolvedJarUrl;
     @Parameter String updateUrl;
     @Parameter String updateChannel;
     /** Per-run jar check for a downloaded jar: crc32 (default), sha256 or none. */
@@ -106,6 +109,7 @@ public final class ExeMojo extends AbstractMojo {
         if (updateUrl != null) c.update(new UpdateSection().url(updateUrl).channel(updateChannel));
         if (javaArgs == null) {
             var digests = digests(jar);
+            resolvedJarUrl = jarUrl == null ? null : jarUrl.replace("{sha8}", digests[0].substring(0, 8));
             var downloaded = !source.equals("path");
             c.jar(new JarSection().sha256(digests[0]).crc32(downloaded ? digests[1] : null)
                     .verify(downloaded ? jarVerify : null).sources(List.of(jarSource())));
@@ -120,7 +124,7 @@ public final class ExeMojo extends AbstractMojo {
                     : project.getGroupId() + ":" + project.getArtifactId() + ":" + project.getVersion());
             case "url" -> {
                 if (jarUrl == null) throw new MojoExecutionException("source=url needs jarUrl");
-                yield new JarSource().url(jarUrl);
+                yield new JarSource().url(resolvedJarUrl);
             }
             default -> throw new MojoExecutionException("source must be path, maven or url, not " + source);
         };
@@ -139,12 +143,12 @@ public final class ExeMojo extends AbstractMojo {
 
     private void writeRelease(Map<String, File> exes) throws Exception {
         var base = releaseBaseUrl;
-        if (base == null && jarUrl != null) base = jarUrl.substring(0, jarUrl.lastIndexOf('/') + 1);
+        if (base == null && resolvedJarUrl != null) base = resolvedJarUrl.substring(0, resolvedJarUrl.lastIndexOf('/') + 1);
         if (base == null || !base.startsWith("https://")) {
             throw new MojoExecutionException("release needs an https releaseBaseUrl (or a jarUrl to take its folder from)");
         }
         var withJar = javaArgs == null;
-        var jarName = jarUrl != null && source.equals("url") ? jarUrl.substring(jarUrl.lastIndexOf('/') + 1) : jar.getName();
+        var jarName = resolvedJarUrl != null && source.equals("url") ? resolvedJarUrl.substring(resolvedJarUrl.lastIndexOf('/') + 1) : jar.getName();
         new ReleaseWriter(getLog(), releaseDirectory, name, appId, appVersion, updateChannel, base)
                 .write(exes, withJar ? jar : null, jarName, releaseFiles == null ? List.of() : releaseFiles, updateMergeFrom);
     }

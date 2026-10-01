@@ -94,6 +94,23 @@ class ReleaseTest {
         assertTrue(exe.path("windows-aarch64").path("urls").get(0).asText().endsWith("/hello-windows-arm64.exe"));
     }
 
+    @Test void sha8InTheJarUrlNamesTheJarAfterItsOwnHash() throws Exception {
+        var m = urlMojo();
+        m.jarUrl = "https://github.com/example/hello/releases/download/v1.1.0/hello-win-{sha8}.jar";
+        m.execute();
+        var sha8 = ReleaseWriter.sha256(m.jar).substring(0, 8);
+        var name = "hello-win-" + sha8 + ".jar";
+        var rel = m.releaseDirectory.toPath();
+        assertTrue(Files.isRegularFile(rel.resolve(name)), List.of(rel.toFile().list()).toString());
+        assertTrue(Files.readString(rel.resolve("SHA256SUMS")).contains("  " + name + "\n"));
+        var cfg = Files.readString(m.outputDirectory.toPath().resolve("hello.jrc.json"));
+        assertTrue(cfg.contains("/v1.1.0/" + name + "\""), cfg);
+        assertFalse(cfg.contains("{sha8}"), cfg);
+        var u = ExeMojo.mapper().readTree(rel.resolve("hello.update.json").toFile());
+        assertTrue(u.path("releases").get(0).path("exe").path("windows-x86_64").path("urls").get(0).asText()
+                .equals("https://github.com/example/hello/releases/download/v1.1.0/hello.exe"));
+    }
+
     @Test void aPathBuildWritesNoRelease() throws Exception {
         var m = urlMojo();
         m.source = "path";
