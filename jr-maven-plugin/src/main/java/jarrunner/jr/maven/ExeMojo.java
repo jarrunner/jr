@@ -58,6 +58,16 @@ public final class ExeMojo extends AbstractMojo {
     @Parameter String productName;
     @Parameter String companyName;
     @Parameter String copyright;
+    /** Write the release folder (exes, jar, version.txt, releaseFiles, SHA256SUMS, update file).
+     *  Default: on for source=url. */
+    @Parameter(property = "jr.release") Boolean release;
+    @Parameter(defaultValue = "${project.build.directory}/jr/release") File releaseDirectory;
+    /** Where the release's files are downloaded from; default the folder of jarUrl. */
+    @Parameter(property = "jr.releaseBaseUrl") String releaseBaseUrl;
+    /** Extra files published with the release and listed in SHA256SUMS; each must exist. */
+    @Parameter List<File> releaseFiles;
+    /** An existing update file whose channels and other releases the new one keeps. */
+    @Parameter(property = "jr.updateMergeFrom") File updateMergeFrom;
 
     @Override
     public void execute() throws MojoExecutionException {
@@ -74,7 +84,8 @@ public final class ExeMojo extends AbstractMojo {
             var json = new File(outputDirectory, name + ".jrc.json");
             Files.writeString(json.toPath(), mapper().writeValueAsString(config()));
             getLog().info("jrc-json: " + json);
-            new ExeStamper(getLog(), outputDirectory, name, json, icon, appVersion, versionStrings()).run(archs(), installDir);
+            var exes = new ExeStamper(getLog(), outputDirectory, name, json, icon, appVersion, versionStrings()).run(archs(), installDir);
+            if (release != null ? release : source.equals("url")) writeRelease(exes);
         } catch (MojoExecutionException e) {
             throw e;
         } catch (Exception e) {
@@ -124,6 +135,18 @@ public final class ExeMojo extends AbstractMojo {
         if (companyName != null) m.put("CompanyName", companyName);
         if (copyright != null) m.put("LegalCopyright", copyright);
         return m;
+    }
+
+    private void writeRelease(Map<String, File> exes) throws Exception {
+        var base = releaseBaseUrl;
+        if (base == null && jarUrl != null) base = jarUrl.substring(0, jarUrl.lastIndexOf('/') + 1);
+        if (base == null || !base.startsWith("https://")) {
+            throw new MojoExecutionException("release needs an https releaseBaseUrl (or a jarUrl to take its folder from)");
+        }
+        var withJar = javaArgs == null;
+        var jarName = jarUrl != null && source.equals("url") ? jarUrl.substring(jarUrl.lastIndexOf('/') + 1) : jar.getName();
+        new ReleaseWriter(getLog(), releaseDirectory, name, appId, appVersion, updateChannel, base)
+                .write(exes, withJar ? jar : null, jarName, releaseFiles == null ? List.of() : releaseFiles, updateMergeFrom);
     }
 
     private List<String> archs() {

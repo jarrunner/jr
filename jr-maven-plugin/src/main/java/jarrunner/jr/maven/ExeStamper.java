@@ -4,6 +4,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -32,8 +33,10 @@ final class ExeStamper {
         this.version = version;
     }
 
-    void run(List<String> archs, String installDir) throws Exception {
+    /** Builds one exe per architecture; returns them by architecture, in the order given. */
+    Map<String, File> run(List<String> archs, String installDir) throws Exception {
         var editor = extract("x86_64", new File(dir, "jr-editor.exe"));
+        var built = new LinkedHashMap<String, File>();
         File host = null;
         try {
             for (var arch : archs) {
@@ -41,12 +44,14 @@ final class ExeStamper {
                 extract(arch, out);
                 stamp(editor, out);
                 log.info("exe: " + out);
+                built.put(arch, out);
                 if (arch.equals("x86_64") || host == null) host = out;
             }
         } finally {
             Files.deleteIfExists(editor.toPath());
         }
         if (installDir != null && !installDir.isBlank()) install(host, new File(installDir, name + ".exe"));
+        return built;
     }
 
     private File extract(String arch, File out) throws Exception {
