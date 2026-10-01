@@ -7,7 +7,31 @@
   <version>1.0-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
 
+  <name>jr-maven-plugin</name>
   <description>Builds jr launcher exes for a Java app in the package phase: hashes the shaded jar, writes the jrc-json, stamps it with the icon and version into the jr exes bundled in this plugin, and optionally copies the result to an install directory.</description>
+  <url>https://github.com/jarrunner/jr</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>jarrunner</id>
+      <name>Ivan Velikanov</name>
+      <email>ivan.velikanov.dev@gmail.com</email>
+      <url>https://github.com/jarrunner</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:git://github.com/jarrunner/jr.git</connection>
+    <developerConnection>scm:git:ssh://github.com:jarrunner/jr.git</developerConnection>
+    <url>https://github.com/jarrunner/jr</url>
+  </scm>
 
   <properties>
     <maven.compiler.release>21</maven.compiler.release>
@@ -104,4 +128,82 @@
       </plugin>
     </plugins>
   </build>
+
+  <!-- Release to Maven Central: Maven 3 only, never the default Maven 4 (under Maven 4 the
+       central-publishing binding silently uploads nothing, and BUILD SUCCESS still prints):
+         C:\user\Apps\cmdtools\maven\apache-maven\bin\mvn.cmd clean deploy -Dorg.name=jarrunner
+       Build the bundled exes first (../jr: build-win.ps1 -NoIcon -DistDir dist-noicon); the tests
+       fail when they are missing. Confirm a release by fetching it from repo1.maven.org. -->
+  <profiles>
+    <profile>
+      <id>release</id>
+      <activation>
+        <property><name>org.name</name></property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.3.1</version>
+            <configuration>
+              <excludeResources>true</excludeResources>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals><goal>jar-no-fork</goal></goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.6.3</version>
+            <configuration>
+              <doclint>none</doclint>
+              <additionalOptions>--no-fonts</additionalOptions>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals><goal>jar</goal></goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals><goal>sign</goal></goals>
+              </execution>
+            </executions>
+            <configuration>
+              <keyname>${org.gpg.keyname}</keyname>
+              <passphrase>${org.gpg.passphrase}</passphrase>
+              <gpgArguments>
+                <arg>--pinentry-mode</arg>
+                <arg>loopback</arg>
+              </gpgArguments>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.9.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>${org.publishing.server.id}</publishingServerId>
+              <autoPublish>true</autoPublish>
+              <waitUntil>published</waitUntil>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
