@@ -72,7 +72,10 @@ public final class CmdLineBuilder {
             return "-XX:AOTCache=\"" + cachePath + "\"";
         }
         Log.info("Creating new AOT cache: " + cachePath);
-        return "-XX:AOTCacheOutput=\"" + cachePath + "\"";
+        // JDK 25 reports the one-step cache creation with five unconditional lines (no -Xlog
+        // setting silences them) on stdout, where they would land in a CLI's output. Moved to
+        // stderr, on this one run only (PRP-30).
+        return "-XX:AOTCacheOutput=\"" + cachePath + "\" -XX:+DisplayVMOutputToStderr";
     }
 
     /** What jr tells the app about itself, as -Dio.github.jarrunner.jr.* properties (PRP-30): start

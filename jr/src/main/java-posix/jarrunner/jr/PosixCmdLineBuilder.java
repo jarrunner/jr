@@ -55,6 +55,7 @@ public final class PosixCmdLineBuilder {
         } else {
             Log.info("Creating new AOT cache: " + cachePath);
             out.add("-XX:AOTCacheOutput=" + cachePath);
+            out.add("-XX:+DisplayVMOutputToStderr");   // see CmdLineBuilder.aotArg
         }
     }
 
