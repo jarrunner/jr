@@ -32,6 +32,7 @@ public class Config {
     String appVersion = "";
     String updateUrl = "";
     String updateChannel = "";
+    JsonValue jsonRoot;     // the parsed jrc-json, passed to the app whole as -D properties (CmdLineBuilder)
 
     boolean hasRunTarget() {
         return !runUrl.isEmpty() || !runMaven.isEmpty();

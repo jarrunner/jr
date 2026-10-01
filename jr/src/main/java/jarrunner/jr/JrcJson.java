@@ -21,6 +21,7 @@ public final class JrcJson {
         if (root.isError()) return root.error();
         if (root.kind() != JsonValue.OBJECT) return "the config must be a JSON object";
         apply(root, c);
+        c.jsonRoot = root;
         return null;
     }
 

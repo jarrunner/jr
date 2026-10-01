@@ -79,20 +79,32 @@ public final class CmdLineBuilder {
     }
 
     /** What jr tells the app about itself, as -Dio.github.jarrunner.jr.* properties (PRP-30): start
-     *  timings, its own exe path, and from a jrc-json the app id/version and update source, which an
-     *  app-side update notice reads. Config may be null (no config: traditional mode). */
+     *  timings, its own exe path, and the whole jrc-json, one property per leaf named by its path
+     *  (app.id, update.url, jvm.vmArgs.0, ...). That convention is the API an app-side update notice
+     *  reads. Config may be null (no config: traditional mode). */
     private static String jrProps(Config c) {
         var sb = new StringBuilder();
         prop(sb, "startMicros", Long.toString(Timing.startMicros()));
         prop(sb, "beforeJvmMicros", Long.toString(Timing.elapsedMicros()));
         prop(sb, "exe", ExeInfo.fullPath());
-        if (c != null) {
-            prop(sb, "app.id", c.appId);
-            prop(sb, "app.version", c.appVersion);
-            prop(sb, "update.url", c.updateUrl);
-            prop(sb, "update.channel", c.updateChannel);
+        if (c != null && c.jsonRoot != null) {
+            flatten(sb, "", c.jsonRoot);
         }
         return sb.toString();
+    }
+
+    private static void flatten(StringBuilder sb, String path, JsonValue v) {
+        var k = v.kind();
+        if (k == JsonValue.OBJECT || k == JsonValue.ARRAY) {
+            for (var i = 0; i < v.size(); i++) {
+                var name = k == JsonValue.OBJECT ? v.keyAt(i) : Integer.toString(i);
+                flatten(sb, path.isEmpty() ? name : path + "." + name, v.at(i));
+            }
+        } else if (k == JsonValue.STRING || k == JsonValue.NUMBER) {
+            prop(sb, path, k == JsonValue.STRING ? v.str() : v.num());
+        } else if (k == JsonValue.TRUE || k == JsonValue.FALSE) {
+            prop(sb, path, k == JsonValue.TRUE ? "true" : "false");
+        }
     }
 
     private static void prop(StringBuilder sb, String key, String value) {

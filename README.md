@@ -608,7 +608,7 @@ The `.jrc` format follows industry standards:
 6. **Performance Timing**:
    - Records start time using high-resolution performance counter
    - Records time before JVM invocation
-   - Passes `-Dio.github.jarrunner.jr.*` properties: `startMicros`, `beforeJvmMicros`, `exe` (its own path), and from a jrc-json `app.id`, `app.version`, `update.url`, `update.channel` (the C launcher, `jr_legacy_c`, still passes the old `jarrunner.start.micros` / `jarrunner.beforejvm.micros`)
+   - Passes `-Dio.github.jarrunner.jr.*` properties: `startMicros`, `beforeJvmMicros`, `exe` (its own path), and the whole jrc-json, one property per leaf named by its path (`app.id`, `app.version`, `update.url`, `jvm.vmArgs.0`, ...), so an app can read its own config and show its own update notice (the C launcher, `jr_legacy_c`, still passes the old `jarrunner.start.micros` / `jarrunner.beforejvm.micros`)
    - Java code can read these properties to measure launcher overhead
 
 7. **Execution**:
