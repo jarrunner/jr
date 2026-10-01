@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.github.jarrunner</groupId>
+  <artifactId>jr-maven-plugin</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>maven-plugin</packaging>
+
+  <description>Builds jr launcher exes for a Java app in the package phase: hashes the shaded jar, writes the jrc-json, stamps it with the icon and version into the jr exes bundled in this plugin, and optionally copies the result to an install directory.</description>
+
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.version>3.9.16</maven.version>
+    <plugin-tools.version>3.16.0</plugin-tools.version>
+    <datahelper.version>2.0</datahelper.version>
+    <jackson.version>2.22.2</jackson.version>
+    <!-- The jr exes this plugin bundles: the shipping builds from ../jr/build-win.ps1 -->
+    <jr.dist>${project.basedir}/../jr/dist</jr.dist>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-plugin-api</artifactId>
+      <version>${maven.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-core</artifactId>
+      <version>${maven.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.plugin-tools</groupId>
+      <artifactId>maven-plugin-annotations</artifactId>
+      <version>${plugin-tools.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.github.datapotter</groupId>
+      <artifactId>datapotter-datahelper-base</artifactId>
+      <version>${datahelper.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.datapotter</groupId>
+      <artifactId>datapotter-datahelper-annotations</artifactId>
+      <version>${datahelper.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>${jr.dist}</directory>
+        <targetPath>jarrunner/jr/maven</targetPath>
+        <includes>
+          <include>jr-windows-x86_64.exe</include>
+          <include>jr-windows-arm64.exe</include>
+        </includes>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>io.github.datapotter</groupId>
+              <artifactId>datapotter-datahelper-processor</artifactId>
+              <version>${datahelper.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-plugin-plugin</artifactId>
+        <version>${plugin-tools.version}</version>
+        <configuration>
+          <goalPrefix>jr</goalPrefix>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
