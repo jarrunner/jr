@@ -24,6 +24,12 @@ public class Config {
     String runUrl = "";    // run.url / run.maven / run.sha256 - a remote jar, see RemoteJar
     String runMaven = "";
     String runSha256 = "";
+    String loadError;       // non-null: the config could not be read (a bad jrc-json); shown, and nothing runs
+    boolean json = false;   // jrc-json form (PRP-30); these four exist only there, for the update feature
+    String appId = "";
+    String appVersion = "";
+    String updateUrl = "";
+    String updateChannel = "";
 
     boolean hasRunTarget() {
         return !runUrl.isEmpty() || !runMaven.isEmpty();
@@ -41,6 +47,11 @@ public class Config {
         }
         config.found = true;
         Log.info("Loading config: " + (config.embedded ? "embedded RCDATA/JRC resource" : path));
+        if (JrcJson.looksLikeJson(text)) {
+            config.json = true;
+            config.loadError = JrcJson.load(text, config);
+            return config;
+        }
         for (var rawLine : Lines.split(text)) {
             var line = rawLine.strip();
             if (line.isEmpty() || line.startsWith("#")) {

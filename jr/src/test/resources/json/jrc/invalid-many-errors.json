@@ -1,0 +1,3 @@
+{ "java": { "version": "latest", "type": "openjdk" }, "jvm": { "mode": "fast", "vmArgs": "-Xmx1g" },
+  "jar": { "sha256": "abc", "sources": [ { "url": "http://example.org/a.jar" }, { "maven": "g:a", "path": "x" } ] },
+  "aot": "yes", "update": { "url": "ftp://x" } }

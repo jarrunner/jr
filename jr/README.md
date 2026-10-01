@@ -87,6 +87,32 @@ Verified 2026-09-29: an exe with only an embedded `.jrc` (`run.url` pointing at 
 
 Not done, by the PRP's own call: putting the shaded jar itself inside the exe.
 
+## The config as JSON: jrc-json (PRP-30)
+
+A config whose first character is `{` (after an optional UTF-8 BOM) is read as JSON, embedded or as a `<exe>.jrc` file; anything else is the key=value `.jrc` above, which keeps working unchanged. The JSON maps onto the same settings:
+
+```json
+{
+  "app":    { "id": "io.github.example:demo", "version": "1.0", "args": ["hello world", "second"] },
+  "java":   { "version": "21+", "type": "jre", "home": "C:\\jdk-25", "autoinstall": true },
+  "jar":    { "sha256": "<64 hex>", "sources": [ { "maven": "g:a:v" } ] },
+  "jvm":    { "mode": "dll", "vmArgs": ["-Xmx256m", "-Dgreeting=two words"], "javaArgs": "-cp lib/* com.example.Main" },
+  "aot":    true,
+  "log":    { "file": "app.log", "level": "info", "overwrite": false },
+  "update": { "url": "https://example.org/demo/update.json", "channel": "stable" }
+}
+```
+
+- `jar.sources` entries carry exactly one of `maven` (`g:a:v`), `url` (https only) or `path`. A `path` may use `%VAR%` and is taken relative to the exe's folder when not absolute; `maven` and `url` need `jar.sha256`. This jr uses the first entry; trying them in order is planned.
+- `jvm.javaArgs` is the escape hatch for launches that are not `-jar` (a classpath and a main class). Give it or `jar.sources`.
+- `app.args` and `jvm.vmArgs` are lists, so an argument containing a space stays one argument.
+- `app.id`, `app.version` and `update` are read and kept for the update feature; nothing acts on them yet.
+- Booleans are JSON booleans, `java.version` is a number (`25`) or text (`"21+"`). Unknown keys are ignored, so a config written for a newer jr still runs.
+
+**Checked before it is baked.** `-Xjr:resource.RCDATA.JRC=app.json` validates a jrc-json first: valid JSON, the right type for every key jr acts on, allowed values for `jvm.mode` and `java.type`, https addresses, a 64-hex `jar.sha256` for downloads, and something to run. Any error refuses the bake and lists every problem; unknown keys are reported as warnings. `-Xjr:check-config=app.json` runs the same check without baking. A jrc-json that fails to parse at startup stops jr with the file, line and column, instead of running with half its settings.
+
+**`-Xjr:json-dump=<file>`** prints a JSON file as jr reads it, in one canonical form (compact, keys in source order, numbers as written, pure ASCII). The JVM side prints the same form, so both can be compared on the sample files in `src/test/resources/json`.
+
 ## Tracing startup problems: JR_DEBUG (PRP-24)
 `Dbg.log(...)` appends to `%TEMP%\jr-debug.log` when `JR_DEBUG=1` is set, and does nothing otherwise, so calls can stay in shipped code. It exists because `Log` (`log.file` in the .jrc) cannot see anything that happens before, or goes wrong while, the config loads. It also avoids a trap hit while building this: `System.err` output from these exes arrives on stdout, and grepping multi-line debug output hid the lines that mattered.
 

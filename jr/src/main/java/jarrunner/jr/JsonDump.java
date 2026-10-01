@@ -20,4 +20,21 @@ public final class JsonDump {
         System.out.println(JsonWriter.write(v));
         return 0;
     }
+
+    /** -Xjr:check-config=&lt;file&gt;: the same check a bake runs, without baking. Exit 0 clean or
+     *  warnings only, 1 errors. */
+    public static int check(String path) {
+        var raw = FileIo.readAll(path);
+        if (raw == null) {
+            System.err.println("cannot read " + path);
+            return 1;
+        }
+        if (!JrcJson.looksLikeJson(raw)) {
+            System.err.println(path + ": not a jrc-json (a key=value .jrc is not checked)");
+            return 1;
+        }
+        var report = JrcCheck.check(raw);
+        System.out.print(report.isEmpty() ? path + ": ok\n" : report);
+        return JrcCheck.hasErrors(report) ? 1 : 0;
+    }
 }

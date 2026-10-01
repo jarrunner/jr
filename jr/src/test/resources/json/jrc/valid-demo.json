@@ -1,0 +1,9 @@
+{
+  "app": { "id": "io.github.example:demo", "version": "1.0", "args": ["hello world", "second"] },
+  "java": { "version": "21+", "autoinstall": false },
+  "jar": { "sources": [ { "path": "app.jar" } ] },
+  "jvm": { "mode": "exe", "vmArgs": ["-Dgreeting=two words", "-Xmx256m"] },
+  "aot": false,
+  "update": { "url": "https://example.org/demo/update.json", "channel": "stable" },
+  "futureThing": 1
+}

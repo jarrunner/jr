@@ -78,8 +78,8 @@ public final class Jr {
             return;
         }
 
-        if (opts.jsonDump != null) {
-            var code = JsonDump.run(opts.jsonDump);
+        if (opts.jsonDump != null || opts.checkConfig != null) {
+            var code = opts.jsonDump != null ? JsonDump.run(opts.jsonDump) : JsonDump.check(opts.checkConfig);
             Log.close();
             WinApi.exit(code);
             return;
@@ -109,6 +109,15 @@ public final class Jr {
             Ui.error(hasConsole, "Invalid jr Option",
                     "Resource and signing options (-Xjr:icon, -Xjr:version..., -Xjr:sign...) need a target:\n"
                             + "-Xjr:make=<new.exe> (a copy of this exe) or -Xjr:edit=<existing.exe>.");
+            Log.close();
+            WinApi.exit(1);
+            return;
+        }
+
+        if (config.loadError != null) {
+            var msg = "The config could not be read (" + configLabel(configPath, config) + "):\n" + config.loadError;
+            Log.error(msg);
+            Ui.error(hasConsole, "Invalid jr Config", msg);
             Log.close();
             WinApi.exit(1);
             return;
