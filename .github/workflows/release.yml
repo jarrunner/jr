@@ -87,7 +87,7 @@ jobs:
           $help = & .\dist\jr-windows-x86_64.exe -Xjr:help 2>&1 | Out-String
           if ($help -notmatch 'Java Runner') { throw "jr -Xjr:help did not answer:`n$help" }
           $res = & .\dist\jr-windows-x86_64.exe -Xjr:list-resources=dist-noicon\jr-windows-x86_64.exe 2>&1 | Out-String
-          if ($res -match 'ICON') { throw "the -NoIcon build carries an icon:`n$res" }
+          if ($res -cmatch '(?m)^\s+ICON\s') { throw "the -NoIcon build carries an icon:`n$res" }
           New-Item -ItemType Directory -Force ..\unsigned | Out-Null
           Copy-Item dist\jr-windows-x86_64.exe ..\unsigned\jr.exe
           Copy-Item dist\jr-windows-arm64.exe ..\unsigned\jr-windows-arm64.exe
