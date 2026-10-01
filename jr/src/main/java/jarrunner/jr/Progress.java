@@ -52,7 +52,7 @@ public final class Progress {
                 WinApi.updateWindow(hwndWindow);
             }
         } else if (hasConsole) {
-            System.out.println(label);
+            Stderr.println(label);
         }
     }
 
@@ -92,7 +92,7 @@ public final class Progress {
             sb.append("] ").append(percent).append("% (")
                     .append(downloaded / unit).append(" / ")
                     .append(total / unit).append(mb ? " MB)  " : " KB)  ");
-            System.out.print(sb);
+            Stderr.print(sb.toString());
         }
     }
 
@@ -129,7 +129,7 @@ public final class Progress {
                 WinApi.destroyIcon(iconSmall);
             }
         } else if (hasConsole) {
-            System.out.println();
+            Stderr.println();
         }
     }
 

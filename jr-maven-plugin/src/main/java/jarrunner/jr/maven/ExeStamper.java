@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 
@@ -18,8 +19,11 @@ final class ExeStamper {
     private final File json;
     private final File icon;
     private final String version;
+    private final Map<String, String> strings;
 
-    ExeStamper(Log log, File dir, String name, File json, File icon, String version) {
+    ExeStamper(Log log, File dir, String name, File json, File icon, String version,
+            Map<String, String> strings) {
+        this.strings = strings;
         this.log = log;
         this.dir = dir;
         this.name = name;
@@ -56,7 +60,8 @@ final class ExeStamper {
     private void stamp(File editor, File out) throws Exception {
         var cmd = new ArrayList<>(List.of(editor.getPath(), "-Xjr:edit=" + out.getPath(),
                 "-Xjr:resource.RCDATA.JRC=" + json.getPath(), "-Xjr:version=" + numericVersion(version),
-                "-Xjr:version.ProductVersion=" + version, "-Xjr:version.FileDescription=" + name));
+                "-Xjr:version.ProductVersion=" + version));
+        strings.forEach((k, v) -> cmd.add("-Xjr:version." + k + "=" + v));
         if (icon != null) cmd.add("-Xjr:icon=" + icon.getPath());
         // A freshly written exe is sometimes still held by an on-write virus scan; jr reports error 32.
         for (var attempt = 1; ; attempt++) {

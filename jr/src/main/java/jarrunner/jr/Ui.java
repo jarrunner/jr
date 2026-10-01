@@ -17,11 +17,13 @@ public final class Ui {
 
     private static void show(boolean hasConsole, String title, String message, int type) {
         if (hasConsole) {
-            var prefix = type == WinApi.MB_ICONERROR ? "[ERROR] " : "[INFO] ";
-            System.out.println();
-            System.out.println(prefix + title);
-            System.out.println(message);
-            System.out.println();
+            // An error goes to the real stderr (see Stderr), information to stdout.
+            var text = "\n" + (type == WinApi.MB_ICONERROR ? "[ERROR] " : "[INFO] ") + title + "\n" + message + "\n\n";
+            if (type == WinApi.MB_ICONERROR) {
+                Stderr.print(text);
+            } else {
+                System.out.print(text);
+            }
         } else {
             WinApi.messageBoxA(NULL, cstr(message), cstr(title), type);
         }

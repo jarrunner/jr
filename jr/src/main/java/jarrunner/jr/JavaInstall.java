@@ -233,9 +233,9 @@ public final class JavaInstall {
 
     private static boolean confirm(boolean hasConsole, String message) {
         if (hasConsole) {
-            System.out.println();
-            System.out.println(message);
-            System.out.print("[Y/n] ");
+            Stderr.println();
+            Stderr.println(message);
+            Stderr.print("[Y/n] ");
             var line = readConsoleLine();
             return line == null || line.isEmpty() || line.charAt(0) == 'y' || line.charAt(0) == 'Y';
         }

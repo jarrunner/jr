@@ -7,7 +7,9 @@ import java.io.File;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.CRC32;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -51,6 +53,11 @@ public final class ExeMojo extends AbstractMojo {
     @Parameter(property = "jr.jarVerify") String jarVerify;
     /** x86_64 and/or arm64. One architecture gives name.exe; several give name-windows-ARCH.exe. */
     @Parameter List<String> architectures;
+    /** Version resource strings. fileDescription is what Task Manager shows (default: name). */
+    @Parameter String fileDescription;
+    @Parameter String productName;
+    @Parameter String companyName;
+    @Parameter String copyright;
 
     @Override
     public void execute() throws MojoExecutionException {
@@ -67,7 +74,7 @@ public final class ExeMojo extends AbstractMojo {
             var json = new File(outputDirectory, name + ".jrc.json");
             Files.writeString(json.toPath(), mapper().writeValueAsString(config()));
             getLog().info("jrc-json: " + json);
-            new ExeStamper(getLog(), outputDirectory, name, json, icon, appVersion).run(archs(), installDir);
+            new ExeStamper(getLog(), outputDirectory, name, json, icon, appVersion, versionStrings()).run(archs(), installDir);
         } catch (MojoExecutionException e) {
             throw e;
         } catch (Exception e) {
@@ -106,6 +113,15 @@ public final class ExeMojo extends AbstractMojo {
             }
             default -> throw new MojoExecutionException("source must be path, maven or url, not " + source);
         };
+    }
+
+    private Map<String, String> versionStrings() {
+        var m = new LinkedHashMap<String, String>();
+        m.put("FileDescription", fileDescription != null ? fileDescription : name);
+        if (productName != null) m.put("ProductName", productName);
+        if (companyName != null) m.put("CompanyName", companyName);
+        if (copyright != null) m.put("LegalCopyright", copyright);
+        return m;
     }
 
     private List<String> archs() {

@@ -9,12 +9,12 @@ public final class JsonDump {
     public static int run(String path) {
         var raw = FileIo.readAll(path);
         if (raw == null) {
-            System.err.println("cannot read " + path);
+            Stderr.println("cannot read " + path);
             return 1;
         }
         var v = JsonReader.parse(Utf8.decode(raw));
         if (v.isError()) {
-            System.err.println(path + ": " + v.error());
+            Stderr.println(path + ": " + v.error());
             return 1;
         }
         System.out.println(JsonWriter.write(v));
@@ -26,11 +26,11 @@ public final class JsonDump {
     public static int check(String path) {
         var raw = FileIo.readAll(path);
         if (raw == null) {
-            System.err.println("cannot read " + path);
+            Stderr.println("cannot read " + path);
             return 1;
         }
         if (!JrcJson.looksLikeJson(raw)) {
-            System.err.println(path + ": not a jrc-json (a key=value .jrc is not checked)");
+            Stderr.println(path + ": not a jrc-json (a key=value .jrc is not checked)");
             return 1;
         }
         var report = JrcCheck.check(raw);

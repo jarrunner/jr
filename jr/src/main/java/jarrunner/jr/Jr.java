@@ -98,7 +98,7 @@ public final class Jr {
                 if (result.ok()) {
                     System.out.print(withNewline);
                 } else {
-                    System.err.print(withNewline);
+                    Stderr.print(withNewline);
                 }
             } else if (result.ok()) {
                 Ui.info(false, "jr", report);
