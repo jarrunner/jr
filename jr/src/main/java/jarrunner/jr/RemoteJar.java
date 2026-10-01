@@ -53,6 +53,10 @@ public final class RemoteJar {
         }
         if (FileIo.exists(target)) {
             if (isVerified(target, sha)) {
+                var changed = JarCheck.changedSinceVerified(config, target, sha);
+                if (changed != null) {
+                    return fail(hasConsole, changed);
+                }
                 Log.info("run target present and verified: " + target);
                 return target;
             }
@@ -133,11 +137,29 @@ public final class RemoteJar {
         while (end > 0 && text.charAt(end - 1) <= ' ') {
             end--;
         }
-        return text.substring(0, end).equals(sha + " " + FileInfo.size(jar));
+        // "<sha256> <size>", plus " <crc32>" since PRP-30 (an older sidecar without it still counts)
+        return (text.substring(0, end) + " ").startsWith(sha + " " + FileInfo.size(jar) + " ");
     }
 
+    /** Written right after the SHA-256 matched; the CRC32 is what per-run verification compares
+     *  against when the exe's config carries none of its own (an exe built before PRP-30). */
     private static void markVerified(String jar, String sha) {
-        FileIo.writeAll(jar + ".jr-sha256", sha + " " + FileInfo.size(jar) + "\n");
+        var crc = Crc32.ofFile(jar);
+        FileIo.writeAll(jar + ".jr-sha256", sha + " " + FileInfo.size(jar) + (crc == null ? "" : " " + crc) + "\n");
+    }
+
+    /** The CRC32 recorded in the sidecar by markVerified, or null. */
+    static String sidecarCrc(String jar) {
+        var text = FileIo.readAll(jar + ".jr-sha256");
+        if (text == null) return null;
+        var line = text.strip();
+        var first = line.indexOf(' ');
+        var last = line.lastIndexOf(' ');
+        return first >= 0 && last > first ? line.substring(last + 1) : null;
+    }
+
+    static void reverify(String jar, String sha) {
+        markVerified(jar, sha);
     }
 
     /** group:artifact:version[:classifier] -> its repository-relative jar path (group/dirs/artifact/version/file.jar), or null if malformed. */

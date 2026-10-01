@@ -104,6 +104,7 @@ An embedded config whose first character is `{` (after an optional UTF-8 BOM) is
 ```
 
 - `jar.sources` entries carry exactly one of `maven` (`g:a:v`), `url` (https only) or `path`. A `path` may use `%VAR%` and is taken relative to the exe's folder when not absolute; `maven` and `url` need `jar.sha256`. This jr uses the first entry; trying them in order is planned.
+- A downloaded jar is checked by SHA-256 once, when it arrives. On every later run, `jar.verify` decides: `"crc32"` (default) reads the whole jar for its CRC32 and compares it with `jar.crc32`, which the maven plugin bakes into the exe, so the expected value cannot be changed without changing the exe (about 40 ms for 80 MB once the file is cached); `"sha256"` re-hashes it (about 120 ms for 80 MB, the choice when tampering matters, together with a signed exe); `"none"` reads nothing and trusts the download check plus the size. CRC32 catches any accidental or ordinary change, including a same-size one; a deliberately forged jar can be made to match a CRC32, never a SHA-256. An exe without `jar.crc32` uses the CRC32 jr records in `<jar>.jr-sha256` after the download check. The AOT cache is not checked: anything able to rewrite it could rewrite any record of it too.
 - `jvm.javaArgs` is the escape hatch for launches that are not `-jar` (a classpath and a main class). Give it or `jar.sources`.
 - `app.args` and `jvm.vmArgs` are lists, so an argument containing a space stays one argument.
 - `app.id`, `app.version` and `update` are read and kept for the update feature; nothing acts on them yet.

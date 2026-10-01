@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.zip.CRC32;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -46,6 +47,8 @@ public final class ExeMojo extends AbstractMojo {
     @Parameter String jarUrl;
     @Parameter String updateUrl;
     @Parameter String updateChannel;
+    /** Per-run jar check for a downloaded jar: crc32 (default), sha256 or none. */
+    @Parameter(property = "jr.jarVerify") String jarVerify;
     /** x86_64 and/or arm64. One architecture gives name.exe; several give name-windows-ARCH.exe. */
     @Parameter List<String> architectures;
 
@@ -83,7 +86,12 @@ public final class ExeMojo extends AbstractMojo {
             c.jvm(new JvmSection().mode(jvmMode).vmArgs(vmArgs).javaArgs(javaArgs));
         }
         if (updateUrl != null) c.update(new UpdateSection().url(updateUrl).channel(updateChannel));
-        if (javaArgs == null) c.jar(new JarSection().sha256(sha256(jar)).sources(List.of(jarSource())));
+        if (javaArgs == null) {
+            var digests = digests(jar);
+            var downloaded = !source.equals("path");
+            c.jar(new JarSection().sha256(digests[0]).crc32(downloaded ? digests[1] : null)
+                    .verify(downloaded ? jarVerify : null).sources(List.of(jarSource())));
+        }
         return c;
     }
 
@@ -104,14 +112,19 @@ public final class ExeMojo extends AbstractMojo {
         return architectures == null || architectures.isEmpty() ? List.of("x86_64") : architectures;
     }
 
-    private static String sha256(File f) throws Exception {
+    /** SHA-256 and CRC32 (the same CRC-32 as ntdll's RtlComputeCrc32, which jr uses) in one pass. */
+    private static String[] digests(File f) throws Exception {
         if (!f.isFile()) throw new MojoExecutionException("No jar to launch at " + f + " (set jar, or run after the shade plugin)");
         var md = MessageDigest.getInstance("SHA-256");
+        var crc = new CRC32();
         try (var in = Files.newInputStream(f.toPath())) {
             var buf = new byte[1 << 16];
-            for (int n; (n = in.read(buf)) > 0; ) md.update(buf, 0, n);
+            for (int n; (n = in.read(buf)) > 0; ) {
+                md.update(buf, 0, n);
+                crc.update(buf, 0, n);
+            }
         }
-        return HexFormat.of().formatHex(md.digest());
+        return new String[]{HexFormat.of().formatHex(md.digest()), String.format("%08x", crc.getValue())};
     }
 
     static ObjectMapper mapper() {

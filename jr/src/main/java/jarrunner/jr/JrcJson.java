@@ -42,6 +42,8 @@ public final class JrcJson {
         c.updateUrl = str(r.path("update", "url"));
         c.updateChannel = str(r.path("update", "channel"));
         text(c, "run.sha256", r.path("jar", "sha256"));
+        text(c, "run.crc32", r.path("jar", "crc32"));
+        text(c, "run.verify", r.path("jar", "verify"));
         var first = r.path("jar", "sources") == null ? null : r.path("jar", "sources").at(0);
         if (first != null) {
             text(c, "run.maven", first.get("maven"));

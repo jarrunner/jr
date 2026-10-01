@@ -24,6 +24,8 @@ public class Config {
     String runUrl = "";    // run.url / run.maven / run.sha256 - a remote jar, see RemoteJar
     String runMaven = "";
     String runSha256 = "";
+    String runVerify = "";  // per-run jar check: "" = crc32 (default), "sha256", "none" - see JarCheck
+    String runCrc32 = "";   // the jar's CRC32 as baked in by the maven plugin
     String loadError;       // non-null: the config could not be read (a bad jrc-json); shown, and nothing runs
     boolean json = false;   // jrc-json form (PRP-30); these four exist only there, for the update feature
     String appId = "";
@@ -107,6 +109,12 @@ public class Config {
             case "run.url" -> { runUrl = value; Log.info("run.url=" + value); }
             case "run.maven" -> { runMaven = value; Log.info("run.maven=" + value); }
             case "run.sha256" -> runSha256 = value;
+            case "run.crc32" -> runCrc32 = AsciiStr.lower(value);
+            case "run.verify" -> {
+                var lower = AsciiStr.lower(value);
+                if (lower.equals("crc32") || lower.equals("sha256") || lower.equals("none")) runVerify = lower;
+                else Log.warn("Unrecognised run.verify '" + value + "' (expected crc32, sha256 or none); using crc32");
+            }
             case "java.type" -> {
                 var lower = AsciiStr.lower(value);
                 if (lower.equals("jdk") || lower.equals("jre")) { javaType = lower; Log.info("java.type=" + lower); }

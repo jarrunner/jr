@@ -9,7 +9,7 @@ public final class JrcCheck {
     private static final String SECTIONS = " app java jar jvm aot log update localDev ";
     private static final String KEYS =
             " app.id app.name app.version app.args java.version java.type java.home java.autoinstall"
-            + " jar.sha256 jar.sources jvm.mode jvm.vmArgs jvm.javaArgs log.file log.level log.overwrite"
+            + " jar.sha256 jar.crc32 jar.verify jar.sources jvm.mode jvm.vmArgs jvm.javaArgs log.file log.level log.overwrite"
             + " update.url update.channel ";
     private static final String[] TEXT = {"app.id", "app.name", "app.version", "java.home", "jar.sha256",
             "jvm.javaArgs", "log.file", "log.level", "update.url", "update.channel"};
@@ -70,6 +70,12 @@ public final class JrcCheck {
         if (ver != null && ver.num() == null && (ver.str() == null || !version(ver.str()))) error("java.version", " must be a number like 25, or text like \"21+\"");
         oneOf("java.type", at(r, "java.type"), "jre", "jdk", " must be \"jre\" or \"jdk\"");
         oneOf("jvm.mode", at(r, "jvm.mode"), "dll", "exe", " must be \"dll\" or \"exe\"");
+        var verify = at(r, "jar.verify");
+        if (verify != null && !"crc32".equals(verify.str()) && !"sha256".equals(verify.str()) && !"none".equals(verify.str())) {
+            error("jar.verify", " must be \"crc32\", \"sha256\" or \"none\"");
+        }
+        var crc = at(r, "jar.crc32");
+        if (crc != null && (crc.str() == null || crc.str().length() != 8 || !hex(crc.str()))) error("jar.crc32", " must be 8 hex characters");
         https("update.url", at(r, "update.url"));
         var sha = at(r, "jar.sha256");
         if (sha != null && sha.str() != null && !hex64(sha.str())) error("jar.sha256", " must be 64 hex characters");
@@ -143,8 +149,11 @@ public final class JrcCheck {
     }
 
     private static boolean hex64(String s) {
-        if (s.length() != 64) return false;
-        for (var i = 0; i < 64; i++) {
+        return s.length() == 64 && hex(s);
+    }
+
+    private static boolean hex(String s) {
+        for (var i = 0; i < s.length(); i++) {
             var c = s.charAt(i);
             if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) return false;
         }
