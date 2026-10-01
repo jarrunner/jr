@@ -61,6 +61,10 @@ public final class ExeMojo extends AbstractMojo {
     @Parameter String productName;
     @Parameter String companyName;
     @Parameter String copyright;
+    /** The application manifest for the exe. Default: the bundled one, which declares Windows 7 to 11
+     *  and asInvoker, so Windows does not treat the exe as a legacy program (the Program Compatibility
+     *  Assistant otherwise pops up after an error dialog). */
+    @Parameter File manifest;
     /** Write the release folder (exes, jar, version.txt, releaseFiles, SHA256SUMS, update file).
      *  Default: on for source=url. */
     @Parameter(property = "jr.release") Boolean release;
@@ -87,7 +91,9 @@ public final class ExeMojo extends AbstractMojo {
             var json = new File(outputDirectory, name + ".jrc.json");
             Files.writeString(json.toPath(), mapper().writeValueAsString(config()));
             getLog().info("jrc-json: " + json);
-            var exes = new ExeStamper(getLog(), outputDirectory, name, json, icon, appVersion, versionStrings()).run(archs(), installDir);
+            var stamper = new ExeStamper(getLog(), outputDirectory, name, json, icon, appVersion, versionStrings());
+            stamper.manifest = manifest;
+            var exes = stamper.run(archs(), installDir);
             if (release != null ? release : source.equals("url")) writeRelease(exes);
         } catch (MojoExecutionException e) {
             throw e;

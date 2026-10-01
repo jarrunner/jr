@@ -371,6 +371,8 @@ public final class WinApi {
     public static final int MB_ICONQUESTION = 32; // long, winuser.h:3682
     public static final int MB_YESNO = 4; // long, winuser.h:3678
     public static final int IDYES = 6; // int, winuser.h:4371
+    public static final int MB_OKCANCEL = 1; // long, winuser.h:3675
+    public static final int IDOK = 1; // int, winuser.h:4366
     public static final int CF_UNICODETEXT = 13; // int, winuser.h:1784
     public static final int GMEM_MOVEABLE = 2; // int, winbase.h:377
     public static final int STD_INPUT_HANDLE = -10; // unsigned long, winbase.h:503

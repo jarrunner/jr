@@ -98,6 +98,9 @@
           <include>jr-windows-arm64.exe</include>
         </includes>
       </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
     </resources>
     <plugins>
       <plugin>

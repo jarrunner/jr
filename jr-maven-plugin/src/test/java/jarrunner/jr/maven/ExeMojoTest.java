@@ -83,6 +83,8 @@ class ExeMojoTest {
         var res = TestApp.run(List.of(exe.getPath(), "-Xjr:list-resources=" + exe.getPath()));
         assertFalse(res.contains("ICON"), res);
         assertTrue(res.contains("VERSION"), res);
+        assertTrue(res.contains("MANIFEST"), res);
+        assertFalse(new File(m.outputDirectory, "jr-app.manifest").exists(), "the temporary manifest is removed");
         assertTrue(res.contains("RCDATA"), res);
         var out = TestApp.run(List.of(exe.getPath(), "more"));
         assertTrue(out.startsWith("0\n"), out);

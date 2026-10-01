@@ -25,10 +25,11 @@ public final class Ui {
                 System.out.print(text);
             }
         } else if (type == WinApi.MB_ICONERROR) {
-            // People have to report these, so the whole text is one click away: Yes copies it.
+            // People have to report these, so the whole text is one click away: OK copies it.
+            // OK/Cancel rather than Yes/No, because only then do Esc and the close button work.
             var text = message + "\n\n" + ExeInfo.fullPath();
-            if (WinApi.messageBoxA(NULL, cstr(text + "\n\nCopy this message?"), cstr(title),
-                    type | WinApi.MB_YESNO) == WinApi.IDYES) {
+            if (WinApi.messageBoxA(NULL, cstr(text + "\n\nOK copies this message, Esc closes."), cstr(title),
+                    type | WinApi.MB_OKCANCEL) == WinApi.IDOK) {
                 copy(title + "\n" + text);
             }
         } else {

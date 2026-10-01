@@ -21,6 +21,9 @@ final class ExeStamper {
     private final File icon;
     private final String version;
     private final Map<String, String> strings;
+    /** The application manifest stamped into every exe; null means the bundled app.manifest. */
+    File manifest;
+    private File manifestUsed;
 
     ExeStamper(Log log, File dir, String name, File json, File icon, String version,
             Map<String, String> strings) {
@@ -36,6 +39,7 @@ final class ExeStamper {
     /** Builds one exe per architecture; returns them by architecture, in the order given. */
     Map<String, File> run(List<String> archs, String installDir) throws Exception {
         var editor = extract("x86_64", new File(dir, "jr-editor.exe"));
+        manifestUsed = manifest != null ? manifest : resource("/jarrunner/jr/maven/app.manifest", new File(dir, "jr-app.manifest"));
         var built = new LinkedHashMap<String, File>();
         File host = null;
         try {
@@ -49,9 +53,18 @@ final class ExeStamper {
             }
         } finally {
             Files.deleteIfExists(editor.toPath());
+            if (manifest == null) Files.deleteIfExists(manifestUsed.toPath());
         }
         if (installDir != null && !installDir.isBlank()) install(host, new File(installDir, name + ".exe"));
         return built;
+    }
+
+    private File resource(String path, File out) throws Exception {
+        try (var in = getClass().getResourceAsStream(path)) {
+            if (in == null) throw new MojoExecutionException("This plugin is missing its resource " + path);
+            Files.copy(in, out.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        }
+        return out;
     }
 
     private File extract(String arch, File out) throws Exception {
@@ -68,6 +81,7 @@ final class ExeStamper {
                 "-Xjr:version.ProductVersion=" + version));
         strings.forEach((k, v) -> cmd.add("-Xjr:version." + k + "=" + v));
         if (icon != null) cmd.add("-Xjr:icon=" + icon.getPath());
+        cmd.add("-Xjr:manifest=" + manifestUsed.getPath());
         // A freshly written exe is sometimes still held by an on-write virus scan; jr reports error 32.
         for (var attempt = 1; ; attempt++) {
             var p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
