@@ -751,15 +751,15 @@ Contributions welcome! Please ensure:
 - Test on Windows 10/11
 - Update documentation for new features
 
-## aot/ — making the cache worth having (child project)
+## jarrunner-aot — making the cache worth having (companion library)
 
 `aot=true` in a `.jrc` tells jr to build an AOT cache, but jr cannot decide *what goes in it*: the JVM
 assembles the cache from whatever the training run happened to load. A cache trained on `mytool --help` is
 worse than no cache at all, because naming a cache also switches off the default CDS archive.
 
-`aot/` is the Java side of that — a dependency-free library (`io.github.littlejlib:littlejlib-aot`) an
-application uses to load itself on purpose during jr's training run. It is what jr signals with
-`JR_AOT_STATE=creating`. See **[aot/README.md](aot/README.md)** for how to wire it in, how to choose what to
+[jarrunner/aot](https://github.com/jarrunner/aot) is the Java side of that — a dependency-free library
+(`io.github.jarrunner:jarrunner-aot`) an application uses to load itself on purpose during jr's training run.
+It is what jr signals with `JR_AOT_STATE=creating`. See **[its README](https://github.com/jarrunner/aot#readme)** for how to wire it in, how to choose what to
 load (measured: bigger is *not* automatically better), how to record method profiles as well as classes
 (JEP 515), and how to build the cache in the Maven lifecycle.
 
