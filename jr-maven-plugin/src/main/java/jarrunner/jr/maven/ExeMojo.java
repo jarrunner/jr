@@ -118,7 +118,9 @@ public final class ExeMojo extends AbstractMojo {
     private Map<String, String> versionStrings() {
         var m = new LinkedHashMap<String, String>();
         m.put("FileDescription", fileDescription != null ? fileDescription : name);
-        if (productName != null) m.put("ProductName", productName);
+        m.put("ProductName", productName != null ? productName : name);
+        m.put("InternalName", name);
+        m.put("OriginalFilename", name + ".exe");
         if (companyName != null) m.put("CompanyName", companyName);
         if (copyright != null) m.put("LegalCopyright", copyright);
         return m;

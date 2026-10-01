@@ -16,8 +16,9 @@
     <plugin-tools.version>3.16.0</plugin-tools.version>
     <datahelper.version>2.0</datahelper.version>
     <jackson.version>2.22.2</jackson.version>
-    <!-- The jr exes this plugin bundles: the shipping builds from ../jr/build-win.ps1 -->
-    <jr.dist>${project.basedir}/../jr/dist</jr.dist>
+    <!-- The jr exes this plugin bundles: build-win.ps1 -NoIcon -DistDir dist-noicon. Icon-less on purpose:
+         an app exe carries an icon only when its own pom names one, never jr's. -->
+    <jr.dist>${project.basedir}/../jr/dist-noicon</jr.dist>
   </properties>
 
   <dependencies>
@@ -55,6 +56,12 @@
       <artifactId>jackson-databind</artifactId>
       <version>${jackson.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.11.4</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -69,6 +76,11 @@
       </resource>
     </resources>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.4</version>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
