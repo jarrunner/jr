@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="bg7" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B7A68"/>
+      <stop offset="1" stop-color="#0E4A3E"/>
+    </linearGradient>
+  </defs>
+  <rect x="60" y="60" width="1080" height="1080" rx="260" fill="url(#bg7)"/>
+
+  <!-- gauge arc, 240 degree sweep, gap at bottom -->
+  <path d="M 271,870 A 380,380 0 0,1 600,300 A 380,380 0 0,1 929,870"
+        fill="none" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round"/>
+
+  <!-- tick marks -->
+  <line x1="271" y1="870" x2="306" y2="850" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"/>
+  <line x1="271" y1="490" x2="306" y2="510" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"/>
+  <line x1="600" y1="300" x2="600" y2="340" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"/>
+  <line x1="929" y1="490" x2="894" y2="510" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"/>
+  <line x1="929" y1="870" x2="894" y2="850" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"/>
+
+  <!-- needle pointing toward the high end -->
+  <polygon points="600,680 896,628 640,700" fill="#E8C48A" stroke="#2B2018" stroke-width="6" stroke-linejoin="round"/>
+  <circle cx="600" cy="680" r="46" fill="#FFFFFF"/>
+
+  <!-- coffee-bean tip on the needle -->
+  <g transform="translate(896,628) rotate(-10)">
+    <ellipse cx="0" cy="0" rx="58" ry="34" fill="#E8C48A" stroke="#2B2018" stroke-width="6"/>
+    <path d="M 0,-30 Q 14,0 0,30" fill="none" stroke="#8B5E34" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>

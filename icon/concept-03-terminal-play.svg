@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C1443A"/>
+      <stop offset="1" stop-color="#8C2A22"/>
+    </linearGradient>
+  </defs>
+  <rect x="60" y="60" width="1080" height="1080" rx="260" fill="url(#bg3)"/>
+  <!-- terminal window -->
+  <rect x="300" y="330" width="600" height="480" rx="48" fill="#1C1C1E"/>
+  <rect x="300" y="330" width="600" height="110" rx="48" fill="#2C2C2E"/>
+  <rect x="300" y="392" width="600" height="48" fill="#2C2C2E"/>
+  <circle cx="360" cy="385" r="18" fill="#FF5F57"/>
+  <circle cx="418" cy="385" r="18" fill="#FEBC2E"/>
+  <circle cx="476" cy="385" r="18" fill="#28C840"/>
+  <!-- play triangle -->
+  <polygon points="530,500 530,700 720,600" fill="#FFFFFF"/>
+</svg>

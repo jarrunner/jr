@@ -1,10 +1,13 @@
 package littlejlib.jr;
 
+import static littlejlib.jr.N.*;
+
 /** The .jrc config file (WinRun4J/jpackage-style key=value), mirroring launcher.c's LauncherConfig.
  *  Always returned non-null from load() (defaults apply whether or not a .jrc exists), matching
  *  launcher.c's initConfig/useConfig split - the "found" field carries what useConfig used to. */
 public class Config {
     boolean found = false;
+    boolean embedded = false; // found, but read from this exe's own RCDATA/JRC resource, not a file
     String vmArgs = "";
     String javaArgs = "";
     String appArgs = "";
@@ -17,15 +20,27 @@ public class Config {
     int javaVersion = 0;          // 0 = not specified: any Java will do, install the default
     boolean javaVersionAtLeast = false; // true if written "NN+" (NN or newer), same convention as jbang's //JAVA
     int javaAutoInstall = -1; // -1 = not specified, use built-in default (enabled)
+    String javaType = ""; // "" = not specified, JavaInstall's own default (jre); "jdk" or "jre"
+    String runUrl = "";    // run.url / run.maven / run.sha256 - a remote jar, see RemoteJar
+    String runMaven = "";
+    String runSha256 = "";
+
+    boolean hasRunTarget() {
+        return !runUrl.isEmpty() || !runMaven.isEmpty();
+    }
 
     public static Config load(String path) {
         var config = new Config();
         var text = FileIo.readAll(path);
         if (text == null) {
+            text = loadEmbedded();
+            config.embedded = text != null;
+        }
+        if (text == null) {
             return config;
         }
         config.found = true;
-        Log.info("Loading config file: " + path);
+        Log.info("Loading config: " + (config.embedded ? "embedded RCDATA/JRC resource" : path));
         for (var rawLine : Lines.split(text)) {
             var line = rawLine.strip();
             if (line.isEmpty() || line.startsWith("#")) {
@@ -72,11 +87,52 @@ public class Config {
                 Log.info("java.version=" + value);
             }
             case "java.autoinstall" -> { javaAutoInstall = isTrue(value) ? 1 : 0; Log.info("java.autoinstall=" + value); }
+            case "run.url" -> { runUrl = value; Log.info("run.url=" + value); }
+            case "run.maven" -> { runMaven = value; Log.info("run.maven=" + value); }
+            case "run.sha256" -> runSha256 = value;
+            case "java.type" -> {
+                var lower = AsciiStr.lower(value);
+                if (lower.equals("jdk") || lower.equals("jre")) { javaType = lower; Log.info("java.type=" + lower); }
+                else Log.warn("Unrecognised java.type '" + value + "' (expected jdk or jre)");
+            }
             default -> {
                 return false;
             }
         }
         return true;
+    }
+
+    /** PRP-24: an exe with no sibling .jrc file can carry its config embedded instead, as an
+     *  RT_RCDATA resource named JRC, stamped with the generic raw-resource option:
+     *  {@code jr.exe -Xjr:edit=app.exe -Xjr:resource.RCDATA.JRC=app.jrc}. A .jrc file on disk
+     *  always wins; this is only consulted when there is none. Opens its own file as a data file,
+     *  the same way -Xjr:list-resources opens a target, and asks which language the resource was
+     *  stamped under rather than assuming one. Relies on WinApi being initialized first - see the
+     *  top of Jr.main. */
+    private static String loadEmbedded() {
+        var module = WinApi.loadLibraryExW(wcstr(ExeInfo.fullPath()), NULL,
+                WinApi.LOAD_LIBRARY_AS_DATAFILE | WinApi.LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+        if (module.toLong() == 0) {
+            Dbg.log("loadEmbedded: LoadLibraryExW failed, error " + WinApi.getLastError());
+            return null;
+        }
+        try {
+            var type = ResId.of(WinApi.RT_RCDATA);
+            var name = ResId.of("JRC");
+            var langs = ReCallbacks.getLangs(module, type, name);
+            var found = langs.length == 0 ? null : ReEntries.find(module, type, name, langs[0]);
+            Dbg.log("loadEmbedded: " + (found == null ? "no RCDATA/JRC resource" : found.size() + " bytes"));
+            if (found == null) {
+                return null;
+            }
+            var sb = new StringBuilder(found.size());
+            for (var i = 0; i < found.size(); i++) {
+                sb.append((char) (found.data().add(i).getByte() & 0xFF));
+            }
+            return sb.toString();
+        } finally {
+            WinApi.freeLibrary(module);
+        }
     }
 
     private static boolean isTrue(String v) {
@@ -105,6 +161,12 @@ public class Config {
         sb.append("# the app's own arguments: myapp.exe -Xjr:jvm=dll -Xjr:aot=false [app args]\n\n");
         sb.append("# VM arguments (passed before -jar, launcher auto-injects AOT flags here)\n");
         sb.append("#vm.args=-Xmx512m -Xms128m -Dapp.mode=production\n\n");
+        sb.append("# Splash screen while the JVM/app starts up (GIF/JPEG/PNG, animated GIF loops).\n");
+        sb.append("# This is plain java.awt.SplashScreen (-splash:), just riding vm.args - closes itself\n");
+        sb.append("# on the app's first AWT/Swing window, or call SplashScreen.getSplashScreen().close()\n");
+        sb.append("# yourself for a JavaFX app (FX has no splash mechanism of its own). Path resolves\n");
+        sb.append("# relative to the working directory, same as any other java arg.\n");
+        sb.append("#vm.args=-splash:splash.png\n\n");
         sb.append("# Java arguments (everything after VM args: -jar, -cp, class name, etc.)\n");
         if (jarPath != null && !jarPath.isEmpty()) {
             sb.append("java.args=-jar ").append(jarPath).append("\n\n");
@@ -112,6 +174,15 @@ public class Config {
             sb.append("#java.args=-jar yourapp.jar\n");
             sb.append("# Or for classpath: java.args=-cp lib/*:app.jar com.example.Main\n\n");
         }
+        sb.append("# Or instead of java.args, fetch the jar on first run - a GitHub release asset\n");
+        sb.append("# or any https link (run.url), or a Maven Central artifact (run.maven) - pinned by\n");
+        sb.append("# its SHA-256 (required: the download is not run unless it matches). Downloaded\n");
+        sb.append("# once, resumed if interrupted: run.maven into %USERPROFILE%\\.m2\\repository (a jar\n");
+        sb.append("# Maven already has is reused), run.url into %USERPROFILE%\\.jr\\cache\\jars\\.\n");
+        sb.append("# The jar must be self-contained (shaded): its dependencies are not fetched.\n");
+        sb.append("#run.url=https://github.com/owner/repo/releases/download/v1.0/app.jar\n");
+        sb.append("#run.maven=com.example:app:1.0\n");
+        sb.append("#run.sha256=<64 hex characters>\n\n");
         sb.append("# Application arguments (passed to your main method)\n");
         sb.append("#app.args=--config myconfig.xml --verbose\n\n");
         sb.append("# AOT cache control (optional, default: true)\n");
@@ -130,6 +201,10 @@ public class Config {
         sb.append("# Eclipse Temurin JDK into %USERPROFILE%\\.jbang\\cache\\jdks\\<version> (same cache jbang itself uses).\n");
         sb.append("#java.version=21+\n");
         sb.append("#java.autoinstall=true\n\n");
+        sb.append("# jre (default) or jdk - most apps only ever RUN java and never need javac/jar/etc,\n");
+        sb.append("# so auto-install fetches the smaller JRE unless this says otherwise. A build tool,\n");
+        sb.append("# an app that shells out to javac, or anything needing the full JDK should set jdk.\n");
+        sb.append("#java.type=jre\n\n");
         sb.append("# Use this JDK and nothing else (no PATH lookup, no version check, no install)\n");
         sb.append("#java.home=C:\\Java\\jdk-25\n");
         return FileIo.writeAll(configPath, sb.toString());

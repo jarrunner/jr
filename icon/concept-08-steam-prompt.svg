@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="bg8" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B2A6B"/>
+      <stop offset="1" stop-color="#241748"/>
+    </linearGradient>
+  </defs>
+  <rect x="60" y="60" width="1080" height="1080" rx="260" fill="url(#bg8)"/>
+
+  <!-- cup -->
+  <path d="M 430,750 L 770,750 L 730,950 L 470,950 Z" fill="#F3ECDF"/>
+  <ellipse cx="600" cy="750" rx="170" ry="30" fill="#4A3580"/>
+  <path d="M 770,800 A 60,60 0 1 1 770,900" fill="none" stroke="#F3ECDF" stroke-width="30" stroke-linecap="round"/>
+
+  <!-- steam curl on the left -->
+  <path d="M 560,748 C 520,690 560,640 528,580 C 508,540 528,500 512,460"
+        fill="none" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round"/>
+
+  <!-- steam resolving into a ">" prompt chevron on the right -->
+  <path d="M 610,730 C 600,690 630,680 626,640"
+        fill="none" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 620,560 L 686,640 L 620,720" fill="none" stroke="#FFFFFF" stroke-width="32"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="712" y="618" width="72" height="26" rx="10" fill="#FFFFFF"/>
+</svg>

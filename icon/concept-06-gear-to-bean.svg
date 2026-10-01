@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="amberBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D9A441"/>
+      <stop offset="1" stop-color="#B87F1E"/>
+    </linearGradient>
+  </defs>
+  <rect x="60" y="60" width="1080" height="1080" rx="260" fill="url(#amberBg)"/>
+
+  <!-- gear rim (mostly hidden behind the bean, left crescent exposed) -->
+  <circle cx="560" cy="600" r="250" fill="#D8DCDE"/>
+
+  <!-- gear teeth, connected to the rim's left edge -->
+  <g fill="#D8DCDE">
+    <rect x="477" y="294" width="70" height="70" rx="12"/>
+    <rect x="331" y="371" width="70" height="70" rx="12"/>
+    <rect x="254" y="517" width="70" height="70" rx="12"/>
+    <rect x="250" y="565" width="70" height="70" rx="12"/>
+    <rect x="276" y="681" width="70" height="70" rx="12"/>
+    <rect x="388" y="803" width="70" height="70" rx="12"/>
+    <rect x="477" y="836" width="70" height="70" rx="12"/>
+  </g>
+
+  <!-- bean body, offset right so it overlaps most of the gear rim -->
+  <ellipse cx="660" cy="600" rx="235" ry="320" fill="#3A2A1E"/>
+
+  <!-- bean split crease -->
+  <path d="M 660 320 C 580 420, 580 560, 660 620 C 740 680, 740 820, 660 880"
+        fill="none" stroke="#7A5236" stroke-width="30" stroke-linecap="round"/>
+</svg>

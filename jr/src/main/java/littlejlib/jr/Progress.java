@@ -17,8 +17,15 @@ public final class Progress {
     private long lastShownPercent = -1;
     private Address hwndWindow;
     private Address hwndBar;
+    private Address iconLarge;
+    private Address iconSmall;
 
     public Progress(boolean guiMode, boolean hasConsole, String label) {
+        this(guiMode, hasConsole, ExeInfo.baseNameNoExt() + " - Installing Java", label);
+    }
+
+    /** title: the GUI window's caption (console mode prints only the label). */
+    public Progress(boolean guiMode, boolean hasConsole, String title, String label) {
         this.guiMode = guiMode;
         this.hasConsole = hasConsole;
 
@@ -29,11 +36,12 @@ public final class Progress {
             WinApi.initCommonControlsEx(iccex);
 
             hwndWindow = WinApi.createWindowExA(WinApi.WS_EX_TOPMOST, cstr("#32770"),
-                    cstr("Java Runner - Installing Java"), WinApi.WS_CAPTION,
+                    cstr(title), WinApi.WS_CAPTION | WinApi.WS_SYSMENU,
                     WinApi.CW_USEDEFAULT, WinApi.CW_USEDEFAULT, 420, 120,
                     NULL, NULL, NULL, NULL);
 
             if (hwndWindow.toLong() != 0) {
+                showOwnIcon();
                 WinApi.createWindowExA(0, cstr("STATIC"), cstr(label), WinApi.WS_CHILD | WinApi.WS_VISIBLE,
                         10, 10, 390, 20, hwndWindow, NULL, NULL, NULL);
                 hwndBar = WinApi.createWindowExA(0, cstr("msctls_progress32"), NULL,
@@ -77,10 +85,33 @@ public final class Progress {
             for (var i = 0; i < barWidth; i++) {
                 sb.append(i < filled ? '#' : '-');
             }
+            // KB below 1 MB total, so a small jar doesn't read "0 MB / 0 MB"; trailing spaces
+            // overwrite leftovers when a \r-redrawn line gets shorter.
+            var mb = total >= 1024 * 1024;
+            var unit = mb ? 1024 * 1024 : 1024;
             sb.append("] ").append(percent).append("% (")
-                    .append(downloaded / (1024 * 1024)).append(" MB / ")
-                    .append(total / (1024 * 1024)).append(" MB)");
+                    .append(downloaded / unit).append(" / ")
+                    .append(total / unit).append(mb ? " MB)  " : " KB)  ");
             System.out.print(sb);
+        }
+    }
+
+    /** The window shows this exe's own icon - whatever is stamped into it, a client's own icon
+     *  included - read from the exe file itself. Windows scales it from the single 256x256 entry
+     *  jr stamps (see icon/build-ico.ps1); no extra sizes are packaged. A caption icon needs WS_SYSMENU, which also brings
+     *  a close button; that is greyed out, since closing the window would not stop the download. */
+    private void showOwnIcon() {
+        var large = ptrVar();
+        var small = ptrVar();
+        if (WinApi.extractIconExW(wcstr(ExeInfo.fullPath()), 0, large, small, 1) > 0) {
+            iconLarge = large.getAddress();
+            iconSmall = small.getAddress();
+            WinApi.sendMessageA(hwndWindow, WinApi.WM_SETICON, WinApi.ICON_BIG, iconLarge.toLong());
+            WinApi.sendMessageA(hwndWindow, WinApi.WM_SETICON, WinApi.ICON_SMALL, iconSmall.toLong());
+        }
+        var menu = WinApi.getSystemMenu(hwndWindow, 0);
+        if (menu.toLong() != 0) {
+            WinApi.enableMenuItem(menu, WinApi.SC_CLOSE, WinApi.MF_BYCOMMAND | WinApi.MF_GRAYED);
         }
     }
 
@@ -88,6 +119,14 @@ public final class Progress {
         if (guiMode) {
             if (hwndWindow != null && hwndWindow.toLong() != 0) {
                 WinApi.destroyWindow(hwndWindow);
+            }
+            // Two plain checks, not a loop over an Address[] - an Address in an array crashes on
+            // TeaVM's C backend (guidelines.teavmcpp.md).
+            if (iconLarge != null && iconLarge.toLong() != 0) {
+                WinApi.destroyIcon(iconLarge);
+            }
+            if (iconSmall != null && iconSmall.toLong() != 0) {
+                WinApi.destroyIcon(iconSmall);
             }
         } else if (hasConsole) {
             System.out.println();

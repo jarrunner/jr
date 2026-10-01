@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1E4258"/>
+      <stop offset="1" stop-color="#122B3A"/>
+    </linearGradient>
+  </defs>
+  <rect x="60" y="60" width="1080" height="1080" rx="260" fill="url(#bg1)"/>
+  <!-- mug -->
+  <path d="M 400 430 Q 400 400 430 400 L 720 400 Q 750 400 750 430 L 750 760 Q 750 810 700 810 L 450 810 Q 400 810 400 760 Z" fill="#F2F2F0"/>
+  <path d="M 750 470 A 95 95 0 1 1 750 700" fill="none" stroke="#F2F2F0" stroke-width="60" stroke-linecap="round"/>
+  <!-- lightning bolt -->
+  <polygon points="700,330 540,660 630,660 500,890 830,560 700,560 800,400" fill="#FFC738" stroke="#8A5B00" stroke-width="10" stroke-linejoin="round"/>
+</svg>

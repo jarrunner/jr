@@ -225,6 +225,18 @@ public final class WinApi {
     /** {@code HWND CreateWindowExA(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)} - winuser.h:2203 */
     @Import(name = "CreateWindowExA") public static native Address createWindowExA(int dwExStyle, Address lpClassName, Address lpWindowName, int dwStyle, int X, int Y, int nWidth, int nHeight, Address hWndParent, Address hMenu, Address hInstance, Address lpParam);
 
+    /** {@code UINT ExtractIconExW(LPCWSTR lpszFile, int nIconIndex, HICON *phiconLarge, HICON *phiconSmall, UINT nIcons)} - shellapi.h:151 */
+    @Import(name = "ExtractIconExW") public static native int extractIconExW(Address lpszFile, int nIconIndex, Address phiconLarge, Address phiconSmall, int nIcons);
+
+    /** {@code HMENU GetSystemMenu(HWND hWnd, WINBOOL bRevert)} - winuser.h:3277 */
+    @Import(name = "GetSystemMenu") public static native Address getSystemMenu(Address hWnd, int bRevert);
+
+    /** {@code WINBOOL EnableMenuItem(HMENU hMenu, UINT uIDEnableItem, UINT uEnable)} - winuser.h:3282 */
+    @Import(name = "EnableMenuItem") public static native int enableMenuItem(Address hMenu, int uIDEnableItem, int uEnable);
+
+    /** {@code WINBOOL DestroyIcon(HICON hIcon)} - winuser.h:4165 */
+    @Import(name = "DestroyIcon") public static native int destroyIcon(Address hIcon);
+
     /** {@code WINBOOL DestroyWindow(HWND hWnd)} - winuser.h:2212 */
     @Import(name = "DestroyWindow") public static native int destroyWindow(Address hWnd);
 
@@ -360,10 +372,18 @@ public final class WinApi {
     public static final int WINHTTP_FLAG_SECURE = 0x00800000; // int, winhttp.h:69
     public static final int WINHTTP_QUERY_CONTENT_LENGTH = 5; // int, winhttp.h:418
     public static final int WINHTTP_QUERY_FLAG_NUMBER = 0x20000000; // int, winhttp.h:492
+    public static final int WINHTTP_QUERY_STATUS_CODE = 19; // int, winhttp.h:432
     public static final int MOVEFILE_COPY_ALLOWED = 2; // int, winbase.h:2489
     public static final int FILE_ATTRIBUTE_NORMAL = 128; // int, winnt.h:6176
     public static final int CREATE_NO_WINDOW = 0x08000000; // int, winbase.h:440
     public static final int WS_CAPTION = 0x00C00000; // long, winuser.h:1589
+    public static final int WS_SYSMENU = 0x00080000; // long, winuser.h:1594
+    public static final int WM_SETICON = 128; // int, winuser.h:1146
+    public static final int ICON_SMALL = 0; // int, winuser.h:1496
+    public static final int ICON_BIG = 1; // int, winuser.h:1497
+    public static final int SC_CLOSE = 0x0000F060; // int, winuser.h:4083
+    public static final int MF_BYCOMMAND = 0; // long, winuser.h:4015
+    public static final int MF_GRAYED = 1; // long, winuser.h:4019
     public static final int WS_CHILD = 0x40000000; // long, winuser.h:1582
     public static final int WS_VISIBLE = 0x10000000; // long, winuser.h:1584
     public static final int WS_EX_TOPMOST = 8; // long, winuser.h:1611

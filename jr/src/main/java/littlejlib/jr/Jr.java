@@ -13,6 +13,14 @@ import static littlejlib.jr.N.*;
  */
 public final class Jr {
     public static void main(String[] args) {
+        // Forces WinApi's static initializer before anything else runs. Its Address constants
+        // (INVALID_HANDLE_VALUE, RT_*) are set there, and a read that follows a WinApi @Import
+        // call in the same method can skip the class-init check (the native call is assumed to
+        // have initialized the class, but natives never do) - measured 2026-09-29: RT_RCDATA read
+        // 0 inside Config.loadEmbedded, so its resource lookup silently asked for type 0.
+        if (WinApi.INVALID_HANDLE_VALUE.toLong() != -1) {
+            Dbg.log("WinApi constants not initialized at startup");
+        }
         Timing.init();
         var exeBaseName = ExeInfo.baseNameNoExt();
         var configPath = ExeInfo.fullPathNoExt() + ".jrc";
@@ -35,7 +43,7 @@ public final class Jr {
         if (!config.logFile.isBlank()) {
             Log.init(config.logFile, config.logOverwrite);
             Log.info("Launcher started: " + exeBaseName + ".exe");
-            Log.info("Config file: " + configPath + " (" + (config.found ? "found" : "not found") + ")");
+            Log.info("Config: " + configLabel(configPath, config));
             Log.info("vm.args=" + config.vmArgs);
             Log.info("java.args=" + config.javaArgs);
             Log.info("app.args=" + config.appArgs);
@@ -102,16 +110,17 @@ public final class Jr {
         // Nothing to run (or help asked for): show help before any Java lookup, so a bare `jr` on a
         // machine without Java never triggers the install prompt. The Java path shown here is a
         // plain PATH lookup for display only - no version check, no auto-install.
-        if (opts.help || (!opts.createConfig && config.javaArgs.isBlank() && opts.appArgs.isEmpty())) {
+        if (opts.help || (!opts.createConfig && config.javaArgs.isBlank() && !config.hasRunTarget()
+                && opts.appArgs.isEmpty())) {
             var displayJavaPath = JavaFinder.findInPath(javaExeName);
-            Help.show(hasConsole, exeBaseName, javaExeName, displayJavaPath, configPath, config.found,
+            Help.show(hasConsole, exeBaseName, javaExeName, displayJavaPath, configLabel(configPath, config),
                     useJvmDll ? 1 : 0);
             Log.close();
             WinApi.exit(opts.help ? 0 : 1);
             return;
         }
 
-        if (config.javaArgs.isBlank() && !opts.createConfig) {
+        if (config.javaArgs.isBlank() && !config.hasRunTarget() && !opts.createConfig) {
             var replacement = JrOptions.oldFlagReplacement(opts.appArgs);
             if (replacement != null) {
                 var msg = "jr's --flags have been replaced by -Xjr: options, which must come before the jar.\n\n"
@@ -126,6 +135,25 @@ public final class Jr {
         if (opts.createConfig) {
             handleCreateConfig(opts, configPath, hasConsole);
             return;
+        }
+
+        // A remote jar (run.url / run.maven) becomes an ordinary "-jar <cached path>" before anything
+        // else looks at java.args, so AOT naming etc. work unchanged. Resolved before the Java lookup
+        // so a bad hash fails before any JRE download.
+        if (config.hasRunTarget()) {
+            if (!config.javaArgs.isBlank()) {
+                Ui.error(hasConsole, "Invalid .jrc", "Set java.args or run.url/run.maven, not both.");
+                Log.close();
+                WinApi.exit(1);
+                return;
+            }
+            var jar = RemoteJar.resolve(config, hasConsole, guiMode);
+            if (jar == null) {
+                Log.close();
+                WinApi.exit(1);
+                return;
+            }
+            config.javaArgs = "-jar " + WinQuote.quote(jar);
         }
 
         var enableAOT = config.enableAOT != 0; // -1 (unset) or 1 (true) => enabled, 0 => disabled
@@ -186,6 +214,13 @@ public final class Jr {
         }
         Log.close();
         WinApi.exit(result.exitCode);
+    }
+
+    private static String configLabel(String configPath, Config config) {
+        if (config.embedded) {
+            return "embedded in this exe (RCDATA/JRC resource)";
+        }
+        return configPath + " (" + (config.found ? "found" : "not found") + ")";
     }
 
     private static void handleCreateConfig(JrOptions opts, String configPath, boolean hasConsole) {
@@ -253,10 +288,11 @@ public final class Jr {
         if (javaPath == null && config.javaAutoInstall != 0) { // -1 (unset) or 1 (true) => enabled
             var javaVersion = requiredVersion > 0 ? requiredVersion : 0; // 0 => JavaInstall's own default (25)
             var cacheOverride = Cstr.readEnv("JR_JDK_CACHE_DIR");
-            Log.info("Attempting auto-install (version " + (requiredVersion > 0 ? requiredVersion : 25)
+            var packageType = config.javaType.isEmpty() ? "jre" : config.javaType; // PRP-24: jre is the default
+            Log.info("Attempting auto-install (" + packageType + ", version " + (requiredVersion > 0 ? requiredVersion : 25)
                     + (requireAtLeast ? "+" : "") + ")");
             var installedHome = JavaInstall.tryInstall(javaVersion, requireAtLeast, mismatch, hasConsole, guiMode,
-                    assumeYes, cacheOverride);
+                    assumeYes, cacheOverride, packageType);
             if (installedHome != null) {
                 javaPath = installedHome + "\\bin\\" + javaExeName;
                 Log.info("Using auto-installed Java: " + javaPath);

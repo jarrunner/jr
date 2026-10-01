@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="greenBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1E8E6B"/>
+      <stop offset="1" stop-color="#0F5C46"/>
+    </linearGradient>
+  </defs>
+  <rect x="60" y="60" width="1080" height="1080" rx="260" fill="url(#greenBg)"/>
+
+  <!-- jar -->
+  <path d="M 430 560 L 460 460 L 740 460 L 770 560 Z" fill="#E7F2F0"/>
+  <rect x="430" y="560" width="340" height="370" rx="40" fill="#F5FAF9"/>
+  <rect x="460" y="416" width="280" height="52" rx="14" fill="#9AA3AA"/>
+  <rect x="460" y="416" width="280" height="16" rx="8" fill="#7C848A"/>
+
+  <!-- seal / checkmark badge -->
+  <circle cx="600" cy="760" r="150" fill="#1E8E6B"/>
+  <path d="M 528 762 L 580 816 L 682 696" fill="none" stroke="#FFFFFF" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

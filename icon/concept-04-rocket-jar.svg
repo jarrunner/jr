@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="skyBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B3A5C"/>
+      <stop offset="1" stop-color="#0F2338"/>
+    </linearGradient>
+  </defs>
+  <rect x="60" y="60" width="1080" height="1080" rx="260" fill="url(#skyBg)"/>
+
+  <!-- stars -->
+  <circle cx="220" cy="200" r="8" fill="#FFFFFF"/>
+  <circle cx="960" cy="260" r="6" fill="#FFFFFF"/>
+  <circle cx="880" cy="160" r="5" fill="#FFFFFF"/>
+
+  <!-- jar -->
+  <path d="M 430 580 L 460 480 L 740 480 L 770 580 Z" fill="#D9EEF3"/>
+  <rect x="430" y="580" width="340" height="340" rx="40" fill="#EAF6FA"/>
+  <rect x="470" y="620" width="34" height="260" rx="17" fill="#FFFFFF"/>
+  <rect x="460" y="436" width="280" height="52" rx="14" fill="#9AA3AA"/>
+  <rect x="460" y="436" width="280" height="16" rx="8" fill="#7C848A"/>
+
+  <!-- flame -->
+  <polygon points="560,470 600,560 640,470" fill="#FFB020"/>
+  <polygon points="577,470 600,530 623,470" fill="#FFE08A"/>
+
+  <!-- speed lines -->
+  <path d="M 400 520 L 360 500" stroke="#4A6C8C" stroke-width="10" stroke-linecap="round"/>
+  <path d="M 390 560 L 345 555" stroke="#4A6C8C" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- rocket -->
+  <path d="M 600 140 C 662 205, 662 320, 662 470 L 538 470 C 538 320, 538 205, 600 140 Z" fill="#E8492C"/>
+  <polygon points="538,400 470,470 538,470" fill="#B23A22"/>
+  <polygon points="662,400 730,470 662,470" fill="#B23A22"/>
+  <circle cx="600" cy="270" r="46" fill="#FFFFFF"/>
+  <circle cx="600" cy="270" r="46" fill="none" stroke="#B23A22" stroke-width="10"/>
+</svg>

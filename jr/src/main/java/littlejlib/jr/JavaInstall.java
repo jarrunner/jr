@@ -29,15 +29,18 @@ public final class JavaInstall {
         "temurin", "x64", "Eclipse Temurin (x64, emulated)",
     };
 
-    /** Returns the installed JDK's home directory on success, or null on failure/decline - the
-     *  caller should fall back to its existing "Java Not Found" error, same as javainstall.c.
+    /** Returns the installed JDK's (or JRE's) home directory on success, or null on failure/decline -
+     *  the caller should fall back to its existing "Java Not Found" error, same as javainstall.c.
      *  atLeast/reason mirror autoInstallJava's atLeast/reason: atLeast widens the direct-cache-hit
-     *  check to "the newest cached JDK &gt;= majorVersion" (java.version=NN+); reason, when non-null,
+     *  check to "the newest cached &gt;= majorVersion" (java.version=NN+); reason, when non-null,
      *  is the "wrong version found" message shown ahead of the install prompt instead of the
-     *  generic "Java was not found." */
+     *  generic "Java was not found." packageType is "jdk" or "jre" (PRP-24: jre is the actual
+     *  default - most .jrc targets only ever RUN java and never need javac/jar/etc, and a JRE zip
+     *  is roughly a third the size - see JrOptions/Config for where the default is applied). */
     public static String tryInstall(int majorVersion, boolean atLeast, String reason, boolean hasConsole,
-            boolean guiMode, boolean assumeYes, String cacheRootOverride) {
+            boolean guiMode, boolean assumeYes, String cacheRootOverride, String packageType) {
         var version = majorVersion > 0 ? majorVersion : DEFAULT_VERSION;
+        var jdk = packageType.equals("jdk");
 
         var cacheRoot = cacheRootOverride != null && !cacheRootOverride.isEmpty()
                 ? cacheRootOverride : defaultCacheRoot();
@@ -45,23 +48,32 @@ public final class JavaInstall {
             return null;
         }
 
-        var targetDir = cacheRoot + "\\" + version;
+        // A cached JDK satisfies a JRE request too (it contains a full JRE), so a JRE request
+        // checks the plain jbang-compatible slot first and only falls to its own "-jre" slot if
+        // nothing is there - never the other way round: a JRE-only cache must NOT be handed back
+        // for a request that specifically needs javac/jar/etc.
+        var jdkDir = cacheRoot + "\\" + version;
+        var targetDir = jdk ? jdkDir : cacheRoot + "\\" + version + "-jre";
+        if (!jdk && FileIo.exists(jdkDir + "\\bin\\java.exe")) {
+            return jdkDir;
+        }
         if (FileIo.exists(targetDir + "\\bin\\java.exe")) {
             return targetDir;
         }
 
         if (atLeast) {
-            var cached = findCachedAtLeast(cacheRoot, version);
+            var cached = findCachedAtLeast(cacheRoot, version, jdk);
             if (cached != null) {
                 return cached;
             }
         }
 
         var arm64 = NativeArch.foojayName().equals("aarch64");
+        var label = jdk ? "JDK" : "JRE";
         if (!assumeYes) {
             var what = arm64
-                    ? "JDK " + version + " for ARM64 (Eclipse Temurin, or Azul Zulu where Temurin has no ARM64 build; ~200 MB)"
-                    : "Eclipse Temurin JDK " + version + " (~200 MB)";
+                    ? label + " " + version + " for ARM64 (Eclipse Temurin, or Azul Zulu where Temurin has no ARM64 build)"
+                    : "Eclipse Temurin " + label + " " + version;
             var prompt = (reason != null ? reason : "Java was not found.")
                     + "\n\nDownload and install " + what + " to:\n" + targetDir + "\n\nProceed?";
             if (!confirm(hasConsole, prompt)) {
@@ -76,7 +88,7 @@ public final class JavaInstall {
         for (var i = 0; i < builds.length && pkgId == null; i += 3) {
             var apiUrl = "https://api.foojay.io/disco/v3.0/packages?distro=" + builds[i] + "&javafx_bundled=false"
                     + "&libc_type=c_std_lib&directly_downloadable=true&archive_type=zip&operating_system=windows"
-                    + "&package_type=jdk&release_status=ga&architecture=" + builds[i + 1]
+                    + "&package_type=" + packageType + "&release_status=ga&architecture=" + builds[i + 1]
                     + "&latest=available&version=" + version;
             var apiResponse = Http.getToBuffer(apiUrl, 16384);
             if (apiResponse == null) {
@@ -87,7 +99,7 @@ public final class JavaInstall {
             vendor = builds[i + 2];
         }
         if (pkgId == null) {
-            Log.warn("auto-install: no package found for JDK " + version);
+            Log.warn("auto-install: no package found for " + label + " " + version);
             return null;
         }
 
@@ -110,7 +122,7 @@ public final class JavaInstall {
         Dirs.mkdirRecursive(tempDir);
         var zipPath = tempDir + "\\" + filename;
 
-        var progress = new Progress(guiMode, hasConsole, "Downloading " + vendor + " JDK " + version + "...");
+        var progress = new Progress(guiMode, hasConsole, "Downloading " + vendor + " " + label + " " + version + "...");
         var downloaded = Http.downloadToFile(downloadUrl, zipPath, progress);
         progress.finish();
         if (!downloaded) {
@@ -158,22 +170,32 @@ public final class JavaInstall {
 
     /** For "NN+": the newest &lt;cacheRoot&gt;\&lt;N&gt; with N &gt;= minVersion and a bin\java.exe. Only
      *  all-digit folder names count, which is how jbang names its own - mirrors javainstall.c's
-     *  jiFindCachedAtLeast. */
-    private static String findCachedAtLeast(String cacheRoot, int minVersion) {
+     *  jiFindCachedAtLeast. A JRE request also accepts jr's own "&lt;N&gt;-jre" folders (never the
+     *  other way round - see tryInstall's cache-slot comment for why a JDK satisfies a JRE need but
+     *  not vice versa). */
+    private static String findCachedAtLeast(String cacheRoot, int minVersion, boolean jdkOnly) {
         var best = 0;
+        String bestName = null;
         for (var name : Dirs.listDirNames(cacheRoot)) {
-            if (!isAllDigits(name)) {
+            var digits = name;
+            if (!jdkOnly && name.endsWith("-jre")) {
+                digits = name.substring(0, name.length() - 4);
+            } else if (!isAllDigits(name)) {
                 continue;
             }
-            var n = Atoi.parse(name);
+            if (!isAllDigits(digits)) {
+                continue;
+            }
+            var n = Atoi.parse(digits);
             if (n < minVersion || n <= best) {
                 continue;
             }
             if (FileIo.exists(cacheRoot + "\\" + name + "\\bin\\java.exe")) {
                 best = n;
+                bestName = name;
             }
         }
-        return best == 0 ? null : cacheRoot + "\\" + best;
+        return best == 0 ? null : cacheRoot + "\\" + bestName;
     }
 
     private static boolean isAllDigits(String s) {

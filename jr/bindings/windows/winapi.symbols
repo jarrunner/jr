@@ -76,6 +76,10 @@ GetSystemDirectoryA getSystemDirectoryA
 SetFileAttributesA setFileAttributesA
 InitCommonControlsEx initCommonControlsEx
 CreateWindowExA createWindowExA
+ExtractIconExW extractIconExW
+GetSystemMenu getSystemMenu
+EnableMenuItem enableMenuItem
+DestroyIcon destroyIcon
 DestroyWindow destroyWindow
 UpdateWindow updateWindow
 SendMessageA sendMessageA
@@ -142,10 +146,18 @@ WINHTTP_ACCESS_TYPE_DEFAULT_PROXY
 WINHTTP_FLAG_SECURE
 WINHTTP_QUERY_CONTENT_LENGTH
 WINHTTP_QUERY_FLAG_NUMBER
+WINHTTP_QUERY_STATUS_CODE
 MOVEFILE_COPY_ALLOWED
 FILE_ATTRIBUTE_NORMAL
 CREATE_NO_WINDOW
 WS_CAPTION
+WS_SYSMENU
+WM_SETICON
+ICON_SMALL
+ICON_BIG
+SC_CLOSE
+MF_BYCOMMAND
+MF_GRAYED
 WS_CHILD
 WS_VISIBLE
 WS_EX_TOPMOST
