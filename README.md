@@ -38,22 +38,7 @@ There is only one build. It links the Universal CRT that ships inside Windows it
 
 ## Building from Source
 
-This is the original C implementation, now under `jr_legacy_c/` (see that folder's own files and this repo's `CLAUDE.md` for the platform decision - a Java/TeaVM implementation under `jr/` is becoming the primary one; see `jr/README.md` for its own build recipe).
-
-Build from source using Microsoft Visual C++:
-
-```batch
-cd jr_legacy_c
-build-win.bat
-```
-
-**Requirements:**
-- Microsoft Visual C++ build tools (portable or full Visual Studio)
-- Run from "Developer Command Prompt for VS" OR have `devcmd.bat` in PATH
-
-**Note:** For portable MSVC build tools without full Visual Studio install, see [PortableBuildTools](https://github.com/Data-Oriented-House/PortableBuildTools) (archived but functional).
-
-This produces `jr.exe` (40 KB, no VC++ Redistributable required).
+The C implementation described above lives in its own repository now, [jarrunner/jr_legacy_c](https://github.com/jarrunner/jr_legacy_c), with its build instructions and release workflow. This repository builds the Java/TeaVM jr: see `jr/README.md` (`powershell -File jr/build-win.ps1`, needing JDK 25, Maven and llvm-mingw), which is also what `.github/workflows/release.yml` runs.
 
 The build uses a hybrid CRT: `/MT` links vcruntime statically, while `/NODEFAULTLIB:libucrt.lib /DEFAULTLIB:ucrt.lib` swaps the bulky static Universal CRT for the copy that already lives in Windows. That is what removes the `VCRUNTIME140.dll` import without paying the 200 KB a fully static build costs. To confirm it took effect:
 

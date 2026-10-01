@@ -32,8 +32,7 @@ Usage: powershell -File build-win.ps1 [-Arch x86_64,arm64] [-NoIcon] [-DistDir d
 
 Output naming: dist\jr-windows-<arch>.exe (optimized, the one to ship) and
 dist\jr-windows-<arch>-fat.exe (plain -O2, kept aside). Not signed - SignPath happens in CI
-(.github/workflows/release.yml), against jr_legacy_c today; wiring this build into that workflow
-is separate, tracked work (see CLAUDE.md's platform-decision note on what "primary" doesn't mean yet).
+(.github/workflows/release.yml), which runs this script on a clean Windows machine.
 #>
 param(
     [string[]]$Arch = @('x86_64', 'arm64'),
