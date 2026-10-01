@@ -32,10 +32,12 @@ public class Config {
     String appVersion = "";
     String updateUrl = "";
     String updateChannel = "";
+    // jrc-json jar.sources to download, in order: "m<group:artifact:version>\n" or "u<https url>\n" entries
+    String sources = "";
     JsonValue jsonRoot;     // the parsed jrc-json, passed to the app whole as -D properties (CmdLineBuilder)
 
     boolean hasRunTarget() {
-        return !runUrl.isEmpty() || !runMaven.isEmpty();
+        return !runUrl.isEmpty() || !runMaven.isEmpty() || !sources.isEmpty();
     }
 
     public static Config load(String path) {

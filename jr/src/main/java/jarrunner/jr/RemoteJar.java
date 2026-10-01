@@ -23,39 +23,62 @@ public final class RemoteJar {
 
     private static final String MAVEN_CENTRAL = "https://repo1.maven.org/maven2/";
 
-    /** The local path of the verified jar, or null after showing the user why not. */
+    /** Why the last {@link #one} returned null. */
+    private static String error;
+
+    /** The local path of the verified jar, or null after showing the user why not. A jrc-json's
+     *  jar.sources (PRP-30) are tried in order until one gives a verified jar: a mirror of the same
+     *  file shares its cache slot, so a jar already fetched from any of them is used with no
+     *  network. When all fail, the last one's reason is shown. */
     public static String resolve(Config config, boolean hasConsole, boolean guiMode) {
-        var url = config.runUrl;
-        String mavenRel = null;
-        if (!config.runMaven.isEmpty()) {
-            if (!url.isEmpty()) {
+        if (config.sources.isEmpty()) {
+            if (!config.runUrl.isEmpty() && !config.runMaven.isEmpty()) {
                 return fail(hasConsole, "Set run.url or run.maven in the .jrc, not both.");
             }
-            mavenRel = mavenPath(config.runMaven);
+            var jar = one(config, config.runUrl, config.runMaven, hasConsole, guiMode);
+            return jar != null ? jar : fail(hasConsole, error);
+        }
+        // "u<url>\n" / "m<coords>\n" entries, from JrcJson
+        var list = config.sources;
+        for (var at = 0; at < list.length(); ) {
+            var end = list.indexOf('\n', at);
+            var s = list.substring(at + 1, end);
+            var maven = list.charAt(at) == 'm';
+            at = end + 1;
+            var jar = one(config, maven ? "" : s, maven ? s : "", hasConsole, guiMode);
+            if (jar != null) return jar;
+        }
+        return fail(hasConsole, error);
+    }
+
+    private static String one(Config config, String url, String maven, boolean hasConsole, boolean guiMode) {
+        error = null;
+        String mavenRel = null;
+        if (!maven.isEmpty()) {
+            mavenRel = mavenPath(maven);
             if (mavenRel == null) {
-                return fail(hasConsole, "run.maven must be group:artifact:version[:classifier], got:\n"
-                        + config.runMaven);
+                return err("run.maven must be group:artifact:version[:classifier], got:\n" + maven);
             }
             url = MAVEN_CENTRAL + mavenRel;
         }
         if (!url.startsWith("https://")) {
-            return fail(hasConsole, "run.url must be an https:// link, got:\n" + url);
+            return err("run.url must be an https:// link, got:\n" + url);
         }
         var sha = AsciiStr.lower(config.runSha256);
         if (!isSha256(sha)) {
-            return fail(hasConsole, "run.sha256 must be set to the jar's 64-character SHA-256 - it is how jr\n"
+            return err("run.sha256 must be set to the jar's 64-character SHA-256 - it is how jr\n"
                     + "knows the download is the file you built. Got: '" + config.runSha256 + "'");
         }
 
         var target = targetPath(mavenRel, sha, url);
         if (target == null) {
-            return fail(hasConsole, "USERPROFILE is not set, so there is nowhere to keep the jar.");
+            return err("USERPROFILE is not set, so there is nowhere to keep the jar.");
         }
         if (FileIo.exists(target)) {
             if (isVerified(target, sha)) {
                 var changed = JarCheck.changedSinceVerified(config, target, sha);
                 if (changed != null) {
-                    return fail(hasConsole, changed);
+                    return err(changed);
                 }
                 Log.info("run target present and verified: " + target);
                 return target;
@@ -67,7 +90,7 @@ public final class RemoteJar {
                 Log.info("run target present, verified now: " + target);
                 return target;
             }
-            return fail(hasConsole, "A file already at this path does not match run.sha256, so it was not run:\n"
+            return err("A file already at this path does not match run.sha256, so it was not run:\n"
                     + target + "\nexpected " + sha + "\nactual   " + actual
                     + "\n\nEither run.sha256 is wrong, or the file is damaged - delete it and jr will download it again.");
         }
@@ -81,17 +104,17 @@ public final class RemoteJar {
         progress.finish();
         if (!ok) {
             // The .part stays: the next run resumes it rather than starting over.
-            return fail(hasConsole, "Could not download the application (the next run will resume):\n" + url);
+            return err("Could not download the application (the next run will resume):\n" + url);
         }
         var actual = Sha256.ofFile(part);
         if (actual == null || !AsciiStr.equalsIgnoreCase(actual, sha)) {
             WinApi.deleteFileA(cstr(part));
-            return fail(hasConsole, "The downloaded application does not match run.sha256, so it was not run.\n\n"
+            return err("The downloaded application does not match run.sha256, so it was not run.\n\n"
                     + url + "\nexpected " + sha + "\nactual   " + actual);
         }
         if (WinApi.moveFileExA(cstr(part), cstr(target), 0) == 0 && !FileIo.exists(target)) {
             WinApi.deleteFileA(cstr(part));
-            return fail(hasConsole, "Could not move the verified download into place:\n" + target);
+            return err("Could not move the verified download into place:\n" + target);
         }
         markVerified(target, sha);
         Log.info("run target verified: " + target);
@@ -204,6 +227,12 @@ public final class RemoteJar {
             }
         }
         return true;
+    }
+
+    private static String err(String message) {
+        Log.info("run target: " + message);
+        error = message;
+        return null;
     }
 
     private static String fail(boolean hasConsole, String message) {

@@ -86,7 +86,6 @@ public final class JrcCheck {
             error("jar.sources", " must be a non-empty list");
         } else {
             for (var i = 0; i < src.size(); i++) source(src.at(i), sha);
-            if (src.size() > 1) warnings.append("warning: jar.sources: this jr uses only the first source\n");
         }
     }
 

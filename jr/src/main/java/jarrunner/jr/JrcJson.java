@@ -45,15 +45,27 @@ public final class JrcJson {
         text(c, "run.sha256", r.path("jar", "sha256"));
         text(c, "run.crc32", r.path("jar", "crc32"));
         text(c, "run.verify", r.path("jar", "verify"));
-        var first = r.path("jar", "sources") == null ? null : r.path("jar", "sources").at(0);
-        if (first != null) {
-            text(c, "run.maven", first.get("maven"));
-            text(c, "run.url", first.get("url"));
-            var path = first.get("path");
-            if (path != null && path.str() != null) {
-                c.applyKey("java.args", "-jar " + WinQuote.quote(resolve(path.str())));
+        // jar.sources (PRP-30): the first path whose file exists is run as it is, wherever it is
+        // listed, since it needs no network. Otherwise maven and url entries are the download list
+        // RemoteJar tries in order. A missing path is passed on only when nothing else is listed,
+        // so that java reports it.
+        var sources = r.path("jar", "sources");
+        String lastPath = null;
+        for (var i = 0; sources != null && i < sources.size(); i++) {
+            var s = sources.at(i);
+            if (s.get("path") != null) {
+                lastPath = resolve(str(s.get("path")));
+                if (FileIo.exists(lastPath)) {
+                    c.sources = "";
+                    c.applyKey("java.args", "-jar " + WinQuote.quote(lastPath));
+                    return;
+                }
+            } else {
+                var maven = s.get("maven") != null;
+                c.sources += (maven ? "m" : "u") + str(s.get(maven ? "maven" : "url")) + "\n";
             }
         }
+        if (c.sources.isEmpty() && lastPath != null) c.applyKey("java.args", "-jar " + WinQuote.quote(lastPath));
     }
 
     /** A string, number or boolean value as the text a .jrc line would carry. */
