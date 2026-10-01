@@ -105,6 +105,27 @@ public final class WinApi {
     /** {@code int MessageBoxA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)} - winuser.h:3716 */
     @Import(name = "MessageBoxA") public static native int messageBoxA(Address hWnd, Address lpText, Address lpCaption, int uType);
 
+    /** {@code WINBOOL OpenClipboard(HWND hWndNewOwner)} - winuser.h:2479 */
+    @Import(name = "OpenClipboard") public static native int openClipboard(Address hWndNewOwner);
+
+    /** {@code WINBOOL EmptyClipboard()} - winuser.h:2494 */
+    @Import(name = "EmptyClipboard") public static native int emptyClipboard();
+
+    /** {@code HANDLE SetClipboardData(UINT uFormat, HANDLE hMem)} - winuser.h:2486 */
+    @Import(name = "SetClipboardData") public static native Address setClipboardData(int uFormat, Address hMem);
+
+    /** {@code WINBOOL CloseClipboard()} - winuser.h:2480 */
+    @Import(name = "CloseClipboard") public static native int closeClipboard();
+
+    /** {@code HGLOBAL GlobalAlloc(UINT uFlags, SIZE_T dwBytes)} - winbase.h:1201 */
+    @Import(name = "GlobalAlloc") public static native Address globalAlloc(int uFlags, long dwBytes);
+
+    /** {@code LPVOID GlobalLock(HGLOBAL hMem)} - winbase.h:1204 */
+    @Import(name = "GlobalLock") public static native Address globalLock(Address hMem);
+
+    /** {@code WINBOOL GlobalUnlock(HGLOBAL hMem)} - winbase.h:1205 */
+    @Import(name = "GlobalUnlock") public static native int globalUnlock(Address hMem);
+
     /** {@code WINBOOL ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)} - fileapi.h:206 */
     @Import(name = "ReadFile") public static native int readFile(Address hFile, Address lpBuffer, int nNumberOfBytesToRead, Address lpNumberOfBytesRead, Address lpOverlapped);
 
@@ -350,6 +371,8 @@ public final class WinApi {
     public static final int MB_ICONQUESTION = 32; // long, winuser.h:3682
     public static final int MB_YESNO = 4; // long, winuser.h:3678
     public static final int IDYES = 6; // int, winuser.h:4371
+    public static final int CF_UNICODETEXT = 13; // int, winuser.h:1784
+    public static final int GMEM_MOVEABLE = 2; // int, winbase.h:377
     public static final int STD_INPUT_HANDLE = -10; // unsigned long, winbase.h:503
     public static final int STD_OUTPUT_HANDLE = -11; // unsigned long, winbase.h:504
     public static final int STD_ERROR_HANDLE = -12; // unsigned long, winbase.h:505

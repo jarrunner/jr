@@ -24,9 +24,32 @@ public final class Ui {
             } else {
                 System.out.print(text);
             }
+        } else if (type == WinApi.MB_ICONERROR) {
+            // People have to report these, so the whole text is one click away: Yes copies it.
+            var text = message + "\n\n" + ExeInfo.fullPath();
+            if (WinApi.messageBoxA(NULL, cstr(text + "\n\nCopy this message?"), cstr(title),
+                    type | WinApi.MB_YESNO) == WinApi.IDYES) {
+                copy(title + "\n" + text);
+            }
         } else {
             WinApi.messageBoxA(NULL, cstr(message), cstr(title), type);
         }
         Log.write(type == WinApi.MB_ICONERROR ? "ERROR" : "INFO", title + ": " + message);
+    }
+
+    /** Puts text on the clipboard as UTF-16, the one format every app pastes. */
+    static void copy(String s) {
+        if (WinApi.openClipboard(NULL) == 0) return;
+        WinApi.emptyClipboard();
+        var n = s.length();
+        var h = WinApi.globalAlloc(WinApi.GMEM_MOVEABLE, (n + 1) * 2L);
+        var p = h.toLong() == 0 ? NULL : WinApi.globalLock(h);
+        if (p.toLong() != 0) {
+            for (var i = 0; i < n; i++) p.add(i * 2).putChar(s.charAt(i));
+            p.add(n * 2).putChar((char) 0);
+            WinApi.globalUnlock(h);
+            WinApi.setClipboardData(WinApi.CF_UNICODETEXT, h);
+        }
+        WinApi.closeClipboard();
     }
 }

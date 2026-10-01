@@ -36,6 +36,13 @@ GetModuleFileNameA getModuleFileNameA
 GetCurrentDirectoryA getCurrentDirectoryA
 SetEnvironmentVariableA setEnvironmentVariableA
 MessageBoxA messageBoxA
+OpenClipboard openClipboard
+EmptyClipboard emptyClipboard
+SetClipboardData setClipboardData
+CloseClipboard closeClipboard
+GlobalAlloc globalAlloc
+GlobalLock globalLock
+GlobalUnlock globalUnlock
 ReadFile readFile
 LoadLibraryA loadLibraryA
 LoadLibraryExA loadLibraryExA
@@ -124,6 +131,8 @@ MB_ICONINFORMATION
 MB_ICONQUESTION
 MB_YESNO
 IDYES
+CF_UNICODETEXT
+GMEM_MOVEABLE
 STD_INPUT_HANDLE
 STD_OUTPUT_HANDLE
 STD_ERROR_HANDLE
