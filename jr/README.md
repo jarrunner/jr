@@ -111,6 +111,33 @@ A config whose first character is `{` (after an optional UTF-8 BOM) is read as J
 
 **Checked before it is baked.** `-Xjr:resource.RCDATA.JRC=app.json` validates a jrc-json first: valid JSON, the right type for every key jr acts on, allowed values for `jvm.mode` and `java.type`, https addresses, a 64-hex `jar.sha256` for downloads, and something to run. Any error refuses the bake and lists every problem; unknown keys are reported as warnings. `-Xjr:check-config=app.json` runs the same check without baking. A jrc-json that fails to parse at startup stops jr with the file, line and column, instead of running with half its settings.
 
+## Self-update: -Xjr:update-check and -Xjr:update (PRP-30)
+
+An exe whose jrc-json has `app.version` and `update.url` can check for and install a newer version of itself, the way yt-dlp does: the whole exe is replaced, not just its jar.
+
+The update file (one per app, at a fixed https address you control):
+
+```json
+{
+  "format": 1,
+  "app": "io.github.example:demo",
+  "channels": { "stable": "1.0.0", "beta": "1.1.0-beta.1" },
+  "releases": [
+    { "version": "1.1.0-beta.1", "released": "2026-10-02T00:00:00Z",
+      "exe": { "windows-x86_64": { "sha256": "<64 hex>", "urls": ["https://.../demo-windows-x86_64.exe"] } } },
+    { "version": "1.0.0", "notes": "one line, shown to the user", "exe": { "...": "..." } },
+    { "version": "0.9.0", "retracted": "why it was withdrawn", "exe": { "...": "..." } }
+  ]
+}
+```
+
+- `releases` is newest first, and that order is all jr relies on: it finds its own `app.version` by exact match and never parses version strings. `channels` names the release each channel should be on (`update.channel`, default `stable`).
+- `-Xjr:update-check` prints the result. Exit 0 up to date (or this build is newer than the channel), 10 a newer version exists, 1 error. A withdrawn version is told so.
+- `-Xjr:update` downloads the exe for this machine (`windows-x86_64` or `windows-aarch64`, falling back to x86_64 on ARM64), tries each https url in turn, and checks the sha256 before touching anything. It then renames the running exe to `<exe>.jr-replaced` (Windows allows renaming a running exe, not overwriting it) and moves the new one into place, putting the old one back if that fails. The next launch deletes the `.jr-replaced` file. It works even when the app's own jar is broken.
+- `format` lets a future jr refuse a file it does not understand instead of misreading it.
+
+Verified 2026-10-01 against a local update file and a real GitHub release asset: all channel and version cases of `-Xjr:update-check`, a full `-Xjr:update` falling through an unreachable first url, a sha256 mismatch leaving the exe byte-identical, and the leftover cleanup.
+
 **`-Xjr:json-dump=<file>`** prints a JSON file as jr reads it, in one canonical form (compact, keys in source order, numbers as written, pure ASCII). The JVM side prints the same form, so both can be compared on the sample files in `src/test/resources/json`.
 
 ## Tracing startup problems: JR_DEBUG (PRP-24)

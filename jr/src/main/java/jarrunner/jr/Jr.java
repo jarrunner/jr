@@ -22,6 +22,10 @@ public final class Jr {
             Dbg.log("WinApi constants not initialized at startup");
         }
         Timing.init();
+        var replaced = ExeInfo.fullPath() + SelfUpdate.REPLACED; // left by -Xjr:update; gone once no instance holds it
+        if (FileIo.exists(replaced)) {
+            WinApi.deleteFileA(cstr(replaced));
+        }
         var exeBaseName = ExeInfo.baseNameNoExt();
         var configPath = ExeInfo.fullPathNoExt() + ".jrc";
 
@@ -120,6 +124,21 @@ public final class Jr {
             Ui.error(hasConsole, "Invalid jr Config", msg);
             Log.close();
             WinApi.exit(1);
+            return;
+        }
+
+        if (opts.update != 0) {
+            int code;
+            if (opts.update == 2) {
+                code = SelfUpdate.run(config, hasConsole, guiMode);
+            } else {
+                var check = UpdateCheck.run(config);
+                if (check.status == UpdateCheck.ERROR) Ui.error(hasConsole, "Update check", check.message);
+                else Ui.info(hasConsole, "Update check", check.message);
+                code = check.status;
+            }
+            Log.close();
+            WinApi.exit(code);
             return;
         }
 

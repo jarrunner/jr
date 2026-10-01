@@ -24,6 +24,7 @@ public final class JrOptions {
     public String createConfigJar = "";
     public String jsonDump; // -Xjr:json-dump=<file>: parse with jr's own reader, print canonical JSON
     public String checkConfig; // -Xjr:check-config=<file>: the pre-bake jrc-json check, without baking
+    public int update; // 1 = -Xjr:update-check, 2 = -Xjr:update (PRP-30)
     public String error; // non-null = a bad option, message for the user
     public List<String> appArgs = new ArrayList<>();
     public final ReStamp stamp = new ReStamp(); // -Xjr:make/edit/icon/version/sign... (PRP-20 phase 2)
@@ -51,7 +52,9 @@ public final class JrOptions {
                 continue;
             }
 
-            if (opt.startsWith("check-config=")) {
+            if (opt.equals("update-check") || opt.equals("update")) {
+                opts.update = opt.equals("update") ? 2 : 1;
+            } else if (opt.startsWith("check-config=")) {
                 opts.checkConfig = opt.substring("check-config=".length());
             } else if (opt.startsWith("json-dump=")) {
                 opts.jsonDump = opt.substring("json-dump=".length());
