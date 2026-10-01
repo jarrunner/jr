@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.github.jarrunner</groupId>
+  <artifactId>hello</artifactId>
+  <version>1.1.0</version>
+
+  <description>The end-to-end example for jr: one exe that downloads its jar from https://jarrunner.github.io on first run, checks it against its sha256, and updates itself from the same place.</description>
+
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <site>https://jarrunner.github.io/hello</site>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive><manifest><mainClass>jarrunner.examples.hello.Hello</mainClass></manifest></archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>io.github.jarrunner</groupId>
+        <artifactId>jr-maven-plugin</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <executions><execution><goals><goal>exe</goal></goals></execution></executions>
+        <configuration>
+          <icon>${project.basedir}/../../icon/jr-icon.ico</icon>
+          <javaVersion>21+</javaVersion>
+          <source>url</source>
+          <jarUrl>${site}/${project.version}/hello-${project.version}.jar</jarUrl>
+          <updateUrl>${site}/update.json</updateUrl>
+          <architectures>
+            <architecture>x86_64</architecture>
+            <architecture>arm64</architecture>
+          </architectures>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
