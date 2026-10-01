@@ -108,6 +108,10 @@ $newPlatformBlock = @'
     #include <stdalign.h>
 #endif
 '@
+# The here-strings take this file's own line endings, which follow the checkout (CRLF on a Windows CI
+# runner, LF here): normalise them like the generated files above, or nothing matches.
+$oldPlatformBlock = $oldPlatformBlock -replace "`r`n", "`n"
+$newPlatformBlock = $newPlatformBlock -replace "`r`n", "`n"
 if ($definitions -notmatch [regex]::Escape($oldPlatformBlock)) {
     throw "definitions.h did not match the expected TeaVM-generated platform-detection block - TeaVM version may have changed this file, check manually."
 }
@@ -166,6 +170,8 @@ static inline size_t mbrtoc16(char16_t * pc16, const char * s, size_t n, mbstate
 
 #endif
 '@
+$oldUchar = $oldUchar -replace "`r`n", "`n"
+$newUchar = $newUchar -replace "`r`n", "`n"
 if ($uchar -notmatch [regex]::Escape($oldUchar)) {
     throw "uchar.h did not match the expected TeaVM-generated content - TeaVM version may have changed this file, check manually."
 }
