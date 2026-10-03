@@ -55,15 +55,16 @@ public final class PosixJr {
             return;
         }
 
-        var javaPath = resolveJavaPath(config, javaExeName);
-        if (javaPath == null) {
+        var resolved = resolveJava(config, javaExeName);
+        if (resolved == null) {
             Log.close();
             PosixApi.exit(1);
             return;
         }
+        var javaPath = resolved[0];
+        var javaMajor = Atoi.parse(resolved[1]);
 
         var enableAOT = config.enableAOT != 0; // default true, matching the Windows side
-        var javaMajor = JavaFinder.detectMajorVersion(javaPath);
         java.util.List<String> jvmArgs = config.javaArgs.isBlank()
                 ? PosixCmdLineBuilder.buildTraditionalMode(opts.appArgs, enableAOT, javaMajor)
                 : PosixCmdLineBuilder.buildConfigMode(config, opts.appArgs, enableAOT, javaMajor);
@@ -73,39 +74,35 @@ public final class PosixJr {
         PosixApi.exit(result.started ? result.exitCode : 1);
     }
 
-    /** PATH lookup with an optional java.version NN/NN+ check - no auto-install: if the version
-     *  doesn't match, this reports the mismatch and stops, rather than silently running the wrong
-     *  Java or (like the Windows side) offering to download one. Returns null and has already
-     *  printed the error if no usable java was found. */
-    private static String resolveJavaPath(Config config, String javaExeName) {
-        String javaPath;
+    /** PRP-31: {java path, major}. An explicit java.home is used as given (a warning if its version is outside the
+     *  range); otherwise JavaChooser picks by the version rules. Null after printing why nothing qualified. */
+    private static String[] resolveJava(Config config, String javaExeName) {
+        var range = JavaRange.of(config);
+        if (range.error != null) {
+            Ui.error(true, "Invalid Java Version Setting", range.error + "\nThis setting is part of the app's own configuration.");
+            return null;
+        }
         if (!config.javaHome.isBlank()) {
-            javaPath = config.javaHome + "/bin/" + javaExeName;
+            var javaPath = config.javaHome + "/bin/" + javaExeName;
             if (!FileIo.exists(javaPath)) {
-                Ui.error(true, "Java Not Found", "No java at " + javaPath + " (from java.home in " + "the .jrc)");
+                Ui.error(true, "Java Not Found", "No java at " + javaPath + " (java.home in the app config)");
                 return null;
             }
-        } else {
-            javaPath = JavaFinder.findInPath(javaExeName);
-            if (javaPath == null) {
-                Ui.error(true, "Java Not Found", "No java on PATH, and no java.home set in the .jrc.\n"
-                        + "This build does not auto-install a JDK (see PRP-21) - install one and "
-                        + "make sure it is on PATH, or set java.home in the .jrc.");
-                return null;
+            var major = JavaFinder.releaseMajor(config.javaHome);
+            if (!range.accepts(major)) {
+                Log.warn("java.home is Java " + major + ", outside " + range.describe() + "; using it because it was named explicitly");
             }
+            return new String[] {javaPath, String.valueOf(major)};
         }
-
-        if (config.javaVersion > 0) {
-            var major = JavaFinder.detectMajorVersion(javaPath);
-            var matches = config.javaVersionAtLeast ? major >= config.javaVersion : major == config.javaVersion;
-            if (!matches) {
-                Ui.error(true, "Wrong Java Version", javaPath + " is Java " + major + ", but this app needs "
-                        + config.javaVersion + (config.javaVersionAtLeast ? "+" : "") + ".\n"
-                        + "This build does not auto-install a JDK (see PRP-21) - point java.home at one, "
-                        + "or put a matching java on PATH.");
-                return null;
-            }
+        var chooser = new JavaChooser();
+        var home = chooser.choose(range);
+        if (home == null) {
+            Ui.error(true, "Java Not Found", "This app needs Java " + range.preferred + " (" + range.describe() + ").\n"
+                    + "Java installations found on this computer:\n" + (chooser.report.length() == 0 ? "- none\n" : chooser.report)
+                    + "Install Java " + range.preferred + ", or set java.home in the app config. This build does not download Java.");
+            return null;
         }
-        return javaPath;
+        Log.info("Using " + home + " (" + chooser.rule + ")");
+        return new String[] {home + "/bin/" + javaExeName, String.valueOf(JavaFinder.releaseMajor(home))};
     }
 }

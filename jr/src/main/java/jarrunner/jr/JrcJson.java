@@ -26,7 +26,7 @@ public final class JrcJson {
     }
 
     static void apply(JsonValue r, Config c) {
-        text(c, "java.version", r.path("java", "version"));
+        applyJava(r, c);
         text(c, "java.type", r.path("java", "type"));
         text(c, "java.home", r.path("java", "home"));
         text(c, "java.autoinstall", r.path("java", "autoinstall"));
@@ -34,7 +34,7 @@ public final class JrcJson {
         args(c, "vm.args", r.path("jvm", "vmArgs"));
         text(c, "java.args", r.path("jvm", "javaArgs"));
         args(c, "app.args", r.path("app", "args"));
-        text(c, "aot", r.get("aot"));
+        for (var k : new String[] {"name", "email", "issues", "url"}) text(c, "support." + k, r.path("support", k));
         text(c, "log.file", r.path("log", "file"));
         text(c, "log.level", r.path("log", "level"));
         text(c, "log.overwrite", r.path("log", "overwrite"));
@@ -66,6 +66,15 @@ public final class JrcJson {
             }
         }
         if (c.sources.isEmpty() && lastPath != null) c.applyKey("java.args", "-jar " + WinQuote.quote(lastPath));
+    }
+
+    /** The keys that decide which Java runs (PRP-31), also used by JrcCheck to check them before baking. */
+    static void applyJava(JsonValue r, Config c) {
+        text(c, "java.version", r.path("java", "version"));
+        text(c, "java.min", r.path("java", "min"));
+        text(c, "java.preferred", r.path("java", "preferred"));
+        text(c, "java.max", r.path("java", "max"));
+        text(c, "aot", r.get("aot"));
     }
 
     /** A string, number or boolean value as the text a .jrc line would carry. */

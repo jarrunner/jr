@@ -17,8 +17,9 @@ public class Config {
     int enableAOT = -1;
     int useJvmDll = -1;
     String javaHome = "";
-    int javaVersion = 0;          // 0 = not specified: any Java will do, install the default
-    boolean javaVersionAtLeast = false; // true if written "NN+" (NN or newer), same convention as jbang's //JAVA
+    int javaMin = 0, javaPreferred = 0, javaMax = 0; // 0 = not declared; see JavaRange for the defaults
+    boolean javaVersionSet = false, javaKeysSet = false; // java.version and java.min/preferred/max are exclusive
+    String javaRangeError;        // a java.* value that is not a major number
     int javaAutoInstall = -1; // -1 = not specified, use built-in default (enabled)
     String javaType = ""; // "" = not specified, JavaInstall's own default (jre); "jdk" or "jre"
     String runUrl = "";    // run.url / run.maven / run.sha256 - a remote jar, see RemoteJar
@@ -32,6 +33,7 @@ public class Config {
     String appVersion = "";
     String updateUrl = "";
     String updateChannel = "";
+    String supportName = "", supportEmail = "", supportIssues = "", supportUrl = ""; // PRP-31: shown in the error dialog
     // jrc-json jar.sources to download, in order: "m<group:artifact:version>\n" or "u<https url>\n" entries
     String sources = "";
     JsonValue jsonRoot;     // the parsed jrc-json, passed to the app whole as -D properties (CmdLineBuilder)
@@ -103,11 +105,14 @@ public class Config {
                 else Log.warn("Unrecognised jvm mode '" + value + "' (expected dll or exe)");
             }
             case "java.home" -> { javaHome = value; Log.info("java.home=" + value); }
-            case "java.version" -> {
-                javaVersion = Atoi.parse(value);
-                javaVersionAtLeast = value.indexOf('+') >= 0;
-                Log.info("java.version=" + value);
-            }
+            case "java.version" -> JavaRange.declareVersion(this, value);
+            case "java.min" -> { javaKeysSet = true; javaMin = JavaRange.declared(this, key, value); }
+            case "java.preferred" -> { javaKeysSet = true; javaPreferred = JavaRange.declared(this, key, value); }
+            case "java.max" -> { javaKeysSet = true; javaMax = JavaRange.declared(this, key, value); }
+            case "support.name" -> supportName = value;
+            case "support.email" -> supportEmail = value;
+            case "support.issues" -> supportIssues = value;
+            case "support.url" -> supportUrl = value;
             case "java.autoinstall" -> { javaAutoInstall = isTrue(value) ? 1 : 0; Log.info("java.autoinstall=" + value); }
             case "run.url" -> { runUrl = value; Log.info("run.url=" + value); }
             case "run.maven" -> { runMaven = value; Log.info("run.maven=" + value); }
@@ -224,10 +229,11 @@ public class Config {
         sb.append("#log.file=launcher.log\n");
         sb.append("#log.level=info\n");
         sb.append("#log.overwrite=false\n\n");
-        sb.append("# Required Java version: 21 = exactly 21, 21+ = 21 or newer (same convention as jbang).\n");
-        sb.append("# If the Java in PATH doesn't match (or there is none), jr offers to download a matching\n");
-        sb.append("# Eclipse Temurin JDK into %USERPROFILE%\\.jbang\\cache\\jdks\\<version> (same cache jbang itself uses).\n");
-        sb.append("#java.version=21+\n");
+        sb.append("# Java version: java.version=21 (or 21+) means at least 21, and 21 is preferred.\n");
+        sb.append("# Or set java.min / java.preferred / java.max separately. AOT (on unless aot=false) needs 25+.\n");
+        sb.append("# jr uses an installed Java of exactly the preferred version, else offers to download it\n");
+        sb.append("# (Eclipse Temurin) into %USERPROFILE%\\.jbang\\cache\\jdks\\<version> (same cache jbang itself uses).\n");
+        sb.append("#java.version=25\n");
         sb.append("#java.autoinstall=true\n\n");
         sb.append("# jre (default) or jdk - most apps only ever RUN java and never need javac/jar/etc,\n");
         sb.append("# so auto-install fetches the smaller JRE unless this says otherwise. A build tool,\n");

@@ -107,7 +107,6 @@ EnumResourceNamesW enumResourceNamesW
 EnumResourceLanguagesW enumResourceLanguagesW
 EnumResourceTypesW enumResourceTypesW
 VerQueryValueW verQueryValueW
-CreateFileW createFileW
 WriteFile writeFile
 SetFilePointer setFilePointer
 GetFileSizeEx getFileSizeEx
@@ -240,3 +239,85 @@ GetFileExInfoStandard GET_FILEEX_INFO_STANDARD
 BCRYPT_SHA256_ALGORITHM
 BCRYPT_OBJECT_LENGTH
 BCRYPT_HASH_LENGTH
+# --- PRP-31: Java home discovery (registry JavaSoft keys, jvm.dll version resource, PE machine type) ---
+RegOpenKeyExA regOpenKeyExA
+RegEnumKeyExA regEnumKeyExA
+RegQueryValueExA regQueryValueExA
+RegCloseKey regCloseKey
+GetFileVersionInfoSizeA getFileVersionInfoSizeA
+GetFileVersionInfoA getFileVersionInfoA
+HKEY_LOCAL_MACHINE
+HKEY_CURRENT_USER
+KEY_READ
+KEY_WOW64_64KEY
+ERROR_SUCCESS
+IMAGE_FILE_MACHINE_AMD64
+IMAGE_FILE_MACHINE_I386
+# --- PRP-31 step 3: capturing what the JVM printed when it failed to start ---
+SetHandleInformation setHandleInformation
+GetConsoleScreenBufferInfo getConsoleScreenBufferInfo
+CreateFileW createFileW
+GetTickCount64 getTickCount64
+HANDLE_FLAG_INHERIT
+CREATE_ALWAYS
+WAIT_TIMEOUT
+CONSOLE_SCREEN_BUFFER_INFO
+macro:JX_ReadConsoleOutputCharacterA readConsoleOutputCharacterA (Address, Address, int, Address, Address)
+COORD
+atexit atexit
+ExitProcess exitProcess
+# --- PRP-31 step 5: the standard error dialog (a #32770 window and a message loop; no WNDPROC) ---
+ShellExecuteW shellExecuteW
+SetWindowTextW setWindowTextW
+GetWindowTextW getWindowTextW
+GetWindowTextLengthW getWindowTextLengthW
+SetWindowTextA setWindowTextA
+IsDialogMessageW isDialogMessageW
+SetFocus setFocus
+IsChild isChild
+IsWindowVisible isWindowVisible
+SetForegroundWindow setForegroundWindow
+MsgWaitForMultipleObjects msgWaitForMultipleObjects
+GetStockObject getStockObject
+GetSystemTimeAsFileTime getSystemTimeAsFileTime
+ES_MULTILINE
+ES_AUTOVSCROLL
+ES_WANTRETURN
+WS_VSCROLL
+WS_BORDER
+WS_TABSTOP
+WS_EX_CLIENTEDGE
+BS_PUSHBUTTON
+WM_KEYDOWN
+WM_LBUTTONUP
+WM_LBUTTONDOWN
+WM_NCLBUTTONDOWN
+WM_SETFONT
+HTCLOSE
+VK_ESCAPE
+VK_RETURN
+VK_SPACE
+VK_F2
+VK_F3
+VK_F4
+VK_F5
+VK_F6
+VK_F7
+DEFAULT_GUI_FONT
+QS_ALLINPUT
+FILE_APPEND_DATA
+OPEN_ALWAYS
+# --- PRP-31 step 5: native look (system message font, DPI-scaled layout) ---
+SystemParametersInfoW systemParametersInfoW
+CreateFontIndirectW createFontIndirectW
+GetDC getDC
+ReleaseDC releaseDC
+GetDeviceCaps getDeviceCaps
+LOGPIXELSY
+SPI_GETNONCLIENTMETRICS
+NONCLIENTMETRICSW
+# --- PRP-31: a smooth small icon. LoadIconWithScaleDown itself is NOT imported (comctl32 v6 only: an exe
+#     without the manifest would not even start), it is looked up at run time - see LoadIconScaleDownFn ---
+GetSystemMetrics getSystemMetrics
+SM_CXSMICON
+SM_CXICON

@@ -51,6 +51,26 @@ public final class RemoteJar {
         return fail(hasConsole, error);
     }
 
+    /** PRP-31 doctor/repair: where the remote jar is (or would be) kept, without any network; the first
+     *  source whose file exists, else the first source's slot; null if there is no remote jar. */
+    static String localPath(Config config) {
+        var list = config.sources.isEmpty()
+                ? (config.runMaven.isEmpty() ? (config.runUrl.isEmpty() ? "" : "u" + config.runUrl + "\n") : "m" + config.runMaven + "\n")
+                : config.sources;
+        String first = null;
+        for (var at = 0; at < list.length(); ) {
+            var end = list.indexOf('\n', at);
+            var s = list.substring(at + 1, end);
+            var maven = list.charAt(at) == 'm';
+            at = end + 1;
+            var rel = maven ? mavenPath(s) : null;
+            var path = maven && rel == null ? null : targetPath(rel, AsciiStr.lower(config.runSha256), maven ? MAVEN_CENTRAL + rel : s);
+            if (path != null && FileIo.exists(path)) return path;
+            if (first == null) first = path;
+        }
+        return first;
+    }
+
     private static String one(Config config, String url, String maven, boolean hasConsole, boolean guiMode) {
         error = null;
         String mavenRel = null;

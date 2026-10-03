@@ -37,6 +37,31 @@ class ExeMojoTest {
         assertEquals("0.0.0.0", ExeStamper.numericVersion("beta"));
     }
 
+
+    @Test void supportComesFromThePomUnlessSet() throws Exception {
+        var m = mojo(TestApp.jar(dir));
+        m.project = new org.apache.maven.project.MavenProject();
+        var org = new org.apache.maven.model.Organization();
+        org.setName("Example Org");
+        m.project.setOrganization(org);
+        var issues = new org.apache.maven.model.IssueManagement();
+        issues.setUrl("https://github.com/example/app/issues");
+        m.project.setIssueManagement(issues);
+        var dev = new org.apache.maven.model.Developer();
+        dev.setEmail("dev@example.org");
+        m.project.setDevelopers(List.of(dev));
+        m.supportEmail = "help@example.org";
+        var json = ExeMojo.mapper().writeValueAsString(m.config());
+        assertTrue(json.contains("\"name\" : \"Example Org\""), json);
+        assertTrue(json.contains("\"issues\" : \"https://github.com/example/app/issues\""), json);
+        assertTrue(json.contains("\"email\" : \"help@example.org\""), json);
+    }
+
+    @Test void noSupportSectionWithoutAPom() throws Exception {
+        var json = ExeMojo.mapper().writeValueAsString(mojo(TestApp.jar(dir)).config());
+        assertFalse(json.contains("\"support\""), json);
+    }
+
     @Test void pathSourceCarriesNoDownloadChecks() throws Exception {
         var jar = TestApp.jar(dir);
         var json = ExeMojo.mapper().writeValueAsString(mojo(jar).config());

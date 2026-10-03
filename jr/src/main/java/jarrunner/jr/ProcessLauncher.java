@@ -1,5 +1,7 @@
 package jarrunner.jr;
 
+import org.teavm.interop.Address;
+
 import static jarrunner.jr.N.*;
 
 /**
@@ -15,7 +17,9 @@ public final class ProcessLauncher {
     private static final int PROCESS_INFO_SIZE = WinOffsets.PROCESS_INFORMATION.SIZE;
     private static final int STARTF_USESTDHANDLES = WinApi.STARTF_USESTDHANDLES;
 
-    public static LaunchResult launch(String cmdLine, boolean hasConsole) {
+    /** GUI mode: stderr goes to guiStderr (PRP-31 capture, NULL for none), and jr waits up to guiWaitMs so
+     *  that a start failure can be reported; a process still running then is left to run (detached). */
+    public static LaunchResult launch(String cmdLine, boolean hasConsole, Address guiStderr, int guiWaitMs) {
         var si = alloc(STARTUPINFO_SIZE);
         WinOffsets.STARTUPINFOA.cb(si, STARTUPINFO_SIZE);
 
@@ -24,6 +28,9 @@ public final class ProcessLauncher {
             WinOffsets.STARTUPINFOA.hStdInput(si, WinApi.getStdHandle(WinApi.STD_INPUT_HANDLE));
             WinOffsets.STARTUPINFOA.hStdOutput(si, WinApi.getStdHandle(WinApi.STD_OUTPUT_HANDLE));
             WinOffsets.STARTUPINFOA.hStdError(si, WinApi.getStdHandle(WinApi.STD_ERROR_HANDLE));
+        } else if (guiStderr.toLong() != 0) {
+            WinOffsets.STARTUPINFOA.dwFlags(si, STARTF_USESTDHANDLES);
+            WinOffsets.STARTUPINFOA.hStdError(si, guiStderr);
         }
 
         var pi = alloc(PROCESS_INFO_SIZE);
@@ -40,11 +47,13 @@ public final class ProcessLauncher {
         var pid = WinOffsets.PROCESS_INFORMATION.dwProcessId(pi);
         Log.info("Java process started successfully (PID: " + pid + ")");
 
-        if (!hasConsole) {
+        if (!hasConsole && WinApi.waitForSingleObject(hProcess, guiWaitMs) == WinApi.WAIT_TIMEOUT) {
             WinApi.closeHandle(hProcess);
             WinApi.closeHandle(hThread);
-            Log.info("Launched in GUI mode, launcher exiting");
-            return new LaunchResult(true, 0);
+            Log.info("Launched in GUI mode and still running, launcher exiting");
+            var r = new LaunchResult(true, 0);
+            r.detached = true;
+            return r;
         }
 
         WinApi.waitForSingleObject(hProcess, WinApi.INFINITE);

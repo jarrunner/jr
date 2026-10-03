@@ -101,14 +101,7 @@ public final class Progress {
      *  jr stamps (see icon/build-ico.ps1); no extra sizes are packaged. A caption icon needs WS_SYSMENU, which also brings
      *  a close button; that is greyed out, since closing the window would not stop the download. */
     private void showOwnIcon() {
-        var large = ptrVar();
-        var small = ptrVar();
-        if (WinApi.extractIconExW(wcstr(ExeInfo.fullPath()), 0, large, small, 1) > 0) {
-            iconLarge = large.getAddress();
-            iconSmall = small.getAddress();
-            WinApi.sendMessageA(hwndWindow, WinApi.WM_SETICON, WinApi.ICON_BIG, iconLarge.toLong());
-            WinApi.sendMessageA(hwndWindow, WinApi.WM_SETICON, WinApi.ICON_SMALL, iconSmall.toLong());
-        }
+        WinIcons.set(hwndWindow);
         var menu = WinApi.getSystemMenu(hwndWindow, 0);
         if (menu.toLong() != 0) {
             WinApi.enableMenuItem(menu, WinApi.SC_CLOSE, WinApi.MF_BYCOMMAND | WinApi.MF_GRAYED);

@@ -34,6 +34,10 @@ public final class ExeMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.groupId}:${project.artifactId}") String appId;
     @Parameter(defaultValue = "${project.version}") String appVersion;
     @Parameter String javaVersion;
+    /** PRP-31: the oldest, the wanted and the newest Java major; an alternative to javaVersion, not both. */
+    @Parameter Integer javaMin;
+    @Parameter Integer javaPreferred;
+    @Parameter Integer javaMax;
     @Parameter String javaType;
     @Parameter String javaHome;
     @Parameter Boolean javaAutoinstall;
@@ -52,6 +56,11 @@ public final class ExeMojo extends AbstractMojo {
     String resolvedJarUrl;
     @Parameter String updateUrl;
     @Parameter String updateChannel;
+    /** Who supports the app (PRP-31), shown in jr's error dialog; each defaults from the pom, see SupportSection. */
+    @Parameter String supportName;
+    @Parameter String supportEmail;
+    @Parameter String supportIssues;
+    @Parameter String supportUrl;
     /** Per-run jar check for a downloaded jar: crc32 (default), sha256 or none. */
     @Parameter(property = "jr.jarVerify") String jarVerify;
     /** x86_64 and/or arm64. One architecture gives name.exe; several give name-windows-ARCH.exe. */
@@ -61,9 +70,9 @@ public final class ExeMojo extends AbstractMojo {
     @Parameter String productName;
     @Parameter String companyName;
     @Parameter String copyright;
-    /** The application manifest for the exe. Default: the bundled one, which declares Windows 7 to 11
-     *  and asInvoker, so Windows does not treat the exe as a legacy program (the Program Compatibility
-     *  Assistant otherwise pops up after an error dialog). */
+    /** The application manifest for the exe. Default: the bundled one, the same kind java.exe carries: Windows 7
+     *  to 11, asInvoker, Common Controls 6 and per-monitor DPI awareness, so Windows does not treat the exe as a
+     *  legacy program (no compatibility popups, no blurry bitmap-stretched windows on a scaled display). */
     @Parameter File manifest;
     /** Write the release folder (exes, jar, version.txt, releaseFiles, SHA256SUMS, update file).
      *  Default: on for source=url. */
@@ -106,13 +115,14 @@ public final class ExeMojo extends AbstractMojo {
         var c = new JrcConfig()
                 .app(new AppSection().id(appId).name(name).version(appVersion).args(appArgs))
                 .aot(aot);
-        if (javaVersion != null || javaType != null || javaHome != null || javaAutoinstall != null) {
-            c.java(new JavaSection().version(javaVersion).type(javaType).home(javaHome).autoinstall(javaAutoinstall));
+        if (javaVersion != null || javaMin != null || javaPreferred != null || javaMax != null || javaType != null || javaHome != null || javaAutoinstall != null) {
+            c.java(new JavaSection().version(javaVersion).min(javaMin).preferred(javaPreferred).max(javaMax).type(javaType).home(javaHome).autoinstall(javaAutoinstall));
         }
         if (jvmMode != null || vmArgs != null || javaArgs != null) {
             c.jvm(new JvmSection().mode(jvmMode).vmArgs(vmArgs).javaArgs(javaArgs));
         }
         if (updateUrl != null) c.update(new UpdateSection().url(updateUrl).channel(updateChannel));
+        c.support(SupportSection.of(project, supportName, supportEmail, supportIssues, supportUrl));
         if (javaArgs == null) {
             var digests = digests(jar);
             resolvedJarUrl = jarUrl == null ? null : jarUrl.replace("{sha8}", digests[0].substring(0, 8));

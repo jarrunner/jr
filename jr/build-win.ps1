@@ -75,7 +75,7 @@ powershell -File postprocess.ps1 -Dir target/c
 if ($LASTEXITCODE -ne 0) { throw 'postprocess.ps1 failed' }
 
 New-Item -ItemType Directory -Force $DistDir | Out-Null
-$libs = @('-lwinhttp', '-lbcrypt', '-lcomctl32', '-lversion', '-lcrypt32', '-lmssign32')
+$libs = @('-lwinhttp', '-lbcrypt', '-lcomctl32', '-lversion', '-lcrypt32', '-lmssign32', '-lgdi32')
 
 # The x86_64 optimized build doubles as the icon editor for every architecture's output (see the
 # file header - resource editing does not execute the target, so cross-arch stamping is fine, but
@@ -118,8 +118,16 @@ if (-not (Test-Path $iconFile)) {
     exit 0
 }
 
+# PRP-31: the same manifest the maven plugin stamps (Common Controls 6, per-monitor DPI, supported OS): without it
+# jr.exe ran as a legacy program, with bitmap-stretched, old-style windows on a scaled display.
+$manifestFile = '../jr-maven-plugin/src/main/resources/jarrunner/jr/maven/app.manifest'
 $editor = Join-Path $DistDir 'jr-icon-editor.exe'
-Copy-Item $builtOptimized[$editorSourceArch] $editor -Force
+# An arm64-only run builds no x86_64 editor: use the x86_64 exe already in dist, or stop. (Before PRP-31 this
+# copied $null, every stamp failed silently, and the run still ended "Done" with unbranded, manifest-less exes.)
+$editorSource = $builtOptimized[$editorSourceArch]
+if (-not $editorSource) { $editorSource = Join-Path $DistDir "jr-windows-$editorSourceArch.exe" }
+if (-not (Test-Path $editorSource)) { throw "no $editorSourceArch jr exe to stamp with: build -Arch $editorSourceArch first (or together)" }
+Copy-Item $editorSource $editor -Force
 foreach ($a in $Arch) {
     foreach ($out in @((Join-Path $DistDir "jr-windows-$a.exe"), (Join-Path $DistDir "jr-windows-$a-fat.exe"))) {
         Write-Host "  stamping icon on $out"
@@ -129,7 +137,7 @@ foreach ($a in $Arch) {
         $attempt = 0
         do {
             $attempt++
-            & $editor "-Xjr:edit=$out" "-Xjr:icon=$iconFile"
+            & $editor "-Xjr:edit=$out" "-Xjr:icon=$iconFile" "-Xjr:manifest=$manifestFile"
             if ($LASTEXITCODE -eq 0) { break }
             if ($attempt -ge 5) { throw "icon stamping failed for $out after $attempt attempts" }
             Start-Sleep -Milliseconds 500

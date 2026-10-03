@@ -12,4 +12,5 @@ public final class JrcConfig extends JrcConfig_A {
     JvmSection jvm;
     Boolean aot;
     UpdateSection update;
+    SupportSection support;
 }

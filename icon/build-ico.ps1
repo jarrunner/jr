@@ -30,7 +30,7 @@ chased down why; hardcoding the one absolute path this file always lives under s
 #>
 
 $ErrorActionPreference = 'Stop'
-$iconDir = 'C:\user\code\littlejlib\jr\icon'
+$iconDir = 'C:\user\code\jarrunner\jr\icon'
 $svg = Join-Path $iconDir 'concept-02-jr-monogram.svg'
 if (-not (Test-Path $svg)) { throw "$svg not found" }
 
@@ -56,6 +56,38 @@ foreach ($s in $sizes) {
     if (-not (Test-Path $png)) { throw "$png was not created" }
     $pngPaths[$s] = $png
 }
+
+# PRP-31 (2026-10-03): the small sizes are DRAWN, not scaled. A 16-20 px caption icon shrunk from the 256 entry
+# smears the italic j and r, whatever the resampling (LoadIconWithScaleDown did not visibly help, user-checked).
+# So 16/20/24/32 are pixel art: upright 2-unit strokes on a 16-unit grid, every edge on a whole pixel, the same
+# purple gradient. ~500-800 bytes each. Windows picks the exact size when it exists (20 is the caption at 125%).
+# Shapes in 16-units: x0,y0,x1,y1 (x1/y1 exclusive).
+$pixelShapes = @(
+    @(5, 2, 7, 4),    # j dot
+    @(5, 5, 7, 13),   # j stem
+    @(3, 12, 6, 14),  # j foot
+    @(9, 5, 11, 13),  # r stem
+    @(11, 5, 14, 7)   # r arm
+)
+foreach ($n in 16, 20, 24, 32) {
+    $u = $n / 16.0
+    $r = [Math]::Max(2, [Math]::Round(3 * $u))
+    $draws = @()
+    foreach ($s in $pixelShapes) {
+        $x0 = [Math]::Round($s[0] * $u); $y0 = [Math]::Round($s[1] * $u)
+        # width from the shape's own size, not from two rounded edges, so equal strokes stay equal
+        $x1 = $x0 + [Math]::Round(($s[2] - $s[0]) * $u) - 1; $y1 = $y0 + [Math]::Round(($s[3] - $s[1]) * $u) - 1
+        $draws += '-draw'; $draws += "rectangle $x0,$y0 $x1,$y1"
+    }
+    $png = Join-Path $iconDir "jr-icon-$n.tmp.png"
+    & $magick -size "${n}x${n}" "gradient:#4A2E5C-#2A1836" `
+        `( -size "${n}x${n}" xc:none -fill white -draw "roundrectangle 0,0 $($n-1),$($n-1) $r,$r" `) `
+        -compose CopyOpacity -composite -compose Over `
+        +antialias -fill white @draws -depth 8 -define png:compression-level=9 $png
+    if ($LASTEXITCODE -ne 0) { throw "drawing ${n}x${n} failed" }
+    $pngPaths[$n] = $png
+}
+$sizes = @(16, 20, 24, 32) + $sizes
 
 # ICONDIR (6 bytes) + one ICONDIRENTRY (16 bytes) per image, PNG bytes concatenated after -
 # every entry PNG-compressed, per the file header above.

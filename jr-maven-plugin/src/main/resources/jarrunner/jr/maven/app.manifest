@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+<!-- jr's application manifest: stamped into jr.exe by build-win.ps1 and into every exe this plugin builds.
+     It declares what java.exe's own manifest declares, because an in-process JVM (jvm=dll) runs under jr's:
+     Common Controls 6 (native-looking windows), per-monitor DPI awareness (no bitmap-stretched, blurry
+     windows on a scaled display), the supported Windows versions (no Program Compatibility Assistant
+     popups), and asInvoker. -->
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0" processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*"/>
+    </dependentAssembly>
+  </dependency>
+  <asmv3:application>
+    <asmv3:windowsSettings xmlns:dpi1="http://schemas.microsoft.com/SMI/2005/WindowsSettings" xmlns:dpi2="http://schemas.microsoft.com/SMI/2016/WindowsSettings">
+      <dpi1:dpiAware>true/PM</dpi1:dpiAware>
+      <dpi2:dpiAwareness>PerMonitorV2, PerMonitor, system</dpi2:dpiAwareness>
+    </asmv3:windowsSettings>
+  </asmv3:application>
   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
     <application>
       <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>

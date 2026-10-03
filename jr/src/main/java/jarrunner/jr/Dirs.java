@@ -92,6 +92,29 @@ public final class Dirs {
         });
     }
 
+    /** PRP-31: names of the files directly in dir matching a wildcard pattern such as "app.*.aot". */
+    static List<String> matching(String dir, String pattern) {
+        return memScoped(() -> {
+            var out = new ArrayList<String>();
+            var findData = alloc(FIND_DATA_SIZE);
+            var findHandle = WinApi.findFirstFileA(cstr(dir + "\\" + pattern), findData);
+            if (findHandle.toLong() == 0 || findHandle == WinApi.INVALID_HANDLE_VALUE) {
+                return out;
+            }
+            do {
+                if ((WinOffsets.WIN32_FIND_DATAA.dwFileAttributes(findData) & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+                    out.add(fileName(findData));
+                }
+            } while (WinApi.findNextFileA(findHandle, findData) != 0);
+            WinApi.findClose(findHandle);
+            return out;
+        });
+    }
+
+    static int matchCount(String dir, String pattern) {
+        return dir == null || dir.isEmpty() ? 0 : matching(dir, pattern).size();
+    }
+
     public static boolean moveDirectory(String src, String dst) {
         removeDirTree(dst); // clear any empty leftover from a previous partial attempt
         return WinApi.moveFileExA(cstr(src), cstr(dst), WinApi.MOVEFILE_COPY_ALLOWED) != 0;

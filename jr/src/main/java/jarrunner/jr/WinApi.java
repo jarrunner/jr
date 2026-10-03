@@ -315,9 +315,6 @@ public final class WinApi {
     /** {@code WINBOOL VerQueryValueW(LPCVOID pBlock, LPCWSTR lpSubBlock, LPVOID *lplpBuffer, PUINT puLen)} - winver.h:163 */
     @Import(name = "VerQueryValueW") public static native int verQueryValueW(Address pBlock, Address lpSubBlock, Address lplpBuffer, Address puLen);
 
-    /** {@code HANDLE CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)} - fileapi.h:64 */
-    @Import(name = "CreateFileW") public static native Address createFileW(Address lpFileName, int dwDesiredAccess, int dwShareMode, Address lpSecurityAttributes, int dwCreationDisposition, int dwFlagsAndAttributes, Address hTemplateFile);
-
     /** {@code WINBOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped)} - fileapi.h:214 */
     @Import(name = "WriteFile") public static native int writeFile(Address hFile, Address lpBuffer, int nNumberOfBytesToWrite, Address lpNumberOfBytesWritten, Address lpOverlapped);
 
@@ -458,4 +455,141 @@ public final class WinApi {
     public static final String BCRYPT_SHA256_ALGORITHM = "SHA256"; // wide L"" literal (pass via Wstr), unsigned short*, bcrypt.h:352
     public static final String BCRYPT_OBJECT_LENGTH = "ObjectLength"; // wide L"" literal (pass via Wstr), unsigned short*, bcrypt.h:135
     public static final String BCRYPT_HASH_LENGTH = "HashDigestLength"; // wide L"" literal (pass via Wstr), unsigned short*, bcrypt.h:125
+    /** {@code LONG RegOpenKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult)} - winreg.h:417 */
+    @Import(name = "RegOpenKeyExA") public static native int regOpenKeyExA(Address hKey, Address lpSubKey, int ulOptions, int samDesired, Address phkResult);
+
+    /** {@code LONG RegEnumKeyExA(HKEY hKey, DWORD dwIndex, LPSTR lpName, LPDWORD lpcchName, LPDWORD lpReserved, LPSTR lpClass, LPDWORD lpcchClass, PFILETIME lpftLastWriteTime)} - winreg.h:410 */
+    @Import(name = "RegEnumKeyExA") public static native int regEnumKeyExA(Address hKey, int dwIndex, Address lpName, Address lpcchName, Address lpReserved, Address lpClass, Address lpcchClass, Address lpftLastWriteTime);
+
+    /** {@code LONG RegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)} - winreg.h:421 */
+    @Import(name = "RegQueryValueExA") public static native int regQueryValueExA(Address hKey, Address lpValueName, Address lpReserved, Address lpType, Address lpData, Address lpcbData);
+
+    /** {@code LONG RegCloseKey(HKEY hKey)} - winreg.h:403 */
+    @Import(name = "RegCloseKey") public static native int regCloseKey(Address hKey);
+
+    /** {@code DWORD GetFileVersionInfoSizeA(LPCSTR lptstrFilename, LPDWORD lpdwHandle)} - winver.h:149 */
+    @Import(name = "GetFileVersionInfoSizeA") public static native int getFileVersionInfoSizeA(Address lptstrFilename, Address lpdwHandle);
+
+    /** {@code WINBOOL GetFileVersionInfoA(LPCSTR lptstrFilename, DWORD dwHandle, DWORD dwLen, LPVOID lpData)} - winver.h:153 */
+    @Import(name = "GetFileVersionInfoA") public static native int getFileVersionInfoA(Address lptstrFilename, int dwHandle, int dwLen, Address lpData);
+
+    public static final Address HKEY_LOCAL_MACHINE = Address.fromLong(-2147483646L); // void*, winreg.h:48
+    public static final Address HKEY_CURRENT_USER = Address.fromLong(-2147483647L); // void*, winreg.h:47
+    public static final int KEY_READ = 0x00020019; // long, winnt.h:9986
+    public static final int KEY_WOW64_64KEY = 256; // int, winnt.h:9982
+    public static final int ERROR_SUCCESS = 0; // long, winerror.h:167
+    public static final int IMAGE_FILE_MACHINE_AMD64 = 0x00008664; // int, winnt.h:7604
+    public static final int IMAGE_FILE_MACHINE_I386 = 332; // int, winnt.h:7576
+    /** {@code WINBOOL SetHandleInformation(HANDLE hObject, DWORD dwMask, DWORD dwFlags)} - handleapi.h:28 */
+    @Import(name = "SetHandleInformation") public static native int setHandleInformation(Address hObject, int dwMask, int dwFlags);
+
+    /** {@code WINBOOL GetConsoleScreenBufferInfo(HANDLE console_output, PCONSOLE_SCREEN_BUFFER_INFO console_screen_buffer_info)} - consoleapi2.h:72 */
+    @Import(name = "GetConsoleScreenBufferInfo") public static native int getConsoleScreenBufferInfo(Address console_output, Address console_screen_buffer_info);
+
+    /** {@code HANDLE CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)} - fileapi.h:64 */
+    @Import(name = "CreateFileW") public static native Address createFileW(Address lpFileName, int dwDesiredAccess, int dwShareMode, Address lpSecurityAttributes, int dwCreationDisposition, int dwFlagsAndAttributes, Address hTemplateFile);
+
+    /** {@code ULONGLONG GetTickCount64()} - sysinfoapi.h:42 */
+    @Import(name = "GetTickCount64") public static native long getTickCount64();
+
+    public static final int HANDLE_FLAG_INHERIT = 1; // int, winbase.h:1355
+    public static final int CREATE_ALWAYS = 2; // int, fileapi.h:19
+    public static final int WAIT_TIMEOUT = 258; // long, winerror.h:356
+    /** {@code #define JX_ReadConsoleOutputCharacterA(5 arguments)} - a function-like macro, expanded by the C compiler at the call; result: int, 4 bytes, per clang */
+    @Import(name = "JX_ReadConsoleOutputCharacterA") public static native int readConsoleOutputCharacterA(Address arg0, Address arg1, int arg2, Address arg3, Address arg4);
+
+    /** {@code int atexit(void (*)(void) __attribute__((cdecl)))} - stdlib.h:273 */
+    @Import(name = "atexit") public static native int atexit(Address arg0);
+
+    /** {@code void ExitProcess(UINT uExitCode)} - processthreadsapi.h:28 */
+    @Import(name = "ExitProcess") public static native void exitProcess(int uExitCode);
+
+    /** {@code HINSTANCE ShellExecuteW(HWND hwnd, LPCWSTR lpOperation, LPCWSTR lpFile, LPCWSTR lpParameters, LPCWSTR lpDirectory, INT nShowCmd)} - shellapi.h:76 */
+    @Import(name = "ShellExecuteW") public static native Address shellExecuteW(Address hwnd, Address lpOperation, Address lpFile, Address lpParameters, Address lpDirectory, int nShowCmd);
+
+    /** {@code WINBOOL SetWindowTextW(HWND hWnd, LPCWSTR lpString)} - winuser.h:3638 */
+    @Import(name = "SetWindowTextW") public static native int setWindowTextW(Address hWnd, Address lpString);
+
+    /** {@code int GetWindowTextW(HWND hWnd, LPWSTR lpString, int nMaxCount)} - winuser.h:3640 */
+    @Import(name = "GetWindowTextW") public static native int getWindowTextW(Address hWnd, Address lpString, int nMaxCount);
+
+    /** {@code int GetWindowTextLengthW(HWND hWnd)} - winuser.h:3642 */
+    @Import(name = "GetWindowTextLengthW") public static native int getWindowTextLengthW(Address hWnd);
+
+    /** {@code WINBOOL SetWindowTextA(HWND hWnd, LPCSTR lpString)} - winuser.h:3637 */
+    @Import(name = "SetWindowTextA") public static native int setWindowTextA(Address hWnd, Address lpString);
+
+    /** {@code WINBOOL IsDialogMessageW(HWND hDlg, LPMSG lpMsg)} - winuser.h:4618 */
+    @Import(name = "IsDialogMessageW") public static native int isDialogMessageW(Address hDlg, Address lpMsg);
+
+    /** {@code HWND SetFocus(HWND hWnd)} - winuser.h:2576 */
+    @Import(name = "SetFocus") public static native Address setFocus(Address hWnd);
+
+    /** {@code WINBOOL IsChild(HWND hWndParent, HWND hWnd)} - winuser.h:2211 */
+    @Import(name = "IsChild") public static native int isChild(Address hWndParent, Address hWnd);
+
+    /** {@code WINBOOL IsWindowVisible(HWND hWnd)} - winuser.h:2307 */
+    @Import(name = "IsWindowVisible") public static native int isWindowVisible(Address hWnd);
+
+    /** {@code WINBOOL SetForegroundWindow(HWND hWnd)} - winuser.h:3507 */
+    @Import(name = "SetForegroundWindow") public static native int setForegroundWindow(Address hWnd);
+
+    /** {@code DWORD MsgWaitForMultipleObjects(DWORD nCount, const HANDLE *pHandles, WINBOOL fWaitAll, DWORD dwMilliseconds, DWORD dwWakeMask)} - winuser.h:2989 */
+    @Import(name = "MsgWaitForMultipleObjects") public static native int msgWaitForMultipleObjects(int nCount, Address pHandles, int fWaitAll, int dwMilliseconds, int dwWakeMask);
+
+    /** {@code HGDIOBJ GetStockObject(int i)} - wingdi.h:3086 */
+    @Import(name = "GetStockObject") public static native Address getStockObject(int i);
+
+    /** {@code void GetSystemTimeAsFileTime(LPFILETIME lpSystemTimeAsFileTime)} - sysinfoapi.h:38 */
+    @Import(name = "GetSystemTimeAsFileTime") public static native void getSystemTimeAsFileTime(Address lpSystemTimeAsFileTime);
+
+    public static final int ES_MULTILINE = 4; // long, winuser.h:4388
+    public static final int ES_AUTOVSCROLL = 64; // long, winuser.h:4392
+    public static final int ES_WANTRETURN = 4096; // long, winuser.h:4397
+    public static final int WS_VSCROLL = 0x00200000; // long, winuser.h:1592
+    public static final int WS_BORDER = 0x00800000; // long, winuser.h:1590
+    public static final int WS_TABSTOP = 0x00010000; // long, winuser.h:1597
+    public static final int WS_EX_CLIENTEDGE = 512; // long, winuser.h:1617
+    public static final int BS_PUSHBUTTON = 0; // long, winuser.h:4479
+    public static final int WM_KEYDOWN = 256; // int, winuser.h:1175
+    public static final int WM_LBUTTONUP = 514; // int, winuser.h:1240
+    public static final int WM_LBUTTONDOWN = 513; // int, winuser.h:1239
+    public static final int WM_NCLBUTTONDOWN = 161; // int, winuser.h:1159
+    public static final int WM_SETFONT = 48; // int, winuser.h:1090
+    public static final int HTCLOSE = 20; // int, winuser.h:1479
+    public static final int VK_ESCAPE = 27; // int, winuser.h:271
+    public static final int VK_RETURN = 13; // int, winuser.h:256
+    public static final int VK_SPACE = 32; // int, winuser.h:276
+    public static final int VK_F2 = 113; // int, winuser.h:314
+    public static final int VK_F3 = 114; // int, winuser.h:315
+    public static final int VK_F4 = 115; // int, winuser.h:316
+    public static final int VK_F5 = 116; // int, winuser.h:317
+    public static final int VK_F6 = 117; // int, winuser.h:318
+    public static final int VK_F7 = 118; // int, winuser.h:319
+    public static final int DEFAULT_GUI_FONT = 17; // int, wingdi.h:1458
+    public static final int QS_ALLINPUT = 1279; // int, winuser.h:3027
+    public static final int FILE_APPEND_DATA = 4; // int, winnt.h:6116
+    public static final int OPEN_ALWAYS = 4; // int, fileapi.h:21
+    /** {@code WINBOOL SystemParametersInfoW(UINT uiAction, UINT uiParam, PVOID pvParam, UINT fWinIni)} - winuser.h:5636 */
+    @Import(name = "SystemParametersInfoW") public static native int systemParametersInfoW(int uiAction, int uiParam, Address pvParam, int fWinIni);
+
+    /** {@code HFONT CreateFontIndirectW(const LOGFONTW *lplf)} - wingdi.h:2901 */
+    @Import(name = "CreateFontIndirectW") public static native Address createFontIndirectW(Address lplf);
+
+    /** {@code HDC GetDC(HWND hWnd)} - winuser.h:3511 */
+    @Import(name = "GetDC") public static native Address getDC(Address hWnd);
+
+    /** {@code int ReleaseDC(HWND hWnd, HDC hDC)} - winuser.h:3550 */
+    @Import(name = "ReleaseDC") public static native int releaseDC(Address hWnd, Address hDC);
+
+    /** {@code int GetDeviceCaps(HDC hdc, int index)} - wingdi.h:3051 */
+    @Import(name = "GetDeviceCaps") public static native int getDeviceCaps(Address hdc, int index);
+
+    public static final int LOGPIXELSY = 90; // int, wingdi.h:1539
+    public static final int SPI_GETNONCLIENTMETRICS = 41; // int, winuser.h:5099
+    /** {@code int GetSystemMetrics(int nIndex)} - winuser.h:3192 */
+    @Import(name = "GetSystemMetrics") public static native int getSystemMetrics(int nIndex);
+
+    public static final int SM_CXSMICON = 49; // int, winuser.h:3128
+    public static final int SM_CXICON = 11; // int, winuser.h:3084
 }

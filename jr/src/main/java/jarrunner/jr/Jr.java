@@ -60,6 +60,8 @@ public final class Jr {
         var guiMode = ConsoleMode.isGuiMode();
         var hasConsole = !guiMode;
         var javaExeName = hasConsole ? "java.exe" : "javaw.exe";
+        ErrorReport.config = config;
+        ErrorReport.javaExeName = javaExeName;
 
         WinApi.setEnvironmentVariableA(cstr("JR_LAUNCH_MODE"), cstr(hasConsole ? "console" : "gui"));
         WinApi.setEnvironmentVariableA(cstr("JR_AOT_STATE"), cstr("off"));
@@ -115,6 +117,20 @@ public final class Jr {
                             + "-Xjr:make=<new.exe> (a copy of this exe) or -Xjr:edit=<existing.exe>.");
             Log.close();
             WinApi.exit(1);
+            return;
+        }
+
+        if (opts.doctor != 0) {
+            var text = opts.doctor == 1 ? Doctor.report(config, configLabel(configPath, config), javaExeName)
+                    : Repair.run(config, javaExeName, hasConsole, guiMode);
+            if (hasConsole) {
+                System.out.print(text);
+            } else {
+                ErrorDialog.show(opts.doctor == 1 ? "jr doctor" : "jr repair", opts.doctor == 1
+                        ? "What jr would do on this computer, and why. Nothing was changed." : "What jr repaired.", text, "");
+            }
+            Log.close();
+            WinApi.exit(0);
             return;
         }
 
@@ -195,60 +211,18 @@ public final class Jr {
         Log.info("AOT enabled: " + enableAOT);
 
         var assumeYes = opts.assumeYes || Cstr.readEnv("JR_ASSUME_YES") != null;
-        var javaPath = resolveJavaPath(config, javaExeName, hasConsole, guiMode, assumeYes);
-        if (javaPath == null) {
+        var java = JavaResolve.resolve(config, javaExeName, hasConsole, guiMode, assumeYes);
+        if (java == null) {
             Log.close();
             WinApi.exit(1);
             return;
         }
-
-        // -XX:AOTCache/-XX:AOTCacheOutput exist from JDK 25 on. An older JVM refuses to start at all
-        // on an option it does not know, so leave them out for it (a version that cannot be read is
-        // given the benefit of the doubt).
-        if (enableAOT) {
-            var major = JavaFinder.detectMajorVersion(javaPath);
-            if (major > 0 && major < 25) {
-                enableAOT = false;
-                Log.info("AOT cache skipped: Java " + major + " predates the JDK 25 AOT options");
-            }
-        }
-
-        String finalCmdLine;
-        if (!config.javaArgs.isBlank()) {
-            Log.info("Using config-based mode");
-            finalCmdLine = CmdLineBuilder.buildConfigMode(javaPath, config, opts.appArgs, enableAOT);
-        } else {
-            Log.info("Using traditional mode (no java.args)");
-            finalCmdLine = CmdLineBuilder.buildTraditionalMode(javaPath, opts.appArgs, enableAOT);
-        }
-        Log.info("Final command: " + finalCmdLine);
-
-        if (useJvmDll) {
-            var jliPath = JavaFinder.findJliDll(javaPath);
-            if (jliPath != null) {
-                var result = JliLauncher.tryLaunch(jliPath, finalCmdLine, javaPath, guiMode);
-                if (result != null) {
-                    Log.info("In-process JVM exited with code: " + result);
-                    Log.close();
-                    WinApi.exit(result);
-                    return;
-                }
-            } else {
-                Log.warn("jli.dll not found next to " + javaPath);
-            }
-            Log.warn("Falling back to child process mode (java.exe)");
-        }
-
-        var result = ProcessLauncher.launch(finalCmdLine, hasConsole);
-        if (!result.started) {
-            Ui.error(hasConsole, "Launch Error", "Failed to launch Java process.\n\nJava: " + javaPath
-                    + "\nCommand: " + finalCmdLine + "\n\nMake sure Java is properly installed.");
-            Log.close();
-            WinApi.exit(1);
-            return;
-        }
-        Log.close();
-        WinApi.exit(result.exitCode);
+        Launch.config = config;
+        Launch.appArgs = opts.appArgs;
+        Launch.exeName = javaExeName;
+        Launch.hasConsole = hasConsole;
+        Launch.guiMode = guiMode;
+        Launch.run(java, enableAOT, useJvmDll);
     }
 
     private static String configLabel(String configPath, Config config) {
@@ -272,85 +246,4 @@ public final class Jr {
         }
     }
 
-    /** Full Java lookup: java.home (.jrc/-Xjr:) taken as is; otherwise PATH, checked against
-     *  java.version (NN = exactly NN, NN+ = NN or newer) and auto-installed if missing or
-     *  mismatched - mirrors launcher.c's main() Java-resolution block. */
-    private static String resolveJavaPath(Config config, String javaExeName, boolean hasConsole, boolean guiMode,
-            boolean assumeYes) {
-        if (!config.javaHome.isEmpty()) {
-            var javaPath = config.javaHome + "\\bin\\" + javaExeName;
-            Log.info("Using custom Java home: " + config.javaHome);
-            if (!FileIo.exists(javaPath)) {
-                Ui.error(hasConsole, "Java Not Found", "Java not found at specified location:\n" + javaPath
-                        + "\n\nPlease check java.home (.jrc) or -Xjr:java.home=.");
-                return null;
-            }
-            return javaPath;
-        }
-
-        var requiredVersion = config.javaVersion > 0 ? config.javaVersion : 0;
-        var requireAtLeast = requiredVersion > 0 && config.javaVersionAtLeast;
-
-        var javaPath = JavaFinder.findInPath(javaExeName);
-
-        // Test-only override: pretend nothing was found, so the auto-install path can be
-        // exercised on a machine that already has a real JDK on PATH. Not documented in
-        // --help - see prp/09-prp-java_auto_install.md.
-        if (javaPath != null && Cstr.readEnv("JR_TEST_FORCE_NO_JAVA") != null) {
-            Log.warn("JR_TEST_FORCE_NO_JAVA set - ignoring Java found in PATH (test mode)");
-            javaPath = null;
-        }
-
-        // A Java in PATH that doesn't satisfy java.version counts as not found, so the cache
-        // lookup / auto-install below gets its chance at the right one.
-        String mismatch = null;
-        if (javaPath != null && requiredVersion > 0) {
-            var foundMajor = JavaFinder.detectMajorVersion(javaPath);
-            if (foundMajor == 0) {
-                Log.warn("Could not determine the version of " + javaPath + "; using it anyway");
-            } else if (requireAtLeast ? foundMajor < requiredVersion : foundMajor != requiredVersion) {
-                mismatch = "This application needs Java " + requiredVersion + (requireAtLeast ? " or newer" : "")
-                        + ", but the Java in PATH is version " + foundMajor + ":\n" + javaPath;
-                Log.info("Java " + foundMajor + " in PATH does not satisfy java.version=" + requiredVersion
-                        + (requireAtLeast ? "+" : ""));
-                javaPath = null;
-            } else {
-                Log.info("Java " + foundMajor + " in PATH satisfies java.version=" + requiredVersion
-                        + (requireAtLeast ? "+" : ""));
-            }
-        }
-
-        if (javaPath == null && config.javaAutoInstall != 0) { // -1 (unset) or 1 (true) => enabled
-            var javaVersion = requiredVersion > 0 ? requiredVersion : 0; // 0 => JavaInstall's own default (25)
-            var cacheOverride = Cstr.readEnv("JR_JDK_CACHE_DIR");
-            var packageType = config.javaType.isEmpty() ? "jre" : config.javaType; // PRP-24: jre is the default
-            Log.info("Attempting auto-install (" + packageType + ", version " + (requiredVersion > 0 ? requiredVersion : 25)
-                    + (requireAtLeast ? "+" : "") + ")");
-            var installedHome = JavaInstall.tryInstall(javaVersion, requireAtLeast, mismatch, hasConsole, guiMode,
-                    assumeYes, cacheOverride, packageType);
-            if (installedHome != null) {
-                javaPath = installedHome + "\\bin\\" + javaExeName;
-                Log.info("Using auto-installed Java: " + javaPath);
-            } else {
-                Log.warn("Auto-install did not complete (declined or failed)");
-            }
-        }
-
-        if (javaPath == null && mismatch != null) {
-            Ui.error(hasConsole, "Wrong Java Version", mismatch + "\n\nInstall Java " + requiredVersion
-                    + (requireAtLeast ? " or newer" : "") + ", or set java.home in the .jrc (or "
-                    + "-Xjr:java.home=C:\\path\\to\\jdk).");
-            return null;
-        }
-
-        if (javaPath == null) {
-            Ui.error(hasConsole, "Java Not Found", "Java not found in PATH.\n\n"
-                    + "Please ensure Java is installed and added to PATH,\n"
-                    + "or set java.home in the .jrc (or -Xjr:java.home=C:\\path\\to\\jdk).\n\n"
-                    + "Looking for: " + javaExeName);
-            return null;
-        }
-        Log.info("Using Java: " + javaPath);
-        return javaPath;
-    }
 }

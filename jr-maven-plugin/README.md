@@ -45,9 +45,10 @@ mvn -Djr.installDir=<dir> package    also copies the exe to <dir>
 - `jarVerify` (`jr.jarVerify`): the check on every run for a downloaded jar: `crc32` (default, against the CRC32 baked into the exe), `sha256`, or `none`.
 - `appId` (default `groupId:artifactId`), `appVersion` (default the project version): the update feature matches on these.
 - `updateUrl`, `updateChannel`: where `-Xjr:update` and `-Xjr:update-check` read the update file (format in jr's README), and which channel.
-- `javaVersion` (`25`, `21+`), `javaType` (`jre`/`jdk`), `javaHome`, `javaAutoinstall`.
+- `javaVersion` (`25`; `25` and `25+` both mean at least 25 with 25 preferred), or `javaMin` / `javaPreferred` / `javaMax` (numbers, not together with `javaVersion`); `javaType` (`jre`/`jdk`), `javaHome`, `javaAutoinstall`. jr uses an installed Java of exactly the preferred version, else downloads it, else the nearest installed one within min/max. AOT (on unless `aot` is false) needs Java 25, so it raises a lower version to 25 with a build warning. Contradictions (min above max, a max below 25 with AOT) fail the build. Rules and reasons: jr's PRP-31.
+- `supportName`, `supportEmail`, `supportIssues`, `supportUrl`: who supports the app, shown in jr's error dialog (Email and Report issue buttons, which open a pre-filled mail or GitHub issue) and in `-Xjr:doctor`. Each defaults from the pom: `<organization><name>` or the first developer's name, the first developer's email, `<issueManagement><url>`, `<url>`.
 - `jvmMode` (`dll` runs the JVM inside the exe, so the process carries the app's name), `vmArgs` (a list), `appArgs` (a list), `javaArgs` (instead of a jar, for a classpath launch), `aot`.
-- `icon` (a single 256px PNG-compressed .ico is the right size, see jr's README), `fileDescription` (what Task Manager shows, default the name), `productName`, `companyName`, `copyright`.
+- `icon` (a 256px PNG-compressed entry; if the small caption icon looks smeared, add hand-drawn 16-32px entries case by case, see jr's README and `icon/build-ico.ps1`), `fileDescription` (what Task Manager shows, default the name), `productName`, `companyName`, `copyright`.
 - `architectures`: `x86_64` (default) and/or `arm64`; with several, the exes are named `<name>-windows-<arch>.exe`.
 - `outputDirectory` (default `target/jr`), `installDir` (`jr.installDir`), `skip` (`jr.skip`).
 

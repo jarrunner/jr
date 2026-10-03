@@ -210,6 +210,12 @@ public final class JavaInstall {
         return true;
     }
 
+    /** JR_JDK_CACHE_DIR (tests), else jbang's cache; null without a user profile. */
+    static String cacheRoot() {
+        var o = Cstr.readEnv("JR_JDK_CACHE_DIR");
+        return o != null && !o.isEmpty() ? o : defaultCacheRoot();
+    }
+
     private static String defaultCacheRoot() {
         var userProfile = Cstr.readEnv("USERPROFILE");
         if (userProfile == null || userProfile.isEmpty()) {

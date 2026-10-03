@@ -60,6 +60,7 @@ public final class CmdLineBuilder {
             return "";
         }
         var cachePath = AotCache.buildCacheName(jarPath);
+        AotCache.lastPath = cachePath;
         if (cachePath.isEmpty()) {
             return "";
         }
@@ -89,6 +90,12 @@ public final class CmdLineBuilder {
         prop(sb, "exe", ExeInfo.fullPath());
         if (c != null && c.jsonRoot != null) {
             flatten(sb, "", c.jsonRoot);
+        }
+        // PRP-31: a native JVM crash log (hs_err) goes where jr's report can find it, not into whatever the
+        // current directory happened to be. An ErrorFile in the app's own vm.args wins.
+        var crashDir = c != null && c.vmArgs.contains("ErrorFile") ? null : JrDirs.of("crash");
+        if (crashDir != null) {
+            sb.append(" \"-XX:ErrorFile=").append(crashDir).append('\\').append(ExeInfo.baseNameNoExt()).append("-hs_err_pid%p.log\"");
         }
         return sb.toString();
     }

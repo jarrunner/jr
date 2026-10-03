@@ -16,22 +16,20 @@ public final class Ui {
     }
 
     private static void show(boolean hasConsole, String title, String message, int type) {
-        if (hasConsole) {
-            // An error goes to the real stderr (see Stderr), information to stdout.
-            var text = "\n" + (type == WinApi.MB_ICONERROR ? "[ERROR] " : "[INFO] ") + title + "\n" + message + "\n\n";
-            if (type == WinApi.MB_ICONERROR) {
-                Stderr.print(text);
+        if (type == WinApi.MB_ICONERROR) {
+            // PRP-31: every error becomes a saved, redacted report; GUI mode shows it in ErrorDialog.
+            var report = ErrorReport.build(title, message);
+            var saved = ErrorReport.save(report);
+            if (hasConsole) {
+                Stderr.print("\n[ERROR] " + title + "\n" + message + "\n" + (saved.isEmpty() ? "" : "Report: " + saved + "\n") + "\n");
+            } else if (ErrorReport.tooMany()) {
+                Log.warn("Error dialog not shown (shown too often in the last minutes); report: " + saved);
             } else {
-                System.out.print(text);
+                var blank = message.indexOf("\n\n");
+                ErrorDialog.show(title, title + "\n" + (blank > 0 ? message.substring(0, blank) : message), report, saved);
             }
-        } else if (type == WinApi.MB_ICONERROR) {
-            // People have to report these, so the whole text is one click away: OK copies it.
-            // OK/Cancel rather than Yes/No, because only then do Esc and the close button work.
-            var text = message + "\n\n" + ExeInfo.fullPath();
-            if (WinApi.messageBoxA(NULL, cstr(text + "\n\nOK copies this message, Esc closes."), cstr(title),
-                    type | WinApi.MB_OKCANCEL) == WinApi.IDOK) {
-                copy(title + "\n" + text);
-            }
+        } else if (hasConsole) {
+            System.out.print("\n[INFO] " + title + "\n" + message + "\n\n");
         } else {
             WinApi.messageBoxA(NULL, cstr(message), cstr(title), type);
         }

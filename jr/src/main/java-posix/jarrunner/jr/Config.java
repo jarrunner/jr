@@ -14,8 +14,9 @@ public class Config {
     int enableAOT = -1;
     int useJvmDll = -1;
     String javaHome = "";
-    int javaVersion = 0;          // 0 = not specified: any Java will do, install the default
-    boolean javaVersionAtLeast = false; // true if written "NN+" (NN or newer), same convention as jbang's //JAVA
+    int javaMin = 0, javaPreferred = 0, javaMax = 0; // 0 = not declared; see JavaRange (PRP-31, same rules as Windows)
+    boolean javaVersionSet = false, javaKeysSet = false;
+    String javaRangeError;
     int javaAutoInstall = -1; // -1 = not specified, use built-in default (enabled)
 
     public static Config load(String path) {
@@ -66,11 +67,10 @@ public class Config {
                 else Log.warn("Unrecognised jvm mode '" + value + "' (expected dll or exe)");
             }
             case "java.home" -> { javaHome = value; Log.info("java.home=" + value); }
-            case "java.version" -> {
-                javaVersion = Atoi.parse(value);
-                javaVersionAtLeast = value.indexOf('+') >= 0;
-                Log.info("java.version=" + value);
-            }
+            case "java.version" -> JavaRange.declareVersion(this, value);
+            case "java.min" -> { javaKeysSet = true; javaMin = JavaRange.declared(this, key, value); }
+            case "java.preferred" -> { javaKeysSet = true; javaPreferred = JavaRange.declared(this, key, value); }
+            case "java.max" -> { javaKeysSet = true; javaMax = JavaRange.declared(this, key, value); }
             case "java.autoinstall" -> { javaAutoInstall = isTrue(value) ? 1 : 0; Log.info("java.autoinstall=" + value); }
             default -> {
                 return false;
@@ -125,11 +125,10 @@ public class Config {
         sb.append("#log.file=launcher.log\n");
         sb.append("#log.level=info\n");
         sb.append("#log.overwrite=false\n\n");
-        sb.append("# Required Java version: 21 = exactly 21, 21+ = 21 or newer (same convention as jbang).\n");
-        sb.append("# If the Java in PATH doesn't match (or there is none), jr offers to download a matching\n");
-        sb.append("# Eclipse Temurin JDK into %USERPROFILE%\\.jbang\\cache\\jdks\\<version> (same cache jbang itself uses).\n");
-        sb.append("#java.version=21+\n");
-        sb.append("#java.autoinstall=true\n\n");
+        sb.append("# Java version: java.version=21 (or 21+) means at least 21, 21 preferred; or java.min / java.preferred /\n");
+        sb.append("# java.max. jr uses an installed Java of exactly the preferred version, else the nearest within\n");
+        sb.append("# min/max (no download on this build). AOT (on unless aot=false) needs Java 25.\n");
+        sb.append("#java.version=25\n\n");
         sb.append("# Use this JDK and nothing else (no PATH lookup, no version check, no install)\n");
         sb.append("#java.home=C:\\Java\\jdk-25\n");
         return FileIo.writeAll(configPath, sb.toString());

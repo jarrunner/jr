@@ -37,21 +37,21 @@ public final class JavaFinder {
      *  mirrors launcher.c's detectJavaMajor and the Windows JavaFinder. */
     public static int detectMajorVersion(String javaExePath) {
         var home = Paths.dirOf(Paths.dirOf(javaExePath));
-        var major = home.isEmpty() ? 0 : readReleaseMajor(home);
+        var major = home.isEmpty() ? 0 : releaseMajor(home);
 
         if (major == 0) {
             var realPath = resolveRealPath(javaExePath);
             if (realPath != null) {
                 home = Paths.dirOf(Paths.dirOf(realPath));
                 if (!home.isEmpty()) {
-                    major = readReleaseMajor(home);
+                    major = releaseMajor(home);
                 }
             }
         }
         return major;
     }
 
-    private static int readReleaseMajor(String jdkHome) {
+    static int releaseMajor(String jdkHome) {
         var text = FileIo.readAll(jdkHome + "/release");
         if (text == null) {
             return 0;
@@ -77,5 +77,11 @@ public final class JavaFinder {
         var buf = alloc(PosixApi.PATH_MAX);
         var p = PosixApi.realpath(cstr(path), buf);
         return p.toLong() == 0 ? null : string(buf);
+    }
+    /** The Java home a java binary belongs to, through any symlinks (/usr/bin/java -> /etc/alternatives/java ->
+     *  /usr/lib/jvm/x/bin/java gives /usr/lib/jvm/x). */
+    static String homeOf(String javaPath) {
+        var real = resolveRealPath(javaPath);
+        return Paths.dirOf(Paths.dirOf(real != null ? real : javaPath));
     }
 }

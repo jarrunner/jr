@@ -618,4 +618,73 @@ public final class WinOffsets {
         public static void pbBlob(Address s, Address v) { s.add(pbBlob).putAddress(v); }
     }
 
+    /** {@code struct _CONSOLE_SCREEN_BUFFER_INFO} - consoleapi2.h:64, 22 bytes */
+    public static final class CONSOLE_SCREEN_BUFFER_INFO {
+        private CONSOLE_SCREEN_BUFFER_INFO() {}
+        public static final int SIZE = 22;
+        /** {@code COORD dwSize} */ public static final int dwSize = 0;
+        /** {@code COORD dwCursorPosition} */ public static final int dwCursorPosition = 4;
+        /** {@code WORD wAttributes} */ public static final int wAttributes = 8;
+        /** {@code SMALL_RECT srWindow} */ public static final int srWindow = 10;
+        /** {@code COORD dwMaximumWindowSize} */ public static final int dwMaximumWindowSize = 18;
+        public static short wAttributes(Address s) { return s.add(wAttributes).getShort(); }
+        public static void wAttributes(Address s, short v) { s.add(wAttributes).putShort(v); }
+    }
+
+    /** {@code struct _COORD} - wincontypes.h:18, 4 bytes */
+    public static final class COORD {
+        private COORD() {}
+        public static final int SIZE = 4;
+        /** {@code SHORT X} */ public static final int X = 0;
+        /** {@code SHORT Y} */ public static final int Y = 2;
+        public static short X(Address s) { return s.add(X).getShort(); }
+        public static void X(Address s, short v) { s.add(X).putShort(v); }
+        public static short Y(Address s) { return s.add(Y).getShort(); }
+        public static void Y(Address s, short v) { s.add(Y).putShort(v); }
+    }
+
+    /** {@code struct tagNONCLIENTMETRICSW} - winuser.h:5434, 504 bytes */
+    public static final class NONCLIENTMETRICSW {
+        private NONCLIENTMETRICSW() {}
+        public static final int SIZE = 504;
+        /** {@code UINT cbSize} */ public static final int cbSize = 0;
+        /** {@code int iBorderWidth} */ public static final int iBorderWidth = 4;
+        /** {@code int iScrollWidth} */ public static final int iScrollWidth = 8;
+        /** {@code int iScrollHeight} */ public static final int iScrollHeight = 12;
+        /** {@code int iCaptionWidth} */ public static final int iCaptionWidth = 16;
+        /** {@code int iCaptionHeight} */ public static final int iCaptionHeight = 20;
+        /** {@code LOGFONTW lfCaptionFont} */ public static final int lfCaptionFont = 24;
+        /** {@code int iSmCaptionWidth} */ public static final int iSmCaptionWidth = 116;
+        /** {@code int iSmCaptionHeight} */ public static final int iSmCaptionHeight = 120;
+        /** {@code LOGFONTW lfSmCaptionFont} */ public static final int lfSmCaptionFont = 124;
+        /** {@code int iMenuWidth} */ public static final int iMenuWidth = 216;
+        /** {@code int iMenuHeight} */ public static final int iMenuHeight = 220;
+        /** {@code LOGFONTW lfMenuFont} */ public static final int lfMenuFont = 224;
+        /** {@code LOGFONTW lfStatusFont} */ public static final int lfStatusFont = 316;
+        /** {@code LOGFONTW lfMessageFont} */ public static final int lfMessageFont = 408;
+        /** {@code int iPaddedBorderWidth} */ public static final int iPaddedBorderWidth = 500;
+        public static int cbSize(Address s) { return s.add(cbSize).getInt(); }
+        public static void cbSize(Address s, int v) { s.add(cbSize).putInt(v); }
+        public static int iBorderWidth(Address s) { return s.add(iBorderWidth).getInt(); }
+        public static void iBorderWidth(Address s, int v) { s.add(iBorderWidth).putInt(v); }
+        public static int iScrollWidth(Address s) { return s.add(iScrollWidth).getInt(); }
+        public static void iScrollWidth(Address s, int v) { s.add(iScrollWidth).putInt(v); }
+        public static int iScrollHeight(Address s) { return s.add(iScrollHeight).getInt(); }
+        public static void iScrollHeight(Address s, int v) { s.add(iScrollHeight).putInt(v); }
+        public static int iCaptionWidth(Address s) { return s.add(iCaptionWidth).getInt(); }
+        public static void iCaptionWidth(Address s, int v) { s.add(iCaptionWidth).putInt(v); }
+        public static int iCaptionHeight(Address s) { return s.add(iCaptionHeight).getInt(); }
+        public static void iCaptionHeight(Address s, int v) { s.add(iCaptionHeight).putInt(v); }
+        public static int iSmCaptionWidth(Address s) { return s.add(iSmCaptionWidth).getInt(); }
+        public static void iSmCaptionWidth(Address s, int v) { s.add(iSmCaptionWidth).putInt(v); }
+        public static int iSmCaptionHeight(Address s) { return s.add(iSmCaptionHeight).getInt(); }
+        public static void iSmCaptionHeight(Address s, int v) { s.add(iSmCaptionHeight).putInt(v); }
+        public static int iMenuWidth(Address s) { return s.add(iMenuWidth).getInt(); }
+        public static void iMenuWidth(Address s, int v) { s.add(iMenuWidth).putInt(v); }
+        public static int iMenuHeight(Address s) { return s.add(iMenuHeight).getInt(); }
+        public static void iMenuHeight(Address s, int v) { s.add(iMenuHeight).putInt(v); }
+        public static int iPaddedBorderWidth(Address s) { return s.add(iPaddedBorderWidth).getInt(); }
+        public static void iPaddedBorderWidth(Address s, int v) { s.add(iPaddedBorderWidth).putInt(v); }
+    }
+
 }

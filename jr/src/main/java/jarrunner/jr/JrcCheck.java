@@ -6,13 +6,13 @@ package jarrunner.jr;
  *  Messages are built by two helpers, never by concatenation: TeaVM's C backend inlines a
  *  StringBuilder sequence per "a" + b site, and the first version of this class cost ~25 KB. */
 public final class JrcCheck {
-    private static final String SECTIONS = " app java jar jvm aot log update localDev ";
+    private static final String SECTIONS = " app java jar jvm aot log update support localDev ";
     private static final String KEYS =
-            " app.id app.name app.version app.args java.version java.type java.home java.autoinstall"
+            " app.id app.name app.version app.args java.version java.min java.preferred java.max java.type java.home java.autoinstall"
             + " jar.sha256 jar.crc32 jar.verify jar.sources jvm.mode jvm.vmArgs jvm.javaArgs log.file log.level log.overwrite"
-            + " update.url update.channel ";
+            + " update.url update.channel support.name support.email support.issues support.url ";
     private static final String[] TEXT = {"app.id", "app.name", "app.version", "java.home", "jar.sha256",
-            "jvm.javaArgs", "log.file", "log.level", "update.url", "update.channel"};
+            "jvm.javaArgs", "log.file", "log.level", "update.url", "update.channel", "support.name", "support.email", "support.issues", "support.url"};
     private static final String[] BOOL = {"java.autoinstall", "log.overwrite"};
     private static final String[] LIST = {"app.args", "jvm.vmArgs"};
 
@@ -66,8 +66,7 @@ public final class JrcCheck {
         for (var k : TEXT) if (at(r, k) != null && at(r, k).str() == null) error(k, " must be text");
         for (var k : BOOL) bool(k, at(r, k));
         for (var k : LIST) list(k, at(r, k));
-        var ver = at(r, "java.version");
-        if (ver != null && ver.num() == null && (ver.str() == null || !version(ver.str()))) error("java.version", " must be a number like 25, or text like \"21+\"");
+        javaRange(r);
         oneOf("java.type", at(r, "java.type"), "jre", "jdk", " must be \"jre\" or \"jdk\"");
         oneOf("jvm.mode", at(r, "jvm.mode"), "dll", "exe", " must be \"dll\" or \"exe\"");
         var verify = at(r, "jar.verify");
@@ -139,12 +138,13 @@ public final class JrcCheck {
         if (v != null && (v.str() == null || !v.str().startsWith("https://"))) error(k, " must be an https:// address");
     }
 
-    /** No regex: java.util.regex costs exe size (PRP-11). */
-    private static boolean version(String s) {
-        var n = s.endsWith("+") ? s.length() - 1 : s.length();
-        if (n == 0) return false;
-        for (var i = 0; i < n; i++) if (s.charAt(i) < '0' || s.charAt(i) > '9') return false;
-        return true;
+    /** PRP-31: the same version rules jr applies at launch, so a contradiction is refused at bake time. */
+    private void javaRange(JsonValue r) {
+        var c = new Config();
+        JrcJson.applyJava(r, c);
+        var range = JavaRange.of(c);
+        if (range.error != null) error("java: ", range.error);
+        else if (range.note != null) warnings.append("warning: ").append(range.note).append('\n');
     }
 
     private static boolean hex64(String s) {

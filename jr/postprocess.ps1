@@ -47,13 +47,15 @@ $definitions = (Get-Content -Raw $definitionsPath) -replace "`r`n", "`n"
 # function declaration"). wincrypt.h needs no such treatment: windows.h already pulls it in
 # transitively.
 $oldTop = "#pragma once`n#include " + '"config.h"'
-$newTop = "#pragma once`n#include <Windows.h>`n#include <time.h>`n#include <stdio.h>`n#include <winhttp.h>`n#include <bcrypt.h>`n#include <commctrl.h>`n#include " + '"mssign.h"' + "`n#include " + '"config.h"'
+$newTop = "#pragma once`n#include <Windows.h>`n#include <time.h>`n#include <stdio.h>`n#include <winhttp.h>`n#include <bcrypt.h>`n#include <commctrl.h>`n#include " + '"mssign.h"' + "`n#include " + '"jr-shims.h"' + "`n#include " + '"config.h"'
 if ($definitions -notmatch [regex]::Escape($oldTop)) {
     throw "definitions.h's opening lines did not match the expected TeaVM-generated content - TeaVM version may have changed this file, check manually."
 }
 $definitions = $definitions.Replace($oldTop, $newTop)
 
 Copy-Item -Path (Join-Path $PSScriptRoot "bindings\windows\mssign.h") -Destination (Join-Path $Dir "mssign.h") -Force
+# jr-shims.h (PRP-31): one-line macros for Win32 functions taking a struct by value; see the file.
+Copy-Item -Path (Join-Path $PSScriptRoot "bindings\windows\jr-shims.h") -Destination (Join-Path $Dir "jr-shims.h") -Force
 
 $oldPlatformBlock = @'
 #ifdef _MSC_VER
@@ -178,4 +180,17 @@ if ($uchar -notmatch [regex]::Escape($oldUchar)) {
 $uchar = $uchar.Replace($oldUchar, $newUchar)
 Set-Content -Path $ucharPath -Value $uchar -NoNewline
 
-Write-Host "Patched $definitionsPath and $ucharPath for clang/mingw msvcrt."
+# core.h (PRP-31): TeaVM emits every Address as void* except the result of Address.add(), which is char*
+# (the cast it needs for the arithmetic, never undone). C converts void* to any pointer type implicitly but
+# not char*, so passing ptr.add(n) to a typed @Import parameter (CreateFontIndirectW's const LOGFONTW*) is
+# "incompatible pointer types", an error from clang 16 on. Cast the sum back to void*, like every other Address.
+$corePath = Join-Path $Dir "core.h"
+$core = (Get-Content -Raw $corePath) -replace "`r`n", "`n"
+$oldAdd = '#define TEAVM_ADDRESS_ADD(address, offset) ((char *) (address) + (offset))'
+$newAdd = '#define TEAVM_ADDRESS_ADD(address, offset) ((void *) ((char *) (address) + (offset)))'
+if (-not $core.Contains($oldAdd)) {
+    throw "core.h did not contain the expected TEAVM_ADDRESS_ADD - TeaVM version may have changed this file, check manually."
+}
+Set-Content -Path $corePath -Value $core.Replace($oldAdd, $newAdd) -NoNewline
+
+Write-Host "Patched $definitionsPath, $ucharPath and $corePath for clang/mingw msvcrt."

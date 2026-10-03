@@ -8,6 +8,26 @@ public final class AotCache {
 
     private static final String BASE52 = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz";
 
+    /** PRP-31: identifies the JVM a cache belongs to, so a cache made by one Java is never handed to another. */
+    static String jvmTag = "";
+    static String lastPath = "";
+
+    /** PRP-31: a cache the JVM may have refused is the cheapest cause to rule out when it fails to start. */
+    static void deleteLast() {
+        if (!lastPath.isEmpty() && WinApi.deleteFileA(N.cstr(lastPath)) != 0) {
+            Log.info("Deleted AOT cache: " + lastPath);
+        }
+    }
+
+    static String jvmTag(JavaHome java) {
+        var id = java.releaseText != null ? java.releaseText : java.home + "|" + java.major;
+        var h = 0xcbf29ce484222325L;
+        for (var i = 0; i < id.length(); i++) {
+            h = (h ^ id.charAt(i)) * 0x100000001b3L;
+        }
+        return encodeBase52(h >>> 34);
+    }
+
     /** "<dir>\<jarBaseName>.<sizeB52>.<modTimeB52>.aot", or "" if the jar's file info can't be read. */
     public static String buildCacheName(String jarPath) {
         var size = FileInfo.size(jarPath);
@@ -17,7 +37,7 @@ public final class AotCache {
         }
         var dir = Paths.dirOf(jarPath);
         var base = Paths.baseNameNoExt(jarPath);
-        var name = base + "." + encodeBase52(size) + "." + encodeBase52(modTime) + ".aot";
+        var name = base + "." + encodeBase52(size) + "." + encodeBase52(modTime) + (jvmTag.isEmpty() ? "" : "." + jvmTag) + ".aot";
         return dir.isEmpty() ? name : dir + "\\" + name;
     }
 

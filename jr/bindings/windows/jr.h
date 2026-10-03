@@ -9,3 +9,4 @@
 #include <commctrl.h>
 #include <wincrypt.h>
 #include "mssign.h"
+#include "jr-shims.h"
