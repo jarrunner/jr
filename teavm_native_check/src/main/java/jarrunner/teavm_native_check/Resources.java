@@ -69,6 +69,8 @@ final class Resources {
     private TreePath unit;
     private boolean isMethod;
     private ExecutableElement method;
+    /** The NC10 pass: the same walk, tracking values that may be a function's failure value (@Fails) until tested. */
+    private boolean fail;
     private final Deque<Frame> frames = new ArrayDeque<>();
     /** Each finding once, though loops are walked until nothing changes. */
     private final Set<String> reported = new HashSet<>();
@@ -88,17 +90,28 @@ final class Resources {
             var pe = c.trees.getElement(new TreePath(path, p));
             if (Facts.has(pe, c.cfg.owns)) s.put(pe, new Site(p, "the caller (@" + simple(c.cfg.owns) + ")", releases(pe, c.cfg.owns)));
         }
+        fail = false;
         run(m.getBody(), s);
+        fail = true;
+        Map<Element, Site> n = new LinkedHashMap<>();
+        for (var p : m.getParameters()) { // a @Nullable parameter may be NULL: this method is checked to handle it
+            var pe = c.trees.getElement(new TreePath(path, p));
+            if (Facts.has(pe, c.cfg.nullable)) n.put(pe, new Site(p, "the caller (@" + simple(c.cfg.nullable) + ")", Set.of("NULL")));
+        }
+        run(m.getBody(), n);
     }
 
     void onLambda(TreePath path, LambdaExpressionTree l) {
         unit = path;
         isMethod = false;
         method = null;
-        if (l.getBody() instanceof BlockTree b) run(b, new LinkedHashMap<>());
-        else {
-            var r = expr((ExpressionTree) l.getBody(), new LinkedHashMap<>());
-            atReturn(l.getBody(), r.s, r.v);
+        for (var mode : new boolean[] {false, true}) {
+            fail = mode;
+            if (l.getBody() instanceof BlockTree b) run(b, new LinkedHashMap<>());
+            else {
+                var r = expr((ExpressionTree) l.getBody(), new LinkedHashMap<>());
+                atReturn(l.getBody(), r.s, r.v);
+            }
         }
     }
 
@@ -314,6 +327,12 @@ final class Resources {
 
     private void atReturn(Tree at, Map<Element, Site> s, Val v) {
         if (s == null) return;
+        if (fail) {
+            var site = v instanceof Var var && s.containsKey(var.v()) ? s.get(var.v()) : v instanceof Fresh f ? f.site() : null;
+            if (site != null && isMethod && Facts.value(method, c.cfg.fails) == null)
+                report(Rule.FAIL_RETURN, at, failValue(site), site.what());
+            return;
+        }
         if (v instanceof Var var && s.containsKey(var.v())) {
             if (isMethod && !Facts.has(method, c.cfg.acquires)) report(Rule.ACQUIRES, at, s.get(var.v()).what());
             s = without(s, var.v());
@@ -345,7 +364,7 @@ final class Resources {
             }
             if (caught || st == null) continue;
             var name = ex.toString().substring(ex.toString().lastIndexOf('.') + 1);
-            if (isMethod && isTracked(ex) && !declares(method, ex) && reported.add("throws" + ex + System.identityHashCode(method)))
+            if (!fail && isMethod && isTracked(ex) && !declares(method, ex) && reported.add("throws" + ex + System.identityHashCode(method)))
                 c.report(Rule.THROWS, at, name, method.getSimpleName());
             var when = how == null ? name + " is thrown here" : how + " can throw " + name + " here";
             for (var e : st.entrySet()) leak(at, e.getKey(), e.getValue(), when);
@@ -531,6 +550,7 @@ final class Resources {
         // a call that may throw: the exception leaves with everything still open before the call closes anything
         if (m != null && !m.getThrownTypes().isEmpty() && s != null) raise(at, s, m.getThrownTypes(), "'" + name + "'");
         var params = m == null ? List.<VariableElement>of() : m.getParameters();
+        if (fail) return failCall(at, m, name, args, vals, params, s);
         for (var i = 0; i < vals.size(); i++) {
             var v = vals.get(i);
             var p = i < params.size() ? params.get(i) : params.isEmpty() ? null : params.getLast();
@@ -547,6 +567,40 @@ final class Resources {
             if (!rel.isEmpty()) return new R(s, new Fresh(new Site(at, "'" + name + "'", rel)));
         }
         return new R(s, null);
+    }
+
+    /** NC10: a value that may be the failure value reaches only @Nullable parameters until it is tested. */
+    private R failCall(Tree at, ExecutableElement m, String name, List<? extends ExpressionTree> args, List<Val> vals,
+            List<? extends VariableElement> params, Map<Element, Site> s) {
+        for (var i = 0; i < vals.size(); i++) {
+            var p = i < params.size() ? params.get(i) : params.isEmpty() ? null : params.getLast();
+            if (p != null && Facts.has(p, c.cfg.nullable)) continue;
+            if (vals.get(i) instanceof Var var && s != null && s.containsKey(var.v())) {
+                var site = s.get(var.v());
+                report(Rule.UNCHECKED, args.get(i), var.v().getSimpleName(), site.what(), line(site.at()), failValue(site), name);
+                s = without(s, var.v()); // once is enough
+            } else if (vals.get(i) instanceof Fresh f) {
+                report(Rule.UNCHECKED, args.get(i), "the result", f.site().what(), line(f.site().at()), failValue(f.site()), name);
+            }
+        }
+        var fv = m == null ? null : Facts.value(m, c.cfg.fails);
+        return new R(s, fv == null ? null : new Fresh(new Site(at, "'" + name + "'", Set.of(fv))));
+    }
+
+    private static String failValue(Site site) { return site.releases().iterator().next(); }
+
+    /** An operand naming the value a function fails with: 0 or NULL for "NULL", -1 or the constant itself for any other. */
+    private static boolean isFailure(ExpressionTree e, String value) {
+        e = Borrows.strip(e);
+        if (e instanceof MethodInvocationTree mi && mi.getArguments().isEmpty() && mi.getMethodSelect() instanceof MemberSelectTree ms)
+            e = Borrows.strip(ms.getExpression()); // INVALID_HANDLE_VALUE.toLong()
+        if (e instanceof TypeCastTree tc) e = Borrows.strip(tc.getExpression());
+        if (e instanceof LiteralTree l && l.getValue() instanceof Number n)
+            return value.equals("NULL") ? n.longValue() == 0 : n.longValue() == -1;
+        if (e instanceof UnaryTree u && u.getKind() == Tree.Kind.UNARY_MINUS && u.getExpression() instanceof LiteralTree l
+                && l.getValue() instanceof Number n) return !value.equals("NULL") && n.longValue() == 1;
+        var n = e instanceof IdentifierTree i ? i.getName().toString() : e instanceof MemberSelectTree s ? s.getIdentifier().toString() : null;
+        return n != null && n.equals(value);
     }
 
     private static boolean closes(Site site, String name, String qualified) {
@@ -580,11 +634,19 @@ final class Resources {
                 var v = tested(b.getLeftOperand(), after);
                 if (v == null) v = tested(b.getRightOperand(), after);
                 if (v == null) return new Map[] {after, copy(after)};
+                if (fail) {
+                    var other = tested(b.getLeftOperand(), after) == v ? b.getRightOperand() : b.getLeftOperand();
+                    if (!isFailure(other, failValue(after.get(v)))) return new Map[] {after, copy(after)}; // the wrong value: still unchecked
+                    var checked = without(after, v);
+                    return new Map[] {checked, copy(checked)};
+                }
                 var failed = without(after, v);
                 return b.getKind() == Tree.Kind.EQUAL_TO ? new Map[] {failed, after} : new Map[] {after, failed};
             }
             case MethodInvocationTree mi when mi.getArguments().isEmpty() && mi.getMethodSelect() instanceof MemberSelectTree ms
                     && ms.getIdentifier().contentEquals("isNull") && tested(ms.getExpression(), s) != null -> {
+                if (fail && !failValue(s.get(tested(ms.getExpression(), s))).equals("NULL")) return new Map[] {s, copy(s)};
+                if (fail) { var checked = without(s, tested(ms.getExpression(), s)); return new Map[] {checked, copy(checked)}; }
                 return new Map[] {without(s, tested(ms.getExpression(), s)), s};
             }
             default -> {
@@ -619,7 +681,7 @@ final class Resources {
         } else if (r.v instanceof Var) return s;
         if (s.containsKey(target)) {
             var old = s.get(target);
-            report(Rule.OVERWRITE, at, target.getSimpleName(), old.what(), line(old.at()), names(old));
+            if (!fail) report(Rule.OVERWRITE, at, target.getSimpleName(), old.what(), line(old.at()), names(old));
             s = without(s, target);
         }
         if (site != null) {
@@ -632,11 +694,13 @@ final class Resources {
     // ---- reporting ---------------------------------------------------------------------------------------------
 
     private void leak(Tree at, Element v, Site site, String when) {
+        if (fail) return;
         if (reported.add("leak" + System.identityHashCode(at) + "/" + v))
             report(Rule.LEAK, at, v.getSimpleName(), site.what(), line(site.at()), when, names(site));
     }
 
     private void lost(Tree at, Site site, String how) {
+        if (fail) return;
         if (reported.add("lost" + System.identityHashCode(at))) report(Rule.LOST, at, site.what(), how, names(site));
     }
 

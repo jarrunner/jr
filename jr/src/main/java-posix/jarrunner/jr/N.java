@@ -111,7 +111,7 @@ public final class N {
     }
 
     /** Reads a NUL-terminated UTF-8 string, or null for a NULL pointer. */
-    public static String string(@CType("char") Address p) {
+    public static String string(@Nullable @CType("char") Address p) {
         return p.toLong() == 0 ? null : string(p, Integer.MAX_VALUE);
     }
 

@@ -30,6 +30,7 @@ public class Main implements Callable<Integer> {
     @Option(names = "--returned-annotation", paramLabel = "NAME", description = "write @NAME on the struct parameter of each field-address accessor: its result points into that parameter (teavm_native_check NC7)") String returnedAnnotation;
     @Option(names = "--escapes-annotation", paramLabel = "NAME", description = "write @NAME on the parameters a symbols line marks escapes=N (1-based): the C function keeps that pointer after it returns, which no header says") String escapesAnnotation;
     @Option(names = "--acquires-annotation", paramLabel = "NAME", description = "write @NAME(\"close1,close2\") on a function whose symbols line says releases=close1,close2 (the Java names of the calls that close what it returns), and on its String overload (teavm_native_check NC8)") String acquiresAnnotation;
+    @Option(names = "--fails-annotation", paramLabel = "NAME", description = "write @NAME(\"VALUE\") on a function whose symbols line says fails=VALUE (NULL, or a constant such as INVALID_HANDLE_VALUE): the value it returns on failure, which callers must test before using the result (teavm_native_check NC10)") String failsAnnotation;
     @Option(names = "--verify-c", description = "also write a C file of _Static_asserts restating every size, offset, width and value, for an independent compiler to check") Path verifyC;
 
     public static void main(String[] args) {
@@ -44,6 +45,7 @@ public class Main implements Callable<Integer> {
         gen.sg.returnedAnnotation = returnedAnnotation;
         gen.fn.escapesAnnotation = escapesAnnotation;
         gen.fn.acquiresAnnotation = acquiresAnnotation;
+        gen.fn.failsAnnotation = failsAnnotation;
         if (!textConverters.isEmpty()) {
             var scope = textScope == null ? new String[0] : textScope.split(",");
             if (scope.length != 2) throw new ParameterException(new CommandLine(this), "--text-converter needs --text-scope ENTER,EXIT");

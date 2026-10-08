@@ -52,6 +52,7 @@ final class Checker extends TreePathScanner<Void, Void> {
     }
 
     @Override public Void visitNewClass(NewClassTree node, Void v) {
+        if (facts.hasPointerTypeArg(typeOf(node))) report(Rule.GENERIC, node, node.getIdentifier());
         if (trees.getElement(getCurrentPath()) instanceof ExecutableElement m) escapes.onCall(getCurrentPath(), m, node.getArguments());
         return super.visitNewClass(node, v);
     }
@@ -66,6 +67,8 @@ final class Checker extends TreePathScanner<Void, Void> {
         if (el != null) {
             var t = el.asType();
             if (facts.isPointerArray(t)) report(Rule.ARRAY, node, el.getSimpleName());
+            else if (facts.hasPointerTypeArg(t) && (node.getInitializer() == null || !facts.hasPointerTypeArg(typeOf(node.getInitializer()))))
+                report(Rule.GENERIC, node, el.getSimpleName());
             else if (el.getKind() == ElementKind.FIELD && facts.isPointer(t) && !Facts.has(el, cfg.handle) && !facts.inWrapper(el)
                     && !isConstantPointer(el, node.getInitializer()))
                 report(Rule.FIELD, node, el.getSimpleName());
@@ -74,6 +77,7 @@ final class Checker extends TreePathScanner<Void, Void> {
     }
 
     @Override public Void visitMethodInvocation(MethodInvocationTree node, Void v) {
+        if (facts.hasPointerTypeArg(typeOf(node))) report(Rule.GENERIC, node, node.getMethodSelect());
         if (trees.getElement(getCurrentPath()) instanceof ExecutableElement m) {
             var q = Facts.qualified(m);
             if (cfg.scope.contains(q))

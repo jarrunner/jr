@@ -40,7 +40,7 @@ public final class ReCallbacks {
 
     /** mirrors reGetLangs. Empty if module is the null handle (no existing resources at all, a
      *  target with no resource section yet) or the resource does not exist. */
-    public static short[] getLangs(Address module, ResId type, ResId name) {
+    public static short[] getLangs(@Nullable Address module, ResId type, ResId name) {
         if (module.toLong() == 0) {
             return new short[0];
         }
@@ -66,7 +66,7 @@ public final class ReCallbacks {
     private static ResId firstNameResult;
 
     /** mirrors reFirstNameCb's use in reQueueIcon: the first RT_GROUP_ICON name, or null. */
-    public static ResId firstName(Address module, ResId type) {
+    public static ResId firstName(@Nullable Address module, ResId type) {
         if (module.toLong() == 0) {
             return null;
         }
@@ -89,7 +89,7 @@ public final class ReCallbacks {
     private static int maxIdResult;
 
     /** mirrors reMaxIdCb's use in reQueueIcon: 0 if module is null or there are no numeric names. */
-    public static int maxNumericName(Address module, ResId type) {
+    public static int maxNumericName(@Nullable Address module, ResId type) {
         if (module.toLong() == 0) {
             return 0;
         }

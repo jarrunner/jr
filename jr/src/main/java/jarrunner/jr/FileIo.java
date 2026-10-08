@@ -15,6 +15,7 @@ public final class FileIo {
 
     /** _wfopen; mode is a CRT mode string ("rb", "a"), so it is ASCII. */
     @Acquires("fclose")
+    @Fails("NULL")
     public static Address open(String path, String mode) {
         return WinApi.wfopen(path, mode);
     }

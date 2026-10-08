@@ -21,6 +21,11 @@ public final class FunctionGen {
     String acquiresAnnotation;
     /** The releases= value of the function being emitted, or null. */
     String releases;
+    /** --fails-annotation: written on a function whose symbols line says {@code fails=NULL} or {@code fails=INVALID_HANDLE_VALUE}
+     *  (the value it returns on failure, which no header says), and on its String overload; null = none. */
+    String failsAnnotation;
+    /** The fails= value of the function being emitted, or null. */
+    String fails;
 
     public FunctionGen(TypeMap types) {
         this.types = types;
@@ -56,7 +61,8 @@ public final class FunctionGen {
 
     /** "@Acquires(\"close\") " when the symbols file names what closes this function's result, else "". */
     String acquires() {
-        return acquiresAnnotation != null && releases != null ? "@" + acquiresAnnotation + "(\"" + releases + "\") " : "";
+        var a = acquiresAnnotation != null && releases != null ? "@" + acquiresAnnotation + "(\"" + releases + "\") " : "";
+        return a + (failsAnnotation != null && fails != null ? "@" + failsAnnotation + "(\"" + fails + "\") " : "");
     }
 
     /** "@Escapes " on a parameter the C function keeps (0-based i), else "". */

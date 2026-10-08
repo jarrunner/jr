@@ -9,6 +9,9 @@
 # phase 5); it becomes @Acquires("a,b") and teavm_native_check NC8 checks every caller closes it on every path.
 # Not covered: resources returned through an out-parameter (CreateProcessW, BCryptOpenAlgorithmProvider), child
 # windows (their parent destroys them), CertEnumCertificatesInStore (each call frees the previous context).
+# `fails=V` after a function's Java name: the value it returns on failure (NULL, or a constant such as
+# INVALID_HANDLE_VALUE); it becomes @Fails("V") and NC10 makes every caller test the result against V before using
+# it (PRP-35 phase 8). Left out: GetStdHandle (fails with either), GetConsoleWindow (NULL is "no console", a state).
 # --- functions (C name, Java name) ---
 exit exit
 fputs fputs
@@ -30,10 +33,10 @@ AttachConsole attachConsole
 GetStdHandle getStdHandle
 SetStdHandle setStdHandle
 GetConsoleMode getConsoleMode
-CreateFileW createFileW releases=closeHandle
+CreateFileW createFileW releases=closeHandle fails=INVALID_HANDLE_VALUE
 GetFileAttributesW getFileAttributesW
 GetFileAttributesExW getFileAttributesExW
-FindFirstFileW findFirstFileW releases=findClose
+FindFirstFileW findFirstFileW releases=findClose fails=INVALID_HANDLE_VALUE
 FindNextFileW findNextFileW
 FindClose findClose
 DeleteFileW deleteFileW
@@ -49,9 +52,9 @@ GlobalAlloc globalAlloc
 GlobalLock globalLock
 GlobalUnlock globalUnlock
 ReadFile readFile
-LoadLibraryW loadLibraryW releases=freeLibrary
-GetProcAddress getProcAddress
-GetModuleHandleW getModuleHandleW
+LoadLibraryW loadLibraryW releases=freeLibrary fails=NULL
+GetProcAddress getProcAddress fails=NULL
+GetModuleHandleW getModuleHandleW fails=NULL
 GetCurrentProcess getCurrentProcess
 FreeLibrary freeLibrary
 GetFinalPathNameByHandleW getFinalPathNameByHandleW
@@ -63,9 +66,9 @@ _open_osfhandle openOsfHandle
 _dup2 dup2
 _close close
 _get_osfhandle getOsfHandle
-WinHttpOpen winHttpOpen releases=winHttpCloseHandle
-WinHttpConnect winHttpConnect releases=winHttpCloseHandle
-WinHttpOpenRequest winHttpOpenRequest releases=winHttpCloseHandle
+WinHttpOpen winHttpOpen releases=winHttpCloseHandle fails=NULL
+WinHttpConnect winHttpConnect releases=winHttpCloseHandle fails=NULL
+WinHttpOpenRequest winHttpOpenRequest releases=winHttpCloseHandle fails=NULL
 WinHttpSendRequest winHttpSendRequest
 WinHttpReceiveResponse winHttpReceiveResponse
 WinHttpQueryHeaders winHttpQueryHeaders
@@ -86,7 +89,7 @@ GetTempPathW getTempPathW
 GetSystemDirectoryW getSystemDirectoryW
 SetFileAttributesW setFileAttributesW
 InitCommonControlsEx initCommonControlsEx
-CreateWindowExW createWindowExW
+CreateWindowExW createWindowExW fails=NULL
 ExtractIconExW extractIconExW
 GetSystemMenu getSystemMenu
 EnableMenuItem enableMenuItem
@@ -99,14 +102,14 @@ TranslateMessage translateMessage
 DispatchMessageW dispatchMessageW
 # --- resedit.c port (PRP-20 phase 2): resource editing ---
 GetLastError getLastError
-BeginUpdateResourceW beginUpdateResourceW releases=endUpdateResourceW
+BeginUpdateResourceW beginUpdateResourceW releases=endUpdateResourceW fails=NULL
 UpdateResourceW updateResourceW
 EndUpdateResourceW endUpdateResourceW
-LoadLibraryExW loadLibraryExW releases=freeLibrary
-FindResourceExW findResourceExW
-LoadResource loadResource
+LoadLibraryExW loadLibraryExW releases=freeLibrary fails=NULL
+FindResourceExW findResourceExW fails=NULL
+LoadResource loadResource fails=NULL
 SizeofResource sizeofResource
-LockResource lockResource
+LockResource lockResource fails=NULL
 EnumResourceNamesW enumResourceNamesW
 EnumResourceLanguagesW enumResourceLanguagesW
 EnumResourceTypesW enumResourceTypesW
@@ -118,13 +121,13 @@ SetEndOfFile setEndOfFile
 CopyFileW copyFileW
 GetFullPathNameW getFullPathNameW
 # --- resedit.c port (PRP-20 phase 2): Authenticode signing (crypt32.dll, mssign32.dll) ---
-CertOpenStore certOpenStore releases=certCloseStore
-CertFindCertificateInStore certFindCertificateInStore releases=certFreeCertificateContext
+CertOpenStore certOpenStore releases=certCloseStore fails=NULL
+CertFindCertificateInStore certFindCertificateInStore releases=certFreeCertificateContext fails=NULL
 CertCloseStore certCloseStore
 CertEnumCertificatesInStore certEnumCertificatesInStore
 CertFreeCertificateContext certFreeCertificateContext
 CryptAcquireCertificatePrivateKey cryptAcquireCertificatePrivateKey
-PFXImportCertStore pfxImportCertStore releases=certCloseStore
+PFXImportCertStore pfxImportCertStore releases=certCloseStore fails=NULL
 CertGetNameStringW certGetNameStringW
 SignerSignEx2 signerSignEx2
 SignerFreeSignerContext signerFreeSignerContext
@@ -313,8 +316,8 @@ FILE_APPEND_DATA
 OPEN_ALWAYS
 # --- PRP-31 step 5: native look (system message font, DPI-scaled layout) ---
 SystemParametersInfoW systemParametersInfoW
-CreateFontIndirectW createFontIndirectW
-GetDC getDC
+CreateFontIndirectW createFontIndirectW fails=NULL
+GetDC getDC fails=NULL
 ReleaseDC releaseDC
 GetDeviceCaps getDeviceCaps
 LOGPIXELSY
@@ -327,10 +330,10 @@ SM_CXSMICON
 SM_CXICON
 # --- PRP-34: Unicode. The command line, environment, console output and the file CRT through their W
 #     forms; the ACP conversion is for jli.dll alone, whose JLI_Launch takes char** (as java.exe does) ---
-_wfopen wfopen releases=fclose
+_wfopen wfopen releases=fclose fails=NULL
 GetEnvironmentVariableW getEnvironmentVariableW
 GetCommandLineW getCommandLineW
-CommandLineToArgvW commandLineToArgvW releases=localFree
+CommandLineToArgvW commandLineToArgvW releases=localFree fails=NULL
 LocalFree localFree
 WriteConsoleW writeConsoleW
 WideCharToMultiByte wideCharToMultiByte

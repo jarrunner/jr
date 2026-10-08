@@ -60,7 +60,7 @@ public final class ReEntries {
     /** Queues deletion of every language of (type, name) already in the target, and sets lastLang
      *  to the language the replacement should use: the existing one if there was one, else
      *  DEFAULT_LANG. Returns false only if the entry list is full - mirrors reQueueReplace. */
-    public boolean queueReplace(Address module, ResId type, ResId name) {
+    public boolean queueReplace(@Nullable Address module, ResId type, ResId name) {
         var langs = ReCallbacks.getLangs(module, type, name);
         for (var lang : langs) {
             if (!add(type, name, lang, null)) {
@@ -73,7 +73,7 @@ public final class ReEntries {
 
     /** A copy of an existing resource's bytes - mirrors reFind. Null if module is the null handle (no resource
      *  section) or the resource does not exist. */
-    public static byte[] find(Address module, ResId type, ResId name, short lang) {
+    public static byte[] find(@Nullable Address module, ResId type, ResId name, short lang) {
         if (module.toLong() == 0) {
             return null;
         }
@@ -85,6 +85,10 @@ public final class ReEntries {
         if (g.toLong() == 0) {
             return null;
         }
-        return bytesOf(WinApi.lockResource(g), WinApi.sizeofResource(module, r));
+        var p = WinApi.lockResource(g);
+        if (p.toLong() == 0) {
+            return null;
+        }
+        return bytesOf(p, WinApi.sizeofResource(module, r));
     }
 }

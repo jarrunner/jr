@@ -30,6 +30,19 @@ final class Facts {
         return false;
     }
 
+    /** A raw pointer anywhere among the type arguments (Optional<Address>, List<Map<String, Address>>): it would sit in an
+     *  Object slot, which TeaVM's GC treats as an object reference. Wrappers are real objects and are fine. */
+    boolean hasPointerTypeArg(TypeMirror t) {
+        if (t == null) return false;
+        if (t.getKind() == TypeKind.ARRAY) return hasPointerTypeArg(((ArrayType) t).getComponentType());
+        if (t.getKind() != TypeKind.DECLARED) return false;
+        for (var a : ((DeclaredType) t).getTypeArguments()) {
+            if (a.getKind() == TypeKind.DECLARED && isPointerType(((DeclaredType) a).asElement())) return true;
+            if (hasPointerTypeArg(a)) return true;
+        }
+        return false;
+    }
+
     boolean isPointerType(Element owner) {
         return owner instanceof TypeElement te && te.getQualifiedName().contentEquals(cfg.pointer);
     }

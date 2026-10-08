@@ -39,7 +39,7 @@ public final class ReVersionInfo {
         }
     }
 
-    public static void queue(Address module, ReEntries list, ReStamp s, StringBuilder report) throws ReError {
+    public static void queue(@Nullable Address module, ReEntries list, ReStamp s, StringBuilder report) throws ReError {
         var vs = new VStrings();
         var ffi = alloc(WinOffsets.VS_FIXEDFILEINFO.SIZE);
         WinOffsets.VS_FIXEDFILEINFO.dwSignature(ffi, 0xFEEF04BD);

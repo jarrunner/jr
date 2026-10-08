@@ -18,7 +18,7 @@ public final class ReIcon {
     private static final int GROUP_ENTRY_SIZE = 14;
     private static final int FILE_ENTRY_SIZE = 16;
 
-    public static void queue(Address module, ReEntries list, String icoPath, StringBuilder report) throws ReError {
+    public static void queue(@Nullable Address module, ReEntries list, String icoPath, StringBuilder report) throws ReError {
         var ico = FileIo.readAllBytes(icoPath);
         if (ico == null) {
             throw new ReError("Cannot read icon file: " + icoPath);

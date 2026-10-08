@@ -162,15 +162,20 @@ public final class ErrorDialog {
     private static Address control(String cls, String text, int style, int x, int y, int w, int h) {
         var exStyle = cls.equals("EDIT") ? WinApi.WS_EX_CLIENTEDGE : 0;
         var hwnd = WinApi.createWindowExW(exStyle, cls, text, WinApi.WS_CHILD | WinApi.WS_VISIBLE | style, s(x), s(y), s(w), s(h), dlg, NULL, NULL, NULL);
-        WinApi.sendMessageW(hwnd, WinApi.WM_SETFONT, font.toLong(), 1L);
+        if (hwnd.toLong() != 0) {
+            WinApi.sendMessageW(hwnd, WinApi.WM_SETFONT, font.toLong(), 1L);
+        }
         return hwnd;
     }
     /** The system's message font (Segoe UI on Windows 10/11) and the screen DPI, so the window is drawn natively,
      *  not bitmap-stretched; jr's manifest declares per-monitor DPI awareness, as java.exe's does. */
     private static void initLook() {
         var dc = WinApi.getDC(NULL);
-        dpi = Math.max(96, WinApi.getDeviceCaps(dc, WinApi.LOGPIXELSY));
-        WinApi.releaseDC(NULL, dc);
+        dpi = 96;
+        if (dc.toLong() != 0) {
+            dpi = Math.max(96, WinApi.getDeviceCaps(dc, WinApi.LOGPIXELSY));
+            WinApi.releaseDC(NULL, dc);
+        }
         var ncm = alloc(WinOffsets.NONCLIENTMETRICSW.SIZE);
         WinOffsets.NONCLIENTMETRICSW.cbSize(ncm, WinOffsets.NONCLIENTMETRICSW.SIZE);
         var logFont = WinOffsets.NONCLIENTMETRICSW.lfMessageFont(ncm);

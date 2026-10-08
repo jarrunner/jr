@@ -96,12 +96,14 @@ public final class StartCapture {
     }
 
     @Acquires("closeHandle")
+    @Fails("INVALID_HANDLE_VALUE")
     private static Address console() {
         return WinApi.createFileW("CONOUT$", WinApi.GENERIC_READ | WinApi.GENERIC_WRITE, WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE, NULL, WinApi.OPEN_EXISTING, 0, NULL);
     }
 
     /** Append-only, so jr, msvcrt and the JDK's own C runtime can all write to the file without overwriting each other. */
     @Acquires("closeHandle")
+    @Fails("INVALID_HANDLE_VALUE")
     private static Address appendHandle() {
         return WinApi.createFileW(file, WinApi.FILE_APPEND_DATA, WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE, NULL, WinApi.OPEN_ALWAYS, WinApi.FILE_ATTRIBUTE_NORMAL, NULL);
     }

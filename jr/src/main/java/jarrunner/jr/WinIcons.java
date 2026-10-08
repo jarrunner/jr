@@ -13,6 +13,9 @@ public final class WinIcons {
     @Unsafe("trusts that comctl32's LoadIconWithScaleDown has the signature LoadIconScaleDownFn declares")
     static void set(Address hwnd) {
         var self = WinApi.getModuleHandleW(NULL);
+        if (self.toLong() == 0) {
+            return;
+        }
         var group = intResource(1); // the RT_GROUP_ICON jr stamps
         var small = ptrVar();
         var large = ptrVar();
