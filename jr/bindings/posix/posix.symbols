@@ -1,10 +1,12 @@
 # The POSIX surface the Linux/macOS port of jr binds. THIS FILE IS THE SOURCE OF TRUTH: PosixApi.java
 # and PosixOffsets.java are generated from it by gen-bindings-posix.sh - never hand-edit them.
+# `releases=a` after a function's Java name: the call that closes what it returns; it becomes @Acquires("a") and
+# teavm_native_check NC8 checks every caller closes it on every path (PRP-35 phase 5). Same syntax as winapi.symbols.
 # --- functions (C name, Java name) ---
 exit exit
 getenv getenv
 setenv setenv
-fopen fopen
+fopen fopen releases=fclose
 fputs fputs
 fflush fflush
 fclose fclose
@@ -22,7 +24,7 @@ unlink unlink
 rename rename
 mkdir mkdir
 rmdir rmdir
-opendir opendir
+opendir opendir releases=closedir
 readdir readdir
 closedir closedir
 realpath realpath

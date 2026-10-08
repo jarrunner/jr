@@ -37,6 +37,7 @@ public final class Http {
             var request = WinApi.winHttpOpenRequest(connect, wcstr("GET"), wcstr(path), NULL,
                     NULL, NULL, https ? WinApi.WINHTTP_FLAG_SECURE : 0);
             if (request.toLong() == 0 || !sendAndReceive(request)) {
+                if (request.toLong() != 0) WinApi.winHttpCloseHandle(request); // opened, but the request failed
                 WinApi.winHttpCloseHandle(connect);
                 WinApi.winHttpCloseHandle(session);
                 return null;
@@ -95,6 +96,7 @@ public final class Http {
                     NULL, NULL, https ? WinApi.WINHTTP_FLAG_SECURE : 0);
             var range = existing > 0 ? "Range: bytes=" + existing + "-\r\n" : null;
             if (request.toLong() == 0 || !sendAndReceive(request, range)) {
+                if (request.toLong() != 0) WinApi.winHttpCloseHandle(request); // opened, but the request failed
                 WinApi.winHttpCloseHandle(connect);
                 WinApi.winHttpCloseHandle(session);
                 return false;

@@ -18,6 +18,7 @@ public final class StartCapture {
     private static int consoleRow = -1;
 
     /** Before a launch. Returns the inheritable stderr file handle in GUI mode, NULL in console mode. */
+    @Acquires("closeHandle")
     static Address begin(boolean hasConsole) {
         startTick = WinApi.getTickCount64();
         if (hasConsole) {
@@ -66,7 +67,11 @@ public final class StartCapture {
     private static String consoleLines() {
         var con = console();
         var info = alloc(WinOffsets.CONSOLE_SCREEN_BUFFER_INFO.SIZE);
-        if (con == WinApi.INVALID_HANDLE_VALUE || WinApi.getConsoleScreenBufferInfo(con, info) == 0) {
+        if (con == WinApi.INVALID_HANDLE_VALUE) {
+            return "";
+        }
+        if (WinApi.getConsoleScreenBufferInfo(con, info) == 0) {
+            WinApi.closeHandle(con);
             return "";
         }
         var width = WinOffsets.COORD.X(WinOffsets.CONSOLE_SCREEN_BUFFER_INFO.dwSize(info));
@@ -90,11 +95,13 @@ public final class StartCapture {
         return sb.toString();
     }
 
+    @Acquires("closeHandle")
     private static Address console() {
         return WinApi.createFileW("CONOUT$", WinApi.GENERIC_READ | WinApi.GENERIC_WRITE, WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE, NULL, WinApi.OPEN_EXISTING, 0, NULL);
     }
 
     /** Append-only, so jr, msvcrt and the JDK's own C runtime can all write to the file without overwriting each other. */
+    @Acquires("closeHandle")
     private static Address appendHandle() {
         return WinApi.createFileW(file, WinApi.FILE_APPEND_DATA, WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE, NULL, WinApi.OPEN_ALWAYS, WinApi.FILE_ATTRIBUTE_NORMAL, NULL);
     }
@@ -106,15 +113,25 @@ public final class StartCapture {
             return;
         }
         var ucrt = WinApi.loadLibraryW("ucrtbase.dll");
-        var open = ucrt.toLong() == 0 ? NULL : WinApi.getProcAddress(ucrt, "_open_osfhandle");
-        var dup2 = ucrt.toLong() == 0 ? NULL : WinApi.getProcAddress(ucrt, "_dup2");
+        if (ucrt.toLong() == 0) {
+            return;
+        }
+        handOver(ucrt); // stays loaded: the in-process JDK uses it for the life of the process
+        var open = WinApi.getProcAddress(ucrt, "_open_osfhandle");
+        var dup2 = WinApi.getProcAddress(ucrt, "_dup2");
+        if (open.toLong() == 0 || dup2.toLong() == 0) {
+            return;
+        }
         var h = appendHandle();
-        if (open.toLong() == 0 || dup2.toLong() == 0 || h == WinApi.INVALID_HANDLE_VALUE) {
+        if (h == WinApi.INVALID_HANDLE_VALUE) {
             return;
         }
         var fd = ((CrtFdFn) (Object) open).invoke(h.toLong(), 1); // _O_WRONLY
-        if (fd >= 0) {
-            ((CrtFdFn) (Object) dup2).invoke(fd, 2);
+        if (fd < 0) {
+            WinApi.closeHandle(h);
+            return;
         }
+        handOver(h); // the CRT's fd now owns it, and fd 2 keeps it open for the JDK
+        ((CrtFdFn) (Object) dup2).invoke(fd, 2);
     }
 }

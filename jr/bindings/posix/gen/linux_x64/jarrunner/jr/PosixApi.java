@@ -27,10 +27,10 @@ public final class PosixApi {
     }
 
     /** {@code extern FILE *fopen(const char *restrict __filename, const char *restrict __modes)} - stdio.h:271 */
-    @Import(name = "fopen") @CType("struct _IO_FILE") public static native Address fopen(@CType("char") Address __filename, @CType("char") Address __modes);
+    @Import(name = "fopen") @Acquires("fclose") @CType("struct _IO_FILE") public static native Address fopen(@CType("char") Address __filename, @CType("char") Address __modes);
 
     /** {@code fopen} with its read-only text as Strings (N.utf8), freed when the call returns. */
-    @CType("struct _IO_FILE") public static Address fopen(String __filename, String __modes) {
+    @Acquires("fclose") @CType("struct _IO_FILE") public static Address fopen(String __filename, String __modes) {
         var scope_ = N.mark();
         var result_ = fopen(N.utf8(__filename), N.utf8(__modes));
         N.release(scope_);
@@ -145,10 +145,10 @@ public final class PosixApi {
     }
 
     /** {@code extern DIR *opendir(const char *__name)} - dirent.h:141 */
-    @Import(name = "opendir") @CType("struct __dirstream") public static native Address opendir(@CType("char") Address __name);
+    @Import(name = "opendir") @Acquires("closedir") @CType("struct __dirstream") public static native Address opendir(@CType("char") Address __name);
 
     /** {@code opendir} with its read-only text as Strings (N.utf8), freed when the call returns. */
-    @CType("struct __dirstream") public static Address opendir(String __name) {
+    @Acquires("closedir") @CType("struct __dirstream") public static Address opendir(String __name) {
         var scope_ = N.mark();
         var result_ = opendir(N.utf8(__name));
         N.release(scope_);

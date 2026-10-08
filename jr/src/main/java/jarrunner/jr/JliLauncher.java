@@ -22,6 +22,7 @@ public final class JliLauncher {
             Log.warn("Could not load " + jliPath);
             return null;
         }
+        handOver(jli); // stays loaded for the life of the process: the JVM runs from it, and a failed probe below leaves it as before
 
         var launchAddr = WinApi.getProcAddress(jli, "JLI_Launch");
         var cmdToArgsAddr = WinApi.getProcAddress(jli, "JLI_CmdToArgs");

@@ -50,6 +50,21 @@ enum Rule {
     TYPE("NC6-type", "A pointer to '%s' is passed where '%s' is expected.",
             "The function reads and writes the fields of its own struct at fixed offsets. Given another struct it reads the wrong bytes, or runs past the end of the memory.",
             "Pass a pointer to the struct the function expects. For a struct nested inside another, use the generated field accessor, for example WIN32_FILE_ATTRIBUTE_DATA.ftLastWriteTime(p) for its FILETIME."),
+    LEAK("NC8-leak", "'%s' (opened by %s on line %d) is still open when %s.",
+            "An OS resource (a file, a handle, a module, a connection) that is never closed stays open until the process exits: the file stays locked, the handle count grows, and a long-running program eventually runs out.",
+            "Close it with %5$s on this path too, or once in a finally block that covers every path. If it is meant to outlive this method, return it (and mark the method @Acquires), store it in a field, or pass it to a parameter marked @Owns. If it must stay open until the process exits (a library the program keeps using), pass it to the project's hand-over method (the plugin's takes= list), which says so in the code."),
+    LOST("NC8-lost", "The resource opened by %s is lost: %s.",
+            "Nothing holds the resource any more, so nothing can close it; it stays open until the process exits.",
+            "Keep it in a local variable and close it with %3$s on every path, or pass it to a parameter marked @Owns."),
+    OVERWRITE("NC8-overwrite", "'%s' is reassigned while it may still hold the resource opened by %s on line %d.",
+            "The old value is gone, so that resource can no longer be closed.",
+            "Close it with %4$s first, or use a new variable for the new value."),
+    ACQUIRES("NC8-acquires", "A resource opened by %s is returned, but this method is not marked @Acquires.",
+            "Callers cannot see that they now own an open resource, so nothing checks that they close it.",
+            "Mark the method @Acquires(\"close1,close2\") naming the calls that close what it returns; its callers are then checked like callers of the OS function."),
+    THROWS("NC8-throws", "%s can be thrown out of '%s' here, but the method does not declare it.",
+            "The resource rule checks every exception path one method at a time, from each callee's signature. An exception that leaves a method without being declared is a path its callers cannot see, so a resource they hold could leak on it unnoticed.",
+            "Add 'throws %1$s' to the method (it costs nothing at run time, even for an unchecked exception), or catch it here."),
     SUSPEND("NC5-suspend", "'%s' can suspend the current thread inside a memScoped block.",
             "TeaVM runs every java.lang.Thread as a fiber on one OS thread, sharing one scope allocator. If this fiber pauses here, another fiber can open and close its own scope and free memory this block is still using.",
             "Move the call out of the memScoped block: finish the native work, leave the block, then sleep, wait, join or synchronize.");
@@ -64,6 +79,6 @@ enum Rule {
     }
 
     String message(Object... args) {
-        return "[" + code + "] " + what.formatted(args) + "\n  Why: " + why + "\n  Fix: " + fix;
+        return "[" + code + "] " + what.formatted(args) + "\n  Why: " + why + "\n  Fix: " + fix.formatted(args);
     }
 }

@@ -1,5 +1,6 @@
 package jarrunner.jr;
 
+import org.teavm.interop.Address;
 import java.util.List;
 
 import static jarrunner.jr.N.*;
@@ -52,14 +53,12 @@ public final class Launch {
         tried.append("- Java ").append(java.major).append(" at ").append(java.home).append(currentAot ? ", with AOT cache" : "")
                 .append(inProcess ? ", in-process" : ", child process").append('\n');
 
-        var stderr = StartCapture.begin(hasConsole);
-        var owned = stderr.toLong() != 0;
+        var stderr = StartCapture.begin(hasConsole); // GUI mode: the capture file, ours to close; console mode: NULL
         if (inProcess && !java.jli.isEmpty()) {
-            if (owned) {
+            var bound = stderr.toLong() != 0;
+            if (stderr.toLong() != 0) {
                 ConsoleMode.bindStderr(stderr); // takes the handle; a child fallback inherits fd 2's instead
                 StartCapture.bindJdkStderr();
-                stderr = WinApi.getStdHandle(WinApi.STD_ERROR_HANDLE);
-                owned = false;
             }
             ExitHook.install();
             var code = JliLauncher.tryLaunch(java.jli, cmdLine, javaPath, guiMode && StartCapture.file.isEmpty());
@@ -69,9 +68,20 @@ public final class Launch {
                 return new LaunchResult(true, code);
             }
             Log.warn("Falling back to child process mode (java.exe)");
-        } else if (inProcess) {
+            return child(bound ? WinApi.getStdHandle(WinApi.STD_ERROR_HANDLE) : NULL);
+        }
+        if (inProcess) {
             Log.warn("No in-process JVM for " + java.home + " (no jli.dll, or a different architecture from this exe)");
         }
+        var r = child(stderr);
+        if (stderr.toLong() != 0) {
+            WinApi.closeHandle(stderr);
+        }
+        return r;
+    }
+
+    /** A child java.exe, its stderr going to the given handle (borrowed: the caller closes it). */
+    private static LaunchResult child(Address stderr) {
         if (!fitsCodePage(cmdLine, systemAcp())) {
             // PRP-34: jr passes the command line as UTF-16, but java.exe reads it through GetCommandLineA, and the
             // JVM finds its own files the same way. Nothing jr can send gets past that.
@@ -80,11 +90,7 @@ public final class Launch {
             Log.warn(note.strip());
             tried.append(note);
         }
-        var r = ProcessLauncher.launch(cmdLine, hasConsole, stderr, GUI_WAIT_MS);
-        if (owned) {
-            WinApi.closeHandle(stderr);
-        }
-        return r;
+        return ProcessLauncher.launch(cmdLine, hasConsole, stderr, GUI_WAIT_MS);
     }
 
     /** Called through ExitHook when jli.dll (or the app) calls exit() during an in-process run. */

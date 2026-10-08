@@ -10,7 +10,7 @@ import org.teavm.interop.Address;
 public final class ReStrings {
     private ReStrings() {}
 
-    public static void queue(Address module, ReEntries list, ReStamp s, StringBuilder report) {
+    public static void queue(Address module, ReEntries list, ReStamp s, StringBuilder report) throws ReError {
         var done = new boolean[s.strings.size()];
 
         for (var i = 0; i < s.strings.size(); i++) {

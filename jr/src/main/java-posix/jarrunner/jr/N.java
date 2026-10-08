@@ -155,4 +155,10 @@ public final class N {
         }
         return sb.toString();
     }
+
+    /** An open OS resource (a handle, a module, a FILE*) is no longer this code's to close: something the checker cannot
+     *  see now owns it (the C runtime adopted it as an fd), or it stays open on purpose until the process exits (a
+     *  library still in use). Does nothing at run time; it is how the code says so to teavm_native_check (NC8, its
+     *  takes= list). Say why at the call. */
+    public static void handOver(Address resource) {}
 }

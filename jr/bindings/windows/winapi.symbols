@@ -5,6 +5,10 @@
 # tag shadowed by an ordinary name. Anything the tool cannot bind is reported NOT BOUND (exit 1).
 # `escapes=N[,M]` after a function's Java name: the C function keeps parameter N (1-based) after it
 # returns, which no header says (PRP-35 phase 4); it becomes @Escapes, and never a String overload.
+# `releases=a[,b]` after a function's Java name: the Java names of the calls that close what it returns (PRP-35
+# phase 5); it becomes @Acquires("a,b") and teavm_native_check NC8 checks every caller closes it on every path.
+# Not covered: resources returned through an out-parameter (CreateProcessW, BCryptOpenAlgorithmProvider), child
+# windows (their parent destroys them), CertEnumCertificatesInStore (each call frees the previous context).
 # --- functions (C name, Java name) ---
 exit exit
 fputs fputs
@@ -26,10 +30,10 @@ AttachConsole attachConsole
 GetStdHandle getStdHandle
 SetStdHandle setStdHandle
 GetConsoleMode getConsoleMode
-CreateFileW createFileW
+CreateFileW createFileW releases=closeHandle
 GetFileAttributesW getFileAttributesW
 GetFileAttributesExW getFileAttributesExW
-FindFirstFileW findFirstFileW
+FindFirstFileW findFirstFileW releases=findClose
 FindNextFileW findNextFileW
 FindClose findClose
 DeleteFileW deleteFileW
@@ -45,7 +49,7 @@ GlobalAlloc globalAlloc
 GlobalLock globalLock
 GlobalUnlock globalUnlock
 ReadFile readFile
-LoadLibraryW loadLibraryW
+LoadLibraryW loadLibraryW releases=freeLibrary
 GetProcAddress getProcAddress
 GetModuleHandleW getModuleHandleW
 GetCurrentProcess getCurrentProcess
@@ -59,9 +63,9 @@ _open_osfhandle openOsfHandle
 _dup2 dup2
 _close close
 _get_osfhandle getOsfHandle
-WinHttpOpen winHttpOpen
-WinHttpConnect winHttpConnect
-WinHttpOpenRequest winHttpOpenRequest
+WinHttpOpen winHttpOpen releases=winHttpCloseHandle
+WinHttpConnect winHttpConnect releases=winHttpCloseHandle
+WinHttpOpenRequest winHttpOpenRequest releases=winHttpCloseHandle
 WinHttpSendRequest winHttpSendRequest
 WinHttpReceiveResponse winHttpReceiveResponse
 WinHttpQueryHeaders winHttpQueryHeaders
@@ -95,10 +99,10 @@ TranslateMessage translateMessage
 DispatchMessageW dispatchMessageW
 # --- resedit.c port (PRP-20 phase 2): resource editing ---
 GetLastError getLastError
-BeginUpdateResourceW beginUpdateResourceW
+BeginUpdateResourceW beginUpdateResourceW releases=endUpdateResourceW
 UpdateResourceW updateResourceW
 EndUpdateResourceW endUpdateResourceW
-LoadLibraryExW loadLibraryExW
+LoadLibraryExW loadLibraryExW releases=freeLibrary
 FindResourceExW findResourceExW
 LoadResource loadResource
 SizeofResource sizeofResource
@@ -114,13 +118,13 @@ SetEndOfFile setEndOfFile
 CopyFileW copyFileW
 GetFullPathNameW getFullPathNameW
 # --- resedit.c port (PRP-20 phase 2): Authenticode signing (crypt32.dll, mssign32.dll) ---
-CertOpenStore certOpenStore
-CertFindCertificateInStore certFindCertificateInStore
+CertOpenStore certOpenStore releases=certCloseStore
+CertFindCertificateInStore certFindCertificateInStore releases=certFreeCertificateContext
 CertCloseStore certCloseStore
 CertEnumCertificatesInStore certEnumCertificatesInStore
 CertFreeCertificateContext certFreeCertificateContext
 CryptAcquireCertificatePrivateKey cryptAcquireCertificatePrivateKey
-PFXImportCertStore pfxImportCertStore
+PFXImportCertStore pfxImportCertStore releases=certCloseStore
 CertGetNameStringW certGetNameStringW
 SignerSignEx2 signerSignEx2
 SignerFreeSignerContext signerFreeSignerContext
@@ -323,10 +327,10 @@ SM_CXSMICON
 SM_CXICON
 # --- PRP-34: Unicode. The command line, environment, console output and the file CRT through their W
 #     forms; the ACP conversion is for jli.dll alone, whose JLI_Launch takes char** (as java.exe does) ---
-_wfopen wfopen
+_wfopen wfopen releases=fclose
 GetEnvironmentVariableW getEnvironmentVariableW
 GetCommandLineW getCommandLineW
-CommandLineToArgvW commandLineToArgvW
+CommandLineToArgvW commandLineToArgvW releases=localFree
 LocalFree localFree
 WriteConsoleW writeConsoleW
 WideCharToMultiByte wideCharToMultiByte

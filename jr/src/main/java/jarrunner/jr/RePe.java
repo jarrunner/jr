@@ -20,7 +20,7 @@ public final class RePe {
     private RePe() {}
 
     /** Returns true if a signature was found and stripped, false if there was none to strip. */
-    public static boolean stripSignature(String path) {
+    public static boolean stripSignature(String path) throws ReError {
         var h = WinApi.createFileW(path, WinApi.GENERIC_READ | WinApi.GENERIC_WRITE, 0, NULL, WinApi.OPEN_EXISTING, 0, NULL);
         if (h == WinApi.INVALID_HANDLE_VALUE) {
             throw new ReError("Cannot open for writing (error " + WinApi.getLastError() + ") - is it running?");

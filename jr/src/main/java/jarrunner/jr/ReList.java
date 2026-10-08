@@ -6,7 +6,7 @@ import static jarrunner.jr.N.*;
 public final class ReList {
     private ReList() {}
 
-    public static String list(String path) {
+    public static String list(String path) throws ReError {
         var m = WinApi.loadLibraryExW(path, NULL, WinApi.LOAD_LIBRARY_AS_DATAFILE | WinApi.LOAD_LIBRARY_AS_IMAGE_RESOURCE);
         if (m.toLong() == 0) {
             throw new ReError("Cannot open " + path + " (error " + WinApi.getLastError() + ")");

@@ -21,6 +21,7 @@ final class Checker extends TreePathScanner<Void, Void> {
     final CTypes ctypes;
     final Borrows borrows;
     final EscapeRules escapes;
+    final Resources resources;
 
     Checker(Trees trees, Config cfg, Elements elements, Types types) {
         this.trees = trees;
@@ -30,6 +31,7 @@ final class Checker extends TreePathScanner<Void, Void> {
         this.ctypes = new CTypes(trees, cfg);
         this.borrows = new Borrows(trees, cfg, facts, lex);
         this.escapes = new EscapeRules(this, borrows, elements, types);
+        this.resources = new Resources(this, types);
     }
 
     @Override public Void visitClass(ClassTree node, Void v) {
@@ -42,7 +44,10 @@ final class Checker extends TreePathScanner<Void, Void> {
         checkReason(el);
         ctypes.learn(getCurrentPath());
         borrows.learn(getCurrentPath());
-        if (el instanceof ExecutableElement m) escapes.onMethod(node, m);
+        if (el instanceof ExecutableElement m) {
+            escapes.onMethod(node, m);
+            resources.onMethod(getCurrentPath(), node, m);
+        }
         return super.visitMethod(node, v);
     }
 
@@ -90,6 +95,7 @@ final class Checker extends TreePathScanner<Void, Void> {
     }
 
     @Override public Void visitLambdaExpression(LambdaExpressionTree node, Void v) {
+        if (!lex.isScopeLambda(getCurrentPath())) resources.onLambda(getCurrentPath(), node); // a scope lambda is walked with its method
         if (lex.scopeLambdas.contains(node) && node.getBodyKind() == LambdaExpressionTree.BodyKind.EXPRESSION
                 && facts.isPointer(typeOf(node.getBody())))
             report(Rule.RETURN, node.getBody());

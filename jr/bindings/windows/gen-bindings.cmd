@@ -10,7 +10,7 @@ rem Run from this folder so the generated javadoc names jr.h, not an absolute pa
 pushd "%~dp0"
 call "%JEXTRACT_TEAVM%" jr.h --symbols winapi.symbols ^
   -I "%LLVM_MINGW%\include" --package jarrunner.jr --api-class WinApi --structs-class WinOffsets --ctype-annotation CType ^
-  --text-converter char=N.utf8 --text-converter wchar_t=N.wcstr --text-scope N.mark,N.release --buf-class Buf --returned-annotation Returned --escapes-annotation Escapes ^
+  --text-converter char=N.utf8 --text-converter wchar_t=N.wcstr --text-scope N.mark,N.release --buf-class Buf --returned-annotation Returned --escapes-annotation Escapes --acquires-annotation Acquires ^
   -o ..\..\src\main\java --verify-c verify-win.c
 if errorlevel 1 (echo gen-bindings: generation FAILED, see NOT BOUND lines above & popd & exit /b 1)
 "%LLVM_MINGW%\bin\x86_64-w64-mingw32-clang" -fsyntax-only -w verify-win.c

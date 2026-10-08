@@ -6,7 +6,7 @@ import org.teavm.interop.Address;
 public final class ReRawResource {
     private ReRawResource() {}
 
-    public static void queue(Address module, ReEntries list, ReStamp.RawResource raw, StringBuilder report) {
+    public static void queue(Address module, ReEntries list, ReStamp.RawResource raw, StringBuilder report) throws ReError {
         var type = ResId.parse(raw.type(), true);
         var name = ResId.parse(raw.name(), false);
         checkJrcJson(raw, report);
@@ -27,7 +27,7 @@ public final class ReRawResource {
 
     /** RCDATA/JRC is jr's own config: a jrc-json is sanity-checked before it is baked, and a
      *  broken one is refused (PRP-30). A key=value .jrc is baked as before. */
-    private static void checkJrcJson(ReStamp.RawResource raw, StringBuilder report) {
+    private static void checkJrcJson(ReStamp.RawResource raw, StringBuilder report) throws ReError {
         if (!AsciiStr.equalsIgnoreCase(raw.type(), "RCDATA") || !AsciiStr.equalsIgnoreCase(raw.name(), "JRC")) {
             return;
         }

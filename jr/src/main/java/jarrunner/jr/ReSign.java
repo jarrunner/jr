@@ -21,7 +21,7 @@ public final class ReSign {
     private static final int SIGNER_NO_ATTR = 0;
     private static final int SIGNER_TIMESTAMP_RFC3161 = 2;
 
-    public static void sign(String targetPath, ReStamp s, StringBuilder report) {
+    public static void sign(String targetPath, ReStamp s, StringBuilder report) throws ReError {
         var cert = NULL;
         var store = NULL;
         try {

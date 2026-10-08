@@ -15,7 +15,7 @@
          line, so both source trees are checked against one configuration. -->
     <!-- PRP-35 phase 3: the Checks.ON constant comes from src/checks-off (release) or, with -Dchecks, src/checks-on. -->
     <jr.checks.src>src/checks-off/java</jr.checks.src>
-    <nativecheck>wrappers=jarrunner.jr.Buf trust=jarrunner.jr.Buf.wrap scope=jarrunner.jr.N.memScoped alloc=jarrunner.jr.N.alloc raw=jarrunner.jr.N,jarrunner.jr.Arena,jarrunner.jr.Buf,jarrunner.jr.WinApi,jarrunner.jr.WinOffsets,jarrunner.jr.PosixApi,jarrunner.jr.PosixOffsets</nativecheck>
+    <nativecheck>tracked=jarrunner.jr.ReError takes=jarrunner.jr.N.handOver wrappers=jarrunner.jr.Buf trust=jarrunner.jr.Buf.wrap scope=jarrunner.jr.N.memScoped alloc=jarrunner.jr.N.alloc raw=jarrunner.jr.N,jarrunner.jr.Arena,jarrunner.jr.Buf,jarrunner.jr.WinApi,jarrunner.jr.WinOffsets,jarrunner.jr.PosixApi,jarrunner.jr.PosixOffsets</nativecheck>
   </properties>
   <dependencies>
     <dependency>

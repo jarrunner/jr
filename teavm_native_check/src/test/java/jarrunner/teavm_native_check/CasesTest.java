@@ -12,7 +12,7 @@ import org.junit.jupiter.api.*;
  *  file's first line: {@code // expect: NC1-field NC2-ofData} (order does not matter) or {@code // expect: none}. */
 class CasesTest {
     static final Path RES = Path.of("src/test/resources");
-    static final String PLUGIN = "-Xplugin:NativeCheck scope=t.N.memScoped raw=t.N,t.Api,t.Buf alloc=t.N.alloc wrappers=t.Buf trust=t.Buf.wrap";
+    static final String PLUGIN = "-Xplugin:NativeCheck scope=t.N.memScoped raw=t.N,t.Api,t.Buf alloc=t.N.alloc wrappers=t.Buf trust=t.Buf.wrap tracked=t.Fail takes=t.N.handOver";
 
     @TestFactory
     Stream<DynamicTest> cases() throws Exception {

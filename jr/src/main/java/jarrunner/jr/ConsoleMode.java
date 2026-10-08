@@ -96,17 +96,18 @@ public final class ConsoleMode {
 
     /** PRP-31: GUI-mode capture for an in-process JVM: fd 2 and STD_ERROR become the capture file. Takes
      *  ownership of h (it is closed once duplicated onto fd 2). */
-    static void bindStderr(Address h) {
+    static void bindStderr(@Owns("closeHandle") Address h) {
         bindStdStream(2, WinApi.STD_ERROR_HANDLE, h);
     }
 
-    private static void bindStdStream(int fd, int stdId, Address h) {
+    private static void bindStdStream(int fd, int stdId, @Owns("closeHandle") Address h) {
         var flags = fd == 0 ? 0x0000 : 0x0001; // _O_RDONLY : _O_WRONLY
         var tmp = WinApi.openOsfHandle(h.toLong(), flags);
         if (tmp < 0) {
             WinApi.closeHandle(h);
             return;
         }
+        handOver(h); // fd tmp owns it now: close(tmp) below closes it
         if (WinApi.dup2(tmp, fd) == 0) {
             WinApi.close(tmp);
             WinApi.setStdHandle(stdId, handle(WinApi.getOsfHandle(fd)));

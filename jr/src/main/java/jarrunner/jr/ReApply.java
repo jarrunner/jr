@@ -12,11 +12,11 @@ import static jarrunner.jr.N.*;
 public final class ReApply {
     private ReApply() {}
 
-    public static void run(String targetPath, ReStamp s, StringBuilder report) {
+    public static void run(String targetPath, ReStamp s, StringBuilder report) throws ReError {
         memScoped(() -> apply(targetPath, s, report));
     }
 
-    private static void apply(String targetPath, ReStamp s, StringBuilder report) {
+    private static void apply(String targetPath, ReStamp s, StringBuilder report) throws ReError {
         var targetW = wcstr(targetPath);
         var module = WinApi.loadLibraryExW(targetW, NULL,
                 WinApi.LOAD_LIBRARY_AS_DATAFILE | WinApi.LOAD_LIBRARY_AS_IMAGE_RESOURCE);

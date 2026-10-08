@@ -21,4 +21,5 @@ public final class N {
 
     public static int intAt(Address p) { return p.getInt(); }
     public static native int os(Address p);
+    public static void handOver(Address resource) {}
 }

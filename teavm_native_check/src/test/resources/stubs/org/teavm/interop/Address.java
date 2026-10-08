@@ -5,6 +5,7 @@ public final class Address {
     public native Address add(long offset);
     public native int toInt();
     public native long toLong();
+    public native boolean isNull();
     public native byte getByte();
     public native void putByte(byte b);
     public native char getChar();

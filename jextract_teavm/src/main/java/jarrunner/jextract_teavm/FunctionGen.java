@@ -16,6 +16,11 @@ public final class FunctionGen {
     String escapesAnnotation;
     /** 1-based parameters of the function being emitted that the C function keeps after it returns. */
     Set<Integer> escaping = Set.of();
+    /** --acquires-annotation: written on a function whose symbols line says {@code releases=a,b} (the Java names of the calls
+     *  that close what it returns), and on its String overload; null = none. */
+    String acquiresAnnotation;
+    /** The releases= value of the function being emitted, or null. */
+    String releases;
 
     public FunctionGen(TypeMap types) {
         this.types = types;
@@ -41,12 +46,17 @@ public final class FunctionGen {
             var note = f.type().varargs() ? " (variadic: fixed parameters" + (varargTypes.isEmpty() ? "" : " + " + varargTypes) + ")" : "";
             return new Src()
                     .add("    /** {@code %s} - %s%s */", c, Src.where(f.pos()), note)
-                    .add("    @Import(name = \"%s\") %spublic static native %s %s(%s);", f.name(), types.ctype(f.type().returnType()), ret, javaName, params)
+                    .add("    @Import(name = \"%s\") %spublic static native %s %s(%s);", f.name(), acquires() + types.ctype(f.type().returnType()), ret, javaName, params)
                     .add("")
                     .addAll(varargTypes.isEmpty() ? stringOverload(f, javaName, ret, spelled) : new Src());
         } finally {
             this.escaping = Set.of();
         }
+    }
+
+    /** "@Acquires(\"close\") " when the symbols file names what closes this function's result, else "". */
+    String acquires() {
+        return acquiresAnnotation != null && releases != null ? "@" + acquiresAnnotation + "(\"" + releases + "\") " : "";
     }
 
     /** "@Escapes " on a parameter the C function keeps (0-based i), else "". */
@@ -87,7 +97,7 @@ public final class FunctionGen {
         if (converted.isEmpty()) return src;
         var isVoid = ret.equals("void");
         src.add("    /** {@code %s} with its read-only text as Strings (%s), freed when the call returns. */", f.name(), String.join(", ", converted))
-                .add("    %spublic static %s %s(%s) {", types.ctype(f.type().returnType()), ret, javaName, String.join(", ", decls))
+                .add("    %spublic static %s %s(%s) {", acquires() + types.ctype(f.type().returnType()), ret, javaName, String.join(", ", decls))
                 .add("        var scope_ = %s();", scopeEnter)
                 .add("        %s%s(%s);", isVoid ? "" : "var result_ = ", javaName, String.join(", ", args))
                 .add("        %s(scope_);", scopeExit);

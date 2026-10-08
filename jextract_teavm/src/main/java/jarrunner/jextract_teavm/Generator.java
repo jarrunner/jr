@@ -74,12 +74,15 @@ public final class Generator {
     void emit(Declaration d, String binding, String wide) {
         var all = List.of(binding.split(" "));
         var javaName = all.getFirst();
-        var parts = all.stream().filter(p -> !p.startsWith("escapes=")).toList();
+        var parts = all.stream().filter(p -> !p.startsWith("escapes=") && !p.startsWith("releases=")).toList();
         var escaping = all.stream().filter(p -> p.startsWith("escapes=")).flatMap(p -> Arrays.stream(p.substring(8).split(",")))
                 .map(Integer::parseInt).collect(java.util.stream.Collectors.toSet());
+        var releases = all.stream().filter(p -> p.startsWith("releases=")).map(p -> p.substring(9)).findFirst().orElse(null);
         switch (d) {
             case Declaration.Function f -> {
+                fn.releases = releases;
                 api.addAll(fn.emit(f, javaName, parts.subList(1, parts.size()), escaping));
+                fn.releases = null;
                 verifier.function(f);
                 functions++;
             }

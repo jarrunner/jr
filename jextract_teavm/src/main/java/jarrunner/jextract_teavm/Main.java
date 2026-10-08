@@ -29,6 +29,7 @@ public class Main implements Callable<Integer> {
     @Option(names = "--buf-class", paramLabel = "NAME", description = "also generate struct accessors taking NAME, a bounds-checked buffer type with getX(int)/putX(int, x) and from(int)") String bufClass;
     @Option(names = "--returned-annotation", paramLabel = "NAME", description = "write @NAME on the struct parameter of each field-address accessor: its result points into that parameter (teavm_native_check NC7)") String returnedAnnotation;
     @Option(names = "--escapes-annotation", paramLabel = "NAME", description = "write @NAME on the parameters a symbols line marks escapes=N (1-based): the C function keeps that pointer after it returns, which no header says") String escapesAnnotation;
+    @Option(names = "--acquires-annotation", paramLabel = "NAME", description = "write @NAME(\"close1,close2\") on a function whose symbols line says releases=close1,close2 (the Java names of the calls that close what it returns), and on its String overload (teavm_native_check NC8)") String acquiresAnnotation;
     @Option(names = "--verify-c", description = "also write a C file of _Static_asserts restating every size, offset, width and value, for an independent compiler to check") Path verifyC;
 
     public static void main(String[] args) {
@@ -42,6 +43,7 @@ public class Main implements Callable<Integer> {
         gen.sg.bufClass = bufClass;
         gen.sg.returnedAnnotation = returnedAnnotation;
         gen.fn.escapesAnnotation = escapesAnnotation;
+        gen.fn.acquiresAnnotation = acquiresAnnotation;
         if (!textConverters.isEmpty()) {
             var scope = textScope == null ? new String[0] : textScope.split(",");
             if (scope.length != 2) throw new ParameterException(new CommandLine(this), "--text-converter needs --text-scope ENTER,EXIT");

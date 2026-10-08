@@ -31,7 +31,7 @@ public final class ReManifest {
             + "<assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\" manifestVersion=\"1.0\">\r\n"
             + "</assembly>\r\n";
 
-    public static void queue(Address module, ReEntries list, ReStamp s, StringBuilder report) {
+    public static void queue(Address module, ReEntries list, ReStamp s, StringBuilder report) throws ReError {
         if (!list.queueReplace(module, ResId.of(WinApi.RT_MANIFEST), ResId.of(1))) {
             throw new ReError("Too many resource changes in one run");
         }

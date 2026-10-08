@@ -19,11 +19,16 @@ import java.util.*;
  *      size, {@code pkg.Buf.wrap}): calling them counts as raw access, allowed only in raw classes and
  *      {@code @Unsafe} code
  *  <li>{@code suspend} methods that can suspend a TeaVM fiber, as {@code pkg.Class.method}
+ *  <li>{@code acquires}, {@code owns} annotation names for NC8 (resources): a method whose result must be closed, naming
+ *      the calls that close it; a parameter that takes over closing what it is given
+ *  <li>{@code tracked} exception types a method must declare when it lets them out (NC8-throws), so the resource rule
+ *      sees every path one method at a time; {@code takes} methods that take over a resource passed to them, so the caller
+ *      no longer closes it (a hand-over helper for what the C runtime adopts, or what stays open until the process exits)
  *  <li>{@code mode} {@code error} (default) fails the build, {@code warn} only reports
  *  </ul> */
 final class Config {
-    final String pointer, unsafe, handle, scoped, async, ctype, escapes, returned;
-    final Set<String> scope, raw, suspend, alloc, allocators, wrappers, trust;
+    final String pointer, unsafe, handle, scoped, async, ctype, escapes, returned, acquires, owns;
+    final Set<String> scope, raw, suspend, alloc, allocators, wrappers, trust, tracked, takes;
     final boolean warn;
 
     private Config(Map<String, String> m) {
@@ -35,6 +40,10 @@ final class Config {
         ctype = m.getOrDefault("ctype", "CType");
         escapes = m.getOrDefault("escapes", "Escapes");
         returned = m.getOrDefault("returned", "Returned");
+        acquires = m.getOrDefault("acquires", "Acquires");
+        owns = m.getOrDefault("owns", "Owns");
+        tracked = list(m.getOrDefault("tracked", ""));
+        takes = list(m.getOrDefault("takes", ""));
         scope = list(m.getOrDefault("scope", ""));
         raw = list(m.getOrDefault("raw", ""));
         alloc = list(m.getOrDefault("alloc", ""));
@@ -51,7 +60,7 @@ final class Config {
     }
 
     static Config parse(String... args) {
-        var known = Set.of("pointer", "unsafe", "handle", "scoped", "async", "ctype", "escapes", "returned", "scope", "raw", "alloc",
+        var known = Set.of("pointer", "unsafe", "handle", "scoped", "async", "ctype", "escapes", "returned", "acquires", "owns", "tracked", "takes", "scope", "raw", "alloc",
                 "allocators", "wrappers", "trust", "suspend", "mode");
         var m = new HashMap<String, String>();
         for (var a : args) {
