@@ -53,6 +53,7 @@ public final class ReCallbacks {
         return out;
     }
 
+    @SameThread("EnumResourceLanguagesW calls it before returning")
     static int collectLang(Address module, Address type, Address name, short lang, long lParam) {
         if (langCount < langBuf.length) {
             langBuf[langCount++] = lang;
@@ -77,6 +78,7 @@ public final class ReCallbacks {
         return result;
     }
 
+    @SameThread("EnumResourceNamesW calls it before returning")
     static int captureFirstName(Address module, Address type, Address name, long lParam) {
         firstNameResult = ResId.read(name);
         return 0; // FALSE: the first one is all we want
@@ -99,6 +101,7 @@ public final class ReCallbacks {
         return result;
     }
 
+    @SameThread("EnumResourceNamesW calls it before returning")
     static int trackMaxId(Address module, Address type, Address name, long lParam) {
         var id = ResId.read(name);
         if (id.isNumeric() && (id.id & 0xFFFF) > maxIdResult) {
@@ -128,18 +131,21 @@ public final class ReCallbacks {
         return listCount;
     }
 
+    @SameThread("EnumResourceTypesW calls it before returning")
     static int listType(Address module, Address type, long lParam) {
         var cb = (Address) (Object) Function.get(NameCallback.class, ReCallbacks.class, "listName");
         WinApi.enumResourceNamesW(module, type, cb, 0L);
         return 1;
     }
 
+    @SameThread("EnumResourceNamesW calls it before returning")
     static int listName(Address module, Address type, Address name, long lParam) {
         var cb = (Address) (Object) Function.get(LangCallback.class, ReCallbacks.class, "listLang");
         WinApi.enumResourceLanguagesW(module, type, name, cb, 0L);
         return 1;
     }
 
+    @SameThread("EnumResourceLanguagesW calls it before returning")
     static int listLang(Address module, Address type, Address name, short lang, long lParam) {
         var typeId = ResId.read(type);
         var nameId = ResId.read(name);

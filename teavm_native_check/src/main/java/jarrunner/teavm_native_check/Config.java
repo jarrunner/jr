@@ -24,11 +24,13 @@ import java.util.*;
  *  <li>{@code tracked} exception types a method must declare when it lets them out (NC8-throws), so the resource rule
  *      sees every path one method at a time; {@code takes} methods that take over a resource passed to them, so the caller
  *      no longer closes it (a hand-over helper for what the C runtime adopts, or what stays open until the process exits)
+ *  <li>{@code foreign}, {@code same} annotation names for NC9 (which OS thread calls a callback); {@code callbacks} the
+ *      methods that turn a named Java method into a C function pointer (default {@code org.teavm.interop.Function.get})
  *  <li>{@code mode} {@code error} (default) fails the build, {@code warn} only reports
  *  </ul> */
 final class Config {
-    final String pointer, unsafe, handle, scoped, async, ctype, escapes, returned, acquires, owns;
-    final Set<String> scope, raw, suspend, alloc, allocators, wrappers, trust, tracked, takes;
+    final String pointer, unsafe, handle, scoped, async, ctype, escapes, returned, acquires, owns, foreign, same;
+    final Set<String> scope, raw, suspend, alloc, allocators, wrappers, trust, tracked, takes, callbackFactory;
     final boolean warn;
 
     private Config(Map<String, String> m) {
@@ -42,6 +44,9 @@ final class Config {
         returned = m.getOrDefault("returned", "Returned");
         acquires = m.getOrDefault("acquires", "Acquires");
         owns = m.getOrDefault("owns", "Owns");
+        foreign = m.getOrDefault("foreign", "ForeignThread");
+        same = m.getOrDefault("same", "SameThread");
+        callbackFactory = list(m.getOrDefault("callbacks", "org.teavm.interop.Function.get"));
         tracked = list(m.getOrDefault("tracked", ""));
         takes = list(m.getOrDefault("takes", ""));
         scope = list(m.getOrDefault("scope", ""));
@@ -60,7 +65,7 @@ final class Config {
     }
 
     static Config parse(String... args) {
-        var known = Set.of("pointer", "unsafe", "handle", "scoped", "async", "ctype", "escapes", "returned", "acquires", "owns", "tracked", "takes", "scope", "raw", "alloc",
+        var known = Set.of("pointer", "unsafe", "handle", "scoped", "async", "ctype", "escapes", "returned", "acquires", "owns", "tracked", "takes", "foreign", "same", "callbacks", "scope", "raw", "alloc",
                 "allocators", "wrappers", "trust", "suspend", "mode");
         var m = new HashMap<String, String>();
         for (var a : args) {

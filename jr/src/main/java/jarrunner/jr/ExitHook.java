@@ -31,6 +31,7 @@ public final class ExitHook {
         }
     }
 
+    @ForeignThread("the CRT runs atexit handlers on the thread that calls exit(): in jvm=dll mode the JVM's main thread, while ours is blocked inside JLI_Launch and runs no Java until it returns, which it never does after exit()")
     static void onExit() {
         if (armed) {
             armed = false;

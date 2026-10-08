@@ -65,6 +65,12 @@ enum Rule {
     THROWS("NC8-throws", "%s can be thrown out of '%s' here, but the method does not declare it.",
             "The resource rule checks every exception path one method at a time, from each callee's signature. An exception that leaves a method without being declared is a path its callers cannot see, so a resource they hold could leak on it unnoticed.",
             "Add 'throws %1$s' to the method (it costs nothing at run time, even for an unchecked exception), or catch it here."),
+    CALLBACK("NC9-callback", "Callback '%s' is handed to C, but does not say which thread calls it.",
+            "TeaVM's runtime runs on one OS thread (one shadow stack for the GC, no locks). A callback the OS calls on another thread runs Java there, and if the main thread runs Java at the same moment, the heap and the scope allocator are corrupted. Whether that can happen depends on who calls the callback, which the code does not show.",
+            "Mark the method @SameThread(\"who calls it, e.g. EnumResourceNamesW, before it returns\") or @ForeignThread(\"which thread, and why the main thread runs no Java meanwhile\")."),
+    FOREIGN("NC9-foreign", "'%s' is used in a method marked @ForeignThread.",
+            "This method can run on another OS thread. The scope allocator and TeaVM's fibers belong to the main thread: a scope opened here, or a fiber suspended here, interleaves with the main thread's own and frees memory it still uses.",
+            "Keep the callback minimal: set a flag or copy plain values, and do the native work on the main thread. If the main thread is provably blocked for the whole call, move the work into a method the callback calls and say so in the @ForeignThread reason."),
     SUSPEND("NC5-suspend", "'%s' can suspend the current thread inside a memScoped block.",
             "TeaVM runs every java.lang.Thread as a fiber on one OS thread, sharing one scope allocator. If this fiber pauses here, another fiber can open and close its own scope and free memory this block is still using.",
             "Move the call out of the memScoped block: finish the native work, leave the block, then sleep, wait, join or synchronize.");

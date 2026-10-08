@@ -83,6 +83,9 @@ final class Checker extends TreePathScanner<Void, Void> {
             checkTypes(node, m);
             escapes.onCall(getCurrentPath(), m, node.getArguments());
             if (Facts.has(m, cfg.scoped) && !lex.scopeCovered(getCurrentPath())) report(Rule.SCOPED, node, q);
+            if (cfg.callbackFactory.contains(q)) checkCallback(node);
+            if ((cfg.scope.contains(q) || cfg.suspend.contains(q) || Facts.has(m, cfg.async)) && inForeign(getCurrentPath()))
+                report(Rule.FOREIGN, node, q);
             if ((cfg.suspend.contains(q) || Facts.has(m, cfg.async)) && lex.inScope(getCurrentPath()))
                 report(Rule.SUSPEND, node, q);
         }
@@ -91,6 +94,7 @@ final class Checker extends TreePathScanner<Void, Void> {
 
     @Override public Void visitSynchronized(SynchronizedTree node, Void v) {
         if (lex.inScope(getCurrentPath())) report(Rule.SUSPEND, node, "synchronized");
+        if (inForeign(getCurrentPath())) report(Rule.FOREIGN, node, "synchronized");
         return super.visitSynchronized(node, v);
     }
 
@@ -138,6 +142,25 @@ final class Checker extends TreePathScanner<Void, Void> {
                 if (RAW_OPS.contains(name) && !lex.rawAllowed(getCurrentPath())) report(Rule.RAW, node, name);
             }
         }
+    }
+
+    /** NC9: {@code Function.get(Fn.class, Owner.class, "method")} names a Java method C will call; it must say which thread. */
+    private void checkCallback(MethodInvocationTree node) {
+        var args = node.getArguments();
+        if (args.size() < 3 || !(strip(args.get(2)) instanceof LiteralTree lit) || !(lit.getValue() instanceof String name)) return;
+        if (!(typeOf(args.get(1)) instanceof DeclaredType cls) || cls.getTypeArguments().size() != 1
+                || !(cls.getTypeArguments().getFirst() instanceof DeclaredType owner)) return;
+        for (var e : owner.asElement().getEnclosedElements())
+            if (e.getKind() == ElementKind.METHOD && e.getSimpleName().contentEquals(name)
+                    && (Facts.value(e, cfg.foreign) != null || Facts.value(e, cfg.same) != null)) return;
+        report(Rule.CALLBACK, node, name);
+    }
+
+    /** Inside a method marked as running on another OS thread (NC9). */
+    private boolean inForeign(TreePath p) {
+        for (; p != null; p = p.getParentPath())
+            if (p.getLeaf() instanceof MethodTree) return Facts.has(trees.getElement(p), cfg.foreign);
+        return false;
     }
 
     /** NC6: each argument whose struct is known against the parameter's {@code @CType}. */

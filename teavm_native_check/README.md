@@ -14,6 +14,7 @@ It does not make native code as safe as Rust. It checks one method at a time aga
 - **NC6** A pointer to one C type is not passed where another is expected, from `@CType` annotations (jextract_teavm writes them on bindings) and from `alloc(X.SIZE)`.
 - **NC7** A pointer parameter is borrowed unless marked: it, or a pointer derived from it, is not returned (unless `@Returned`), stored, or passed on to a parameter that keeps it (unless `@Escapes`). An override may not add `@Escapes`. Memory from a scope does not reach an `@Escapes` parameter.
 - **NC8** An OS resource (a handle, a FILE*, a module) is closed on every path out of the method that opened it: returns, the end, and every exception path (a `throw`, or a call to a method that declares what it throws; a `finally` covers them all). "Opened" is a call marked `@Acquires("close1,close2")`, which names the calls that close it (jextract_teavm writes it from `releases=` in the symbols file). Handing it on also counts: returning it (the method is then `@Acquires` itself), storing it in a field, or passing it to a parameter marked `@Owns("close")` or to a `takes=` method. The branch where it was compared with `==` (`h.toLong() == 0`, `h == INVALID`) is the failed open. Methods let the `tracked=` exceptions out only if they declare them (`throws`, free at run time), so every path is visible one method at a time.
+- **NC9** Every Java method handed to C as a callback (`Function.get(Fn.class, Owner.class, "name")`) says which OS thread calls it: `@SameThread("EnumResourceNamesW, before it returns")` or `@ForeignThread("which thread, and why the main thread runs no Java meanwhile")`. TeaVM's runtime is single-threaded, so a `@ForeignThread` method opens no scope and suspends no fiber. Only the marked method's own body is checked.
 
 Every message says what is wrong, why it matters, and what to write instead:
 
@@ -24,7 +25,7 @@ Every message says what is wrong, why it matters, and what to write instead:
 ## Using it in a project
 
 1. Install it once: `mvn install` in this folder (JDK 21 or newer; no dependencies beyond the JDK's own `jdk.compiler`).
-2. Define the annotations in your own code, with SOURCE retention so they cost nothing: `Handle`, `Unsafe(String value)`, `Scoped`, `CType(String value)`, `Escapes`, `Returned`, and for NC8 `Acquires(String value)` and `Owns(String value)`. The names can be changed through arguments.
+2. Define the annotations in your own code, with SOURCE retention so they cost nothing: `Handle`, `Unsafe(String value)`, `Scoped`, `CType(String value)`, `Escapes`, `Returned`, and for NC8 `Acquires(String value)` and `Owns(String value)`, for NC9 `ForeignThread(String value)` and `SameThread(String value)`. The names can be changed through arguments.
 3. Run javac with the plugin. With Maven:
 
         <plugin>
@@ -48,6 +49,7 @@ Arguments (`key=value`, lists comma separated), all in `Config.java`:
 - `trust`: methods that take the caller's word for something later checks rely on (`pkg.Buf.wrap(pointer, size)`), allowed only where raw access is.
 - `tracked`: exception types a method must declare when it lets them out (NC8 sees exception paths from signatures).
 - `takes`: methods that take over a resource passed to them, so the caller no longer closes it (a no-op hand-over helper that says, in the code, "the C runtime owns this now" or "stays open until exit").
+- `callbacks`: methods that turn a named Java method into a C function pointer (default `org.teavm.interop.Function.get`); `foreign`, `same`: the NC9 annotation names.
 - `pointer`, `unsafe`, `handle`, `scoped`, `async`, `ctype`, `escapes`, `returned`, `acquires`, `owns`: type and annotation names, if yours differ.
 - `suspend`: methods that suspend a fiber (defaults to sleep/join/yield/wait).
 - `mode=warn`: report without failing, for a first look at an existing code base.
