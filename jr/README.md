@@ -183,22 +183,36 @@ Three things worth knowing for anyone extending this:
 
   bindings\gen-bindings.cmd
 
-This takes about 20 s. It rewrites both Java files, then has llvm-mingw's clang re-check every size, offset, width and value through `bindings/windows/verify-win.c` (a regenerated file; it names this machine's path, so do not commit it). A name that cannot be bound, for example a function that the headers declare only for a newer `_WIN32_WINNT` than mingw's default `0x601`, is printed as `NOT BOUND: <name>: <why>`, and the script exits 1. Read struct fields through the generated accessors (`WinOffsets.STARTUPINFOA.dwFlags(addr, v)`), not `addr.add(offset).getInt()`, so the width comes from the header too. One-time setup of the generator is in `../jextract_teavm/README.md`. `bindings/windows/jr.h` lists the headers the bindings are parsed against, and it must stay in step with the `#include`s that `postprocess.ps1` puts into `definitions.h`.
+This takes about 20 s. It rewrites both Java files, then has llvm-mingw's clang re-check every size, offset, width and value through `bindings/windows/verify-win.c` (a regenerated file; it names this machine's path, so do not commit it). A name that cannot be bound, for example a function that the headers declare only for a newer `_WIN32_WINNT` than mingw's default `0x601`, is printed as `NOT BOUND: <name>: <why>`, and the script exits 1. Read struct fields through the generated accessors (`WinOffsets.STARTUPINFOW.dwFlags(addr, v)`), not `addr.add(offset).getInt()`, so the width comes from the header too. The generator also writes `@CType` on every pointer (so the checker can tell a FILETIME* from a WIN32_FILE_ATTRIBUTE_DATA*, or wide text from narrow), the String overloads, Buf forms of the accessors, and `@Escapes` for a function the symbols file marks `escapes=N` because it keeps that pointer (no header says so): see the next section. One-time setup of the generator is in `../jextract_teavm/README.md`. `bindings/windows/jr.h` lists the headers the bindings are parsed against, and it must stay in step with the `#include`s that `postprocess.ps1` puts into `definitions.h`.
 
 This replaced PRP-08's `offsetgen/` (struct offsets only) and PRP-11's `wintype-poc/` (type checking via an annotation processor), both superseded by `../prp/12-prp.01.report.md` and kept as history in `history/`.
 
-## Native memory: always through N (PRP-18)
-TeaVM's GC frees or moves any Java array known only through an `Address`, so `Address.ofData(javaArray)` passed to native code is a use-after-free waiting for the next GC (measured in `../experiments_and_archives/memsafe-lab`, write-up in `../prp/18-prp.01.lab-findings-and-api-proposal.md`). Every string, buffer, struct and out-parameter handed to WinApi therefore comes from `jarrunner.jr.N`, which allocates off the GC heap (`Arena`: one malloc'd 64 KB block plus malloc'd overflow chunks):
+## Native memory: through N, checked by the compiler (PRP-18, PRP-35)
+TeaVM's GC frees or moves any Java array known only through an `Address`, so `Address.ofData(javaArray)` passed to native code is a use-after-free waiting for the next GC (measured in `../experiments_and_archives/memsafe-lab`, write-up in `../prp/18-prp.01.lab-findings-and-api-proposal.md`). Every string, buffer, struct and out-parameter handed to native code therefore comes from `jarrunner.jr.N`, which allocates off the GC heap (`Arena`: one malloc'd 64 KB block plus malloc'd overflow chunks). Since PRP-35 the rules below are not conventions: the javac plugin `../teavm_native_check` checks them on every build (Maven, `build-posix.sh` and CI), and a broken rule fails the build with a message that says what is wrong, why, and what to write instead.
+
+A native call, the way it is written now:
 
     import static jarrunner.jr.N.*;
 
-    var si = alloc(WinOffsets.STARTUPINFOA.SIZE);            // zeroed struct
-    WinApi.createProcessA(NULL, cstr(cmdLine), NULL, NULL, 0, 0, NULL, NULL, si, pi);
-    var exitCode = intVar();                                  // out-parameter
+    WinApi.deleteFileW(path);                                 // generated String overload: converts, calls, frees
+    var si = alloc(WinOffsets.STARTUPINFOW.SIZE);              // a zeroed struct; the checker knows it is a STARTUPINFOW
+    WinOffsets.STARTUPINFOW.cb(si, WinOffsets.STARTUPINFOW.SIZE);
+    var exitCode = intVar();                                   // a 4-byte out-parameter
     WinApi.getExitCodeProcess(process, exitCode);
-    return exitCode.getInt();
+    return intOf(exitCode);                                    // read it back, no pointer arithmetic
 
-`cstr` (ANSI) and `wcstr` (UTF-16) convert strings, `string(p)` / `string(p, max)` read them back, `alloc` / `intVar` / `longVar` / `ptrVar` give zeroed memory, and `NULL` is NULL. Memory lives for the whole program unless the code is inside `memScoped(() -> ...)`, which frees everything allocated in it on exit and fills it with 0xDD. Use `memScoped` only where memory would otherwise pile up (loops, recursion, per-log-line and per-chunk paths, big buffers), because each one costs about 340 bytes of exe. The rules: never `Address.ofData` a Java array for native code, never keep a pointer from `N` in a field or past its scope (WinAPI handles are fine), and check with `java ../experiments_and_archives/memsafe-lab/lint/AddressLint.java src/main/java`, which must report 0 and 0.
+The pieces:
+- **Memory lives until the innermost `memScoped(() -> ...)` ends,** or for the whole program outside any scope. Use a scope where memory would otherwise pile up (loops, per-line and per-chunk paths, big buffers). Inside N itself, `mark()`/`release(mark)` do the same without a lambda, which TeaVM compiles to a class of its own (1.5-3 KB of C).
+- **Text goes through the generated String overloads** (`WinApi.createFileW(path, ...)`, `PosixApi.fopen(path, "rb")`). jextract_teavm writes one for every function whose text parameter clang confirms is `const`. It converts (`wcstr` for wide text, `utf8` for narrow), calls and frees, with no lambda and no try/finally. When an overload does not fit (a NULL for optional text, a modifiable buffer), convert by hand: `wcstr(s)`, `utf8(s)`, and read back with `wstring(p)` / `string(p)`.
+- **Out-parameters:** `shortVar()`, `intVar()`, `longVar()` and `ptrVar()` give zeroed variables; read them with `shortOf`, `intOf`, `longOf` and `ptrOf`, and write with `setInt`. The checker knows their widths, so a 4-byte variable handed to a function that writes 8 fails the build.
+- **Structs:** allocate `alloc(X.SIZE)` and use the generated accessors: scalar fields as `X.field(p)` / `X.field(p, v)`, and an embedded struct or array as `X.field(p)`, which returns a pointer to it. Never `p.add(offset)` by hand.
+- **Fields hold handles only.** An `Address` field must be marked `@Handle` (a window, a file, a module: memory the OS owns), never memory from N.
+- **Pointer parameters are borrowed.** A method may use a pointer it is given but not keep it. If it returns the pointer or a pointer into it, mark the parameter `@Returned`. If it keeps it after returning, mark it `@Escapes`; then its callers must pass memory that outlives the call.
+- **Raw access is marked.** `p.add`, `getInt`/`putInt` and friends, pointers made from numbers (`Address.fromLong`) and casts between a pointer and a `Function` are allowed only in N, Arena, Buf, the generated classes, or a method marked `@Unsafe("why it is safe")`. That keeps the code to review with care a short list: `grep -rn @Unsafe src`. For the two non-memory cases there are named helpers, `handle(long)` for an OS handle number and `intResource(id)` for MAKEINTRESOURCE.
+- **Buffers that know their size:** `Buf.alloc(n)` (or `Buf.wrap(p, n)` inside `@Unsafe` code) with `getInt(off)`, `slice(off, len)` and `ptr()` for the OS. In a checks build (`build-win.ps1 -Checks`, into `dist-checks/`) every access is checked and an overrun stops the program with `jr: native buffer overrun: ...`; in the release build the checks compile to nothing. `-Xjr:checks-selftest` proves a checks build catches one.
+- **Never:** `Address.ofData` / `Address.ofObject`, an array of pointers, or `Thread.sleep`, `wait` or `synchronized` inside a scope (TeaVM's threads are fibers sharing one arena).
+
+The full list of rules (NC1-NC7), the plugin's settings in `pom.xml` (`<nativecheck>`), and the reasons behind each decision are in `../prp/35-prp.status.md`.
 
 ## If you hit a segfault with no compiler diagnostic
 Bisect by inserting `fprintf(stderr, "CKPT n\n"); fflush(stderr);` checkpoints directly into the GENERATED `.c` file (not the Java source - that's what's actually crashing, and it's plain readable C once you're in it). This found two real bugs in this PRP in under 10 minutes each. See guidelines.teavmcpp.md for the specific bug this technique already caught (Address values in an Address[] array).
