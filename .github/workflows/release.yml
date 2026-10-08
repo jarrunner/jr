@@ -87,6 +87,20 @@ jobs:
           Copy-Item dist-noicon\jr-windows-arm64.exe ..\unsigned\jr-noicon-windows-arm64.exe
           Get-ChildItem ..\unsigned | ForEach-Object { '{0,-34} {1,9:N0}' -f $_.Name, $_.Length }
 
+      # PRP-35: the checks build (every Buf access checked) is never shipped, so nothing else would
+      # notice it breaking. Built after the release exes were copied out; it only writes dist-checks.
+      - name: Checks build
+        shell: pwsh
+        working-directory: jr
+        run: |
+          powershell -File build-win.ps1 -Checks -Arch x86_64 -NoIcon
+          if ($LASTEXITCODE -ne 0) { throw 'build-win.ps1 -Checks failed' }
+          $out = & .\dist-checks\jr-windows-x86_64.exe -Xjr:checks-selftest 2>&1 | Out-String
+          if ($LASTEXITCODE -eq 0 -or $out -notmatch 'native buffer overrun: 4 bytes at offset 2 of a 4-byte buffer') { throw "the checks build did not catch the planted overrun (exit $LASTEXITCODE):`n$out" }
+          $rel = & .\dist\jr-windows-x86_64.exe -Xjr:checks-selftest 2>&1 | Out-String
+          if ($rel -notmatch 'Unknown jr option') { throw "the release exe knows -Xjr:checks-selftest, so it carries the checks:`n$rel" }
+          'checks build: overrun caught; release exe has no checks'
+
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
@@ -131,6 +145,16 @@ jobs:
           done
           ../macos/jr-macos -Xjr:help 2>&1 | grep -q 'Java Runner' || { echo 'jr -Xjr:help did not answer'; exit 1; }
           arch -x86_64 ../macos/jr-macos -Xjr:help 2>&1 | grep -q 'Java Runner' || { echo 'the x86_64 slice did not answer under Rosetta'; exit 1; }
+
+      # PRP-35: the checks build, after the release binaries were copied out (it reuses build-macos_arm64).
+      - name: Checks build
+        working-directory: jr
+        run: |
+          CHECKS=1 sh build-macos.sh macos_arm64
+          out=$(build-macos_arm64/jr-posix -Xjr:checks-selftest 2>&1) && { echo "the checks build exited 0"; exit 1; }
+          echo "$out" | grep -q 'native buffer overrun: 4 bytes at offset 2 of a 4-byte buffer' || { echo "the checks build did not catch the planted overrun:"; echo "$out"; exit 1; }
+          ../macos/jr-macos -Xjr:checks-selftest 2>&1 | grep -q 'Unknown jr option' || { echo 'the release binary knows -Xjr:checks-selftest'; exit 1; }
+          echo 'checks build: overrun caught; release binary has no checks'
 
       - name: Upload build
         uses: actions/upload-artifact@v4

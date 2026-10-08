@@ -18,6 +18,9 @@ public final class PosixJr {
     public static void main(String[] args) {
         Timing.init();
         args = utf8Args(args);
+        if (Checks.ON && args.length == 1 && args[0].equals("-Xjr:checks-selftest")) { // checks builds only (PRP-35)
+            Buf.alloc(4).getInt(2); // 4 bytes at offset 2 of a 4-byte buffer: must throw
+        }
         var exeBaseName = ExeInfo.baseNameNoExt();
         var configPath = ExeInfo.fullPathNoExt() + ".jrc";
 
