@@ -11,11 +11,11 @@ public final class Timing {
     private static long startMicros;
 
     public static void init() {
-        var addr = longVar();
+        var addr = alloc(WinOffsets.LARGE_INTEGER.SIZE);
         WinApi.queryPerformanceFrequency(addr);
-        freq = addr.getLong();
+        freq = WinOffsets.LARGE_INTEGER.QuadPart(addr);
         WinApi.queryPerformanceCounter(addr);
-        start = addr.getLong();
+        start = WinOffsets.LARGE_INTEGER.QuadPart(addr);
         startMicros = elapsedMicros();
     }
 
@@ -24,9 +24,9 @@ public final class Timing {
     }
 
     public static long elapsedMicros() {
-        var addr = longVar();
+        var addr = alloc(WinOffsets.LARGE_INTEGER.SIZE);
         WinApi.queryPerformanceCounter(addr);
-        var now = addr.getLong();
+        var now = WinOffsets.LARGE_INTEGER.QuadPart(addr);
         return freq == 0 ? 0 : ((now - start) * 1_000_000L) / freq;
     }
 }

@@ -23,6 +23,12 @@ public class Main implements Callable<Integer> {
     @Option(names = "--structs-class", defaultValue = "Structs", description = "class for struct layouts") String structsClass;
     @Option(names = {"-o", "--out"}, required = true, description = "source root to write into") Path out;
     @Option(names = "--diagnostics", description = "write clang's full warning/error output here") Path diagnostics;
+    @Option(names = "--ctype-annotation", paramLabel = "NAME", description = "annotate every pointer to a named struct or union with @NAME(\"struct tag\") - parameters, returns, struct classes and accessors - for a compile-time checker (the annotation type is the caller's)") String ctypeAnnotation;
+    @Option(names = "--text-converter", paramLabel = "TYPE=FUNCTION", description = "with --text-scope: for each function taking read-only text (const char* or const wchar_t*, as clang confirms), also generate an overload taking String; FUNCTION turns a String into native text, per TYPE char or wchar_t, e.g. wchar_t=N.wcstr") Map<String, String> textConverters = new LinkedHashMap<>();
+    @Option(names = "--text-scope", paramLabel = "ENTER,EXIT", description = "the scope the String overloads convert inside: ENTER() returns a long mark, EXIT(mark) frees everything allocated since, e.g. N.mark,N.release") String textScope;
+    @Option(names = "--buf-class", paramLabel = "NAME", description = "also generate struct accessors taking NAME, a bounds-checked buffer type with getX(int)/putX(int, x) and from(int)") String bufClass;
+    @Option(names = "--returned-annotation", paramLabel = "NAME", description = "write @NAME on the struct parameter of each field-address accessor: its result points into that parameter (teavm_native_check NC7)") String returnedAnnotation;
+    @Option(names = "--escapes-annotation", paramLabel = "NAME", description = "write @NAME on the parameters a symbols line marks escapes=N (1-based): the C function keeps that pointer after it returns, which no header says") String escapesAnnotation;
     @Option(names = "--verify-c", description = "also write a C file of _Static_asserts restating every size, offset, width and value, for an independent compiler to check") Path verifyC;
 
     public static void main(String[] args) {
@@ -32,7 +38,17 @@ public class Main implements Callable<Integer> {
     @Override
     public Integer call() throws Exception {
         var parser = new ClangParse(target, includes, defines, clangArgs);
-        var gen = new Generator(parser);
+        var gen = new Generator(parser, ctypeAnnotation);
+        gen.sg.bufClass = bufClass;
+        gen.sg.returnedAnnotation = returnedAnnotation;
+        gen.fn.escapesAnnotation = escapesAnnotation;
+        if (!textConverters.isEmpty()) {
+            var scope = textScope == null ? new String[0] : textScope.split(",");
+            if (scope.length != 2) throw new ParameterException(new CommandLine(this), "--text-converter needs --text-scope ENTER,EXIT");
+            gen.fn.converters = textConverters;
+            gen.fn.scopeEnter = scope[0].trim();
+            gen.fn.scopeExit = scope[1].trim();
+        }
         var t0 = System.nanoTime();
         try {
             gen.run(headers, Symbols.read(symbols));

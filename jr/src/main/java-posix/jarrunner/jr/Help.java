@@ -29,6 +29,6 @@ public final class Help {
                 + "  " + exeBaseName + " myapp.jar\n"
                 + "  " + exeBaseName + " -Xjr:create-config=myapp.jar\n"
                 + "  " + exeBaseName + " -Xjr:java.home=/usr/lib/jvm/jdk-21 myapp.jar --verbose";
-        System.out.println(info);
+        Stderr.out(info + "\n");
     }
 }

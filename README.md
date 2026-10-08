@@ -1,6 +1,6 @@
 # Java Runner (jr) - Make Your JARs Feel Like Native Windows Executables
 
-A tiny Windows launcher (40 KB, no runtime to install) that makes JAR files executable like native .exe files - with automatic console/GUI detection, JDK 25 AOT cache support, and simple configuration.
+A small Windows launcher (about 610 KB, nothing to install) that makes JAR files executable like native .exe files - with automatic console/GUI detection, JDK 25 AOT cache support, Java auto-install and simple configuration. jr itself is written in Java and compiled to a native exe (see [Java compiled to a native exe](#java-compiled-to-a-native-exe)).
 
 ## What Makes jr Different?
 
@@ -11,7 +11,7 @@ A tiny Windows launcher (40 KB, no runtime to install) that makes JAR files exec
 3. **Smart console detection** - Automatically uses java.exe (console) or javaw.exe (GUI) based on how you launch it
 4. **Two modes**: Works as generic JAR launcher (no config needed) OR as dedicated app launcher with .jrc config files
 5. **Your app gets its own process name** - with `jvm=dll` the JVM runs inside the launcher, so Task Manager shows `myapp.exe` instead of another anonymous `java.exe`
-6. **Tiny size, nothing to install** - 40 KB with no VC++ Redistributable, vs 500 KB (Launch4j) or 50+ MB (jpackage)
+6. **Small, nothing to install** - about 610 KB (about 160 KB if you pack it with UPX, see [docs/upx.md](docs/upx.md)), no VC++ Redistributable, no bundled JRE, vs 50+ MB (jpackage)
 
 **Key Features:**
 - Automatic console/GUI detection (no manual configuration like Launch4j/WinRun4J)
@@ -24,29 +24,75 @@ A tiny Windows launcher (40 KB, no runtime to install) that makes JAR files exec
 
 ## macOS and Linux
 
-`posix/jrmac` does the same job there, as a shell script rather than C — same `.jrc` format, so a config written for `jr.exe` works unchanged. `posix/install.sh <name> <jar>` installs a tool. See [posix/README.md](posix/README.md), which also explains why there is no compiled binary for those platforms and does not need one.
+The Java code that makes up jr also compiles for POSIX systems. The Linux build runs end to end (tested under WSL, with a real JDK), and a macOS build links but has not yet run on a Mac. Neither is released yet: making jr work properly on the Mac is the current focus (see [What comes next](#what-comes-next)). Linux is built and tested mainly because it is the closest thing to a Mac that can be run on the development machine. The `.jrc` format is the same on every platform.
 
 ## Download
 
-**Pre-built executables are available in [GitHub Releases](../../releases):**
+**Pre-built executables are in [GitHub Releases](../../releases):**
 
-- **`jr.exe`** (40 KB) - No dependencies to install, works on any Windows 10 or later
+- **`jr.exe`** (about 610 KB) - Windows x64. Nothing to install: it needs only DLLs that ship with Windows.
+- **`jr-windows-arm64.exe`** - Windows on ARM64. Built and linked for ARM64, not yet run on ARM64 hardware.
+- **`jr-noicon-*.exe`** - the same without jr's icon, for tools that stamp their own (this is what `jr-maven-plugin` bundles).
+- **`SHA256SUMS`** - check a download against it. The release exes are not code-signed.
 
-Download, rename if desired, and start using immediately!
-
-There is only one build. It links the Universal CRT that ships inside Windows itself, so there is no VC++ Redistributable to chase and no 200 KB static build to trade against it. On Windows 7 or 8.1 it needs the UCRT update (KB2999226); the earlier separate `jr-standalone.exe` covered that case and is no longer produced.
+Download, rename if desired, and start using immediately! Tested on Windows 11.
 
 ## Building from Source
 
-The C implementation described above lives in its own repository now, [jarrunner/jr_legacy_c](https://github.com/jarrunner/jr_legacy_c), with its build instructions and release workflow. This repository builds the Java/TeaVM jr: see `jr/README.md` (`powershell -File jr/build-win.ps1`, needing JDK 25, Maven and llvm-mingw), which is also what `.github/workflows/release.yml` runs.
+`powershell -File jr/build-win.ps1`, needing JDK 25, Maven and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw/releases) (the `msvcrt` build). Details are in [jr/README.md](jr/README.md). The release workflow (`.github/workflows/release.yml`) runs the same script on a clean Windows machine, so a release contains nothing built on a developer's machine.
 
-The build uses a hybrid CRT: `/MT` links vcruntime statically, while `/NODEFAULTLIB:libucrt.lib /DEFAULTLIB:ucrt.lib` swaps the bulky static Universal CRT for the copy that already lives in Windows. That is what removes the `VCRUNTIME140.dll` import without paying the 200 KB a fully static build costs. To confirm it took effect:
+jr began as a hand-written C launcher. That version lives on in its own repository, [jarrunner/jr_legacy_c](https://github.com/jarrunner/jr_legacy_c), but it has far fewer features than this one and is no longer developed.
 
-```batch
-dumpbin /dependents jr.exe
+## Java compiled to a native exe
+
+jr is written in Java. [TeaVM](https://teavm.org) compiles it to C, and an LLVM toolchain compiles that C to a native exe: llvm-mingw on Windows (x64 and ARM64), zig cc on Linux and macOS. The Windows API bindings (functions, constants, struct layouts) are not written by hand: [jextract_teavm](jextract_teavm/) generates them from the real system headers, and the C compiler checks every size and offset again on each build.
+
+The result, measured rather than claimed:
+
+- **On Windows it is a real, shipping native program.** jr runs real tools every day. It has a GUI error dialog, progress windows, an HTTPS downloader, resource editing, Authenticode signing and an in-process JVM, all in Java, in about 610 KB.
+- **Size.** A hand-written C launcher would be smaller, but less so than you might think. When the Java port reached feature parity with the old C launcher it was about 4.8x its size (370 KB against 77 KB). Most of that is a fixed cost: TeaVM's runtime is paid for once. Packed with UPX, today's 610 KB exe is about 160 KB, roughly what a C launcher with today's features would be, by our estimate. See [docs/upx.md](docs/upx.md) for the numbers.
+- **Speed.** A jr launch costs about 30 ms on its own. Next to starting a JVM that is noise.
+- **Cross-platform.** Linux builds and runs. macOS builds, but has not yet run on a Mac. So for now the honest claim is: proven on Windows, working on Linux, macOS next.
+
+### What the code looks like
+
+To a Java developer who already knows the OS functions they are calling, it reads as ordinary modern Java (`var`, lambdas, switch expressions, small final classes) with native calls that look like static methods. About a third of the source files contain no native code at all. A typical native piece, shortened from `Crc32.java`:
+
+```java
+var crc32 = (RtlComputeCrc32Fn) (Object) fn;      // a function pointer from GetProcAddress
+return memScoped(() -> {                           // native memory, freed when the block ends
+    var f = WinApi.fopen(cstr(path), cstr("rb"));
+    var buf = alloc(READ_CHUNK);
+    var crc = 0;
+    long n;
+    while ((n = WinApi.fread(buf, 1, READ_CHUNK, f)) > 0) {
+        crc = crc32.invoke(crc, buf, (int) n);
+    }
+    WinApi.fclose(f);
+    return hex(crc);
+});
 ```
 
-Expect only `USER32.dll`, `KERNEL32.dll` and the `api-ms-win-crt-*.dll` set. A `VCRUNTIME140.dll` line means the hybrid flags were dropped and you are back to needing the redistributable.
+What will feel unfamiliar, in rough order:
+
+1. **Some everyday JDK calls are avoided on purpose.** TeaVM compiles in everything a call can reach, so `String.format` costs about 580 KB, and `String.split` or `toLowerCase` pull in the regex engine and Unicode tables. jr uses small hand-written helpers instead. This surprises Java developers more than anything native does.
+2. **C structs are read through generated accessors by offset**, for example `WinOffsets.FILETIME.dwLowDateTime(addr)`. The offsets are checked against the real compiler, so this is safe, but it reads more like C than Java.
+3. **Function pointers and callbacks** are small abstract classes extending TeaVM's `Function`, and a function pointer is cast to one.
+4. **No reflection**, and C structs cannot be passed by value (a header macro is the workaround).
+5. **Threads are green threads.** `java.lang.Thread`, `synchronized`, `join` and `wait`/`notify` work, but TeaVM runs every Java thread as a fiber on one OS thread, switching only where a thread waits (`sleep`, `wait`, `join`). A thread that computes without waiting is never interrupted, and a blocking OS call pauses all of them. There is no parallel Java code, and therefore no data races in it. Real OS threads are fine for native work, but Java code must not run on them, because TeaVM's runtime (its garbage collector included) is not thread-safe. jr itself starts no threads.
+
+The rules for native memory are short and written at the top of `N.java`: everything is allocated outside the garbage-collected heap, and a pointer never outlives its `memScoped` block.
+
+### What comes next
+
+Planned, not done:
+
+- **macOS**: run and test on real Macs, then release it.
+- **The POSIX launcher catches up** with the Windows one, using the same generated-binding approach.
+- **Windows on ARM64**: run on real hardware.
+- **Fixes in the bindings generator**, so that the code needs fewer workarounds.
+
+The Windows feature set is essentially complete. Size is watched carefully, but it is no longer the main goal.
 
 ## Quick Start - Make JARs Executable System-Wide
 
@@ -543,9 +589,9 @@ mytest.exe
 
 ## Technical Details
 
-- **Language**: C (Windows API)
-- **Size**: ~20 KB
-- **Dependencies**: Standard Windows libraries (kernel32.dll, user32.lib)
+- **Language**: Java, compiled to C by TeaVM and to a native exe by llvm-mingw (see [Java compiled to a native exe](#java-compiled-to-a-native-exe))
+- **Size**: about 610 KB (x64)
+- **Dependencies**: only DLLs that ship with Windows (kernel32, user32, msvcrt, winhttp, bcrypt and a few more)
 - **Config Format**: Simple key=value properties format with comment support
 - **File Extension**: `.jrc` (Java Runner Config)
 - **Behavior** (`jvm=exe`, default):
@@ -562,7 +608,7 @@ mytest.exe
 The `.jrc` format follows industry standards:
 - Similar to **WinRun4J** INI format (but simplified)
 - Compatible with **jpackage** launcher properties file conventions
-- Portable across Windows, Linux, and macOS (C code is cross-platform ready)
+- The same format on Windows, Linux and macOS
 
 ## How It Works
 
@@ -598,7 +644,7 @@ The `.jrc` format follows industry standards:
 
 7. **Execution**:
    - Constructs command: `"path\to\java.exe" [timing-props] [vm.args] [aot-cache] [java.args] [app.args] [cmdline-args]`
-   - `jvm=exe` (default): runs it with `CreateProcessA()` using handle
+   - `jvm=exe` (default): runs it with `CreateProcess()` using handle
      inheritance for proper I/O, waits for completion and returns the same exit
      code
    - `jvm=dll`: hands the identical command string to the JDK's own
@@ -658,24 +704,24 @@ app.args=--config production.xml
 ## Comparison with Other Tools
 
 **vs Launch4j / WinRun4J:**
-- Much smaller (40 KB vs 500 KB for Launch4j), with nothing to install alongside it
+- One exe with nothing to install alongside it (about 610 KB, or about 160 KB packed with UPX)
 - Automatic AOT cache support (90% faster startup with JDK 25+)
 - Automatic console/GUI detection (no manual config needed)
+- Finds or downloads a suitable Java by itself
 - Works without config files (can also work with config when needed)
 - Actively maintained (Launch4j: 2017, WinRun4J: 2018, both inactive)
 
 **vs jpackage (bundled JRE approach):**
-- 1000x smaller (doesn't bundle JRE - 40 KB vs 50+ MB)
+- About 100x smaller (doesn't bundle a JRE - about 610 KB vs 50+ MB)
 - Users can use any Java version they want
-- Easier updates (just replace JAR, no need to rebuild entire package)
+- Easier updates (just replace the JAR, no need to rebuild the entire package)
 - Still gets AOT performance benefits with JDK 25+
 
 **vs GraalVM native-image:**
-- No complex build process or compatibility issues
-- Much faster build times (just compile C, not whole Java app)
-- Smaller executables for simple use cases
+- Your app stays an ordinary jar: no native-image build, no reflection or JNI configuration
+- Much faster build times (only jr itself is compiled ahead of time, once, not your app)
 - Flexibility to swap Java versions
-- Works with all Java code (no reflection/JNI limitations)
+- Works with all Java code
 
 **The Philosophy:**
 jr doesn't try to hide that your app is Java. It embraces it. It just makes the execution experience feel native - double-click to run, automatic console handling, fast startup with AOT, executable from command line. Best of both worlds.
@@ -704,26 +750,17 @@ Without AOT:
 
 - **No Embedded Paths**: Executable doesn't contain build machine paths
 - **Portable**: Can be moved between directories/systems
-- **No Telemetry**: No data collection or phone-home features; the only network access is the Java auto-install, and only after you say yes (see [Privacy](#privacy))
-- **Source Available**: Full C source code provided for review
-- **Signing**: Release builds are signed through SignPath Foundation (see [Code signing policy](#code-signing-policy)); `-Xjr:sign` signs copies you brand yourself
-
-## Code signing policy
-
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-
-Release binaries (`jr.exe`) are built from this repository's source by GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)) and signed only after a maintainer manually approves each signing request. Nothing built outside that pipeline is signed.
-
-Team roles:
-
-- Committers and reviewers: [ivan-velikanov](https://github.com/ivan-velikanov)
-- Approvers: [ivan-velikanov](https://github.com/ivan-velikanov)
-
-Changes from anyone outside the team are reviewed by a committer before they are merged.
+- **No Telemetry**: No data collection or phone-home features (see [Privacy](#privacy))
+- **Source Available**: The full Java source is in this repository, and release builds are made from it by GitHub Actions
+- **Checksums**: Each release carries `SHA256SUMS`. The release exes are not code-signed; `-Xjr:sign` signs copies you brand yourself with your own certificate
 
 ### Privacy
 
-This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The one network feature is the Java auto-install: when no suitable JDK is found, jr asks first (console Y/n or a dialog), and only on a yes contacts the [Foojay Disco API](https://api.foojay.io) and downloads an Eclipse Temurin JDK (on Windows on ARM64, an Azul Zulu JDK where Temurin publishes no ARM64 build). It can be turned off with `java.autoinstall=false`.
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. jr uses the network only for these, and only when asked to:
+
+- **Java auto-install**: when no suitable Java is found, jr asks first (console Y/n or a dialog), and only on a yes contacts the [Foojay Disco API](https://api.foojay.io) and downloads an Eclipse Temurin JDK or JRE (on Windows on ARM64, an Azul Zulu build where Temurin publishes none). It can be turned off with `java.autoinstall=false`.
+- **Downloading the app's jar**, when its config names a URL or Maven coordinates for it instead of a local file. The download is checked against the sha256 in the config.
+- **Update checks and self-update**, only when run with `-Xjr:update-check` or `-Xjr:update`, from the update URL in the app's config.
 
 ## License
 

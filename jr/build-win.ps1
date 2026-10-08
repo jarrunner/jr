@@ -23,22 +23,27 @@ its own architecture - verified 2026-09-28 (arm64 output's resources read back c
 denies the write - "Cannot open for writing (error 32)", a sharing violation, not a bug), so a
 throwaway copy of the x86_64 build always does the editing, whichever architecture is the target.
 
-Usage: powershell -File build-win.ps1 [-Arch x86_64,arm64] [-NoIcon] [-DistDir dist]
+Usage: powershell -File build-win.ps1 [-Arch x86_64,arm64] [-NoIcon] [-DistDir dist] [-Checks]
   -Arch     comma-separated list of jarrunner.jr architectures to build (default: both).
             Maps to clang target triples: x86_64 -> x86_64-w64-mingw32, arm64 -> aarch64-w64-mingw32.
   -NoIcon   skip icon stamping entirely (e.g. while icon/jr-icon.ico is mid-edit elsewhere).
   -DistDir  where the named, ready-to-ship exes land (default: dist, next to the existing
             jr-teavm.exe/jr-teavm-opt.exe kept there historically - this script does not touch those).
+  -Checks   a checks build (PRP-35 phase 3): compiles src/checks-on, so every Buf access is checked against its
+            size; default DistDir dist-checks. Never ship it. The release build compiles src/checks-off, whose
+            constant false makes javac drop the checks. Every build compiles clean, so the two never mix.
 
 Output naming: dist\jr-windows-<arch>.exe (optimized, the one to ship) and
-dist\jr-windows-<arch>-fat.exe (plain -O2, kept aside). Not signed - SignPath happens in CI
-(.github/workflows/release.yml), which runs this script on a clean Windows machine.
+dist\jr-windows-<arch>-fat.exe (plain -O2, kept aside). Not signed. Releases are built by CI
+(.github/workflows/release.yml), which runs this same script on a clean Windows machine.
 #>
 param(
     [string[]]$Arch = @('x86_64', 'arm64'),
     [switch]$NoIcon,
-    [string]$DistDir = 'dist'
+    [string]$DistDir = '',
+    [switch]$Checks
 )
+if (-not $DistDir) { $DistDir = if ($Checks) { 'dist-checks' } else { 'dist' } }
 
 Set-Location $PSScriptRoot
 # Deliberately NOT $ErrorActionPreference = 'Stop': under PowerShell 5.1, a native command's routine
@@ -52,8 +57,8 @@ foreach ($a in $Arch) {
     if (-not $triples.ContainsKey($a)) { throw "unknown -Arch '$a' (expected x86_64 and/or arm64)" }
 }
 
-Write-Host "[1/4] mvn compile"
-mvn -q compile
+Write-Host "[1/4] mvn clean compile$(if ($Checks) { ' (checks build)' })"
+if ($Checks) { mvn -q clean compile -Dchecks } else { mvn -q clean compile }
 if ($LASTEXITCODE -ne 0) { throw 'mvn compile failed' }
 
 Write-Host '[2/4] resolving classpath'

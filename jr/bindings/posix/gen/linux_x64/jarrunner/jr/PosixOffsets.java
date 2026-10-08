@@ -9,7 +9,7 @@ public final class PosixOffsets {
     private PosixOffsets() {}
 
     /** {@code struct stat} - struct_stat.h:26, 144 bytes */
-    public static final class stat_t {
+    @CType("struct stat") public static final class stat_t {
         private stat_t() {}
         public static final int SIZE = 144;
         /** {@code __dev_t st_dev} */ public static final int st_dev = 0;
@@ -27,44 +27,78 @@ public final class PosixOffsets {
         /** {@code struct timespec st_mtim} */ public static final int st_mtim = 88;
         /** {@code struct timespec st_ctim} */ public static final int st_ctim = 104;
         /** {@code __syscall_slong_t[3] __glibc_reserved} */ public static final int __glibc_reserved = 120;
-        public static long st_dev(Address s) { return s.add(st_dev).getLong(); }
-        public static void st_dev(Address s, long v) { s.add(st_dev).putLong(v); }
-        public static long st_ino(Address s) { return s.add(st_ino).getLong(); }
-        public static void st_ino(Address s, long v) { s.add(st_ino).putLong(v); }
-        public static long st_nlink(Address s) { return s.add(st_nlink).getLong(); }
-        public static void st_nlink(Address s, long v) { s.add(st_nlink).putLong(v); }
-        public static int st_mode(Address s) { return s.add(st_mode).getInt(); }
-        public static void st_mode(Address s, int v) { s.add(st_mode).putInt(v); }
-        public static int st_uid(Address s) { return s.add(st_uid).getInt(); }
-        public static void st_uid(Address s, int v) { s.add(st_uid).putInt(v); }
-        public static int st_gid(Address s) { return s.add(st_gid).getInt(); }
-        public static void st_gid(Address s, int v) { s.add(st_gid).putInt(v); }
-        public static int __pad0(Address s) { return s.add(__pad0).getInt(); }
-        public static void __pad0(Address s, int v) { s.add(__pad0).putInt(v); }
-        public static long st_rdev(Address s) { return s.add(st_rdev).getLong(); }
-        public static void st_rdev(Address s, long v) { s.add(st_rdev).putLong(v); }
-        public static long st_size(Address s) { return s.add(st_size).getLong(); }
-        public static void st_size(Address s, long v) { s.add(st_size).putLong(v); }
-        public static long st_blksize(Address s) { return s.add(st_blksize).getLong(); }
-        public static void st_blksize(Address s, long v) { s.add(st_blksize).putLong(v); }
-        public static long st_blocks(Address s) { return s.add(st_blocks).getLong(); }
-        public static void st_blocks(Address s, long v) { s.add(st_blocks).putLong(v); }
+        public static long st_dev(@CType("struct stat") Address s) { return s.add(st_dev).getLong(); }
+        public static void st_dev(@CType("struct stat") Address s, long v) { s.add(st_dev).putLong(v); }
+        public static long st_dev(Buf s) { return s.getLong(st_dev); }
+        public static void st_dev(Buf s, long v) { s.putLong(st_dev, v); }
+        public static long st_ino(@CType("struct stat") Address s) { return s.add(st_ino).getLong(); }
+        public static void st_ino(@CType("struct stat") Address s, long v) { s.add(st_ino).putLong(v); }
+        public static long st_ino(Buf s) { return s.getLong(st_ino); }
+        public static void st_ino(Buf s, long v) { s.putLong(st_ino, v); }
+        public static long st_nlink(@CType("struct stat") Address s) { return s.add(st_nlink).getLong(); }
+        public static void st_nlink(@CType("struct stat") Address s, long v) { s.add(st_nlink).putLong(v); }
+        public static long st_nlink(Buf s) { return s.getLong(st_nlink); }
+        public static void st_nlink(Buf s, long v) { s.putLong(st_nlink, v); }
+        public static int st_mode(@CType("struct stat") Address s) { return s.add(st_mode).getInt(); }
+        public static void st_mode(@CType("struct stat") Address s, int v) { s.add(st_mode).putInt(v); }
+        public static int st_mode(Buf s) { return s.getInt(st_mode); }
+        public static void st_mode(Buf s, int v) { s.putInt(st_mode, v); }
+        public static int st_uid(@CType("struct stat") Address s) { return s.add(st_uid).getInt(); }
+        public static void st_uid(@CType("struct stat") Address s, int v) { s.add(st_uid).putInt(v); }
+        public static int st_uid(Buf s) { return s.getInt(st_uid); }
+        public static void st_uid(Buf s, int v) { s.putInt(st_uid, v); }
+        public static int st_gid(@CType("struct stat") Address s) { return s.add(st_gid).getInt(); }
+        public static void st_gid(@CType("struct stat") Address s, int v) { s.add(st_gid).putInt(v); }
+        public static int st_gid(Buf s) { return s.getInt(st_gid); }
+        public static void st_gid(Buf s, int v) { s.putInt(st_gid, v); }
+        public static int __pad0(@CType("struct stat") Address s) { return s.add(__pad0).getInt(); }
+        public static void __pad0(@CType("struct stat") Address s, int v) { s.add(__pad0).putInt(v); }
+        public static int __pad0(Buf s) { return s.getInt(__pad0); }
+        public static void __pad0(Buf s, int v) { s.putInt(__pad0, v); }
+        public static long st_rdev(@CType("struct stat") Address s) { return s.add(st_rdev).getLong(); }
+        public static void st_rdev(@CType("struct stat") Address s, long v) { s.add(st_rdev).putLong(v); }
+        public static long st_rdev(Buf s) { return s.getLong(st_rdev); }
+        public static void st_rdev(Buf s, long v) { s.putLong(st_rdev, v); }
+        public static long st_size(@CType("struct stat") Address s) { return s.add(st_size).getLong(); }
+        public static void st_size(@CType("struct stat") Address s, long v) { s.add(st_size).putLong(v); }
+        public static long st_size(Buf s) { return s.getLong(st_size); }
+        public static void st_size(Buf s, long v) { s.putLong(st_size, v); }
+        public static long st_blksize(@CType("struct stat") Address s) { return s.add(st_blksize).getLong(); }
+        public static void st_blksize(@CType("struct stat") Address s, long v) { s.add(st_blksize).putLong(v); }
+        public static long st_blksize(Buf s) { return s.getLong(st_blksize); }
+        public static void st_blksize(Buf s, long v) { s.putLong(st_blksize, v); }
+        public static long st_blocks(@CType("struct stat") Address s) { return s.add(st_blocks).getLong(); }
+        public static void st_blocks(@CType("struct stat") Address s, long v) { s.add(st_blocks).putLong(v); }
+        public static long st_blocks(Buf s) { return s.getLong(st_blocks); }
+        public static void st_blocks(Buf s, long v) { s.putLong(st_blocks, v); }
+        public static @CType("struct timespec") Address st_atim(@Returned @CType("struct stat") Address s) { return s.add(st_atim); }
+        public static Buf st_atim(@Returned Buf s) { return s.from(st_atim); }
+        public static @CType("struct timespec") Address st_mtim(@Returned @CType("struct stat") Address s) { return s.add(st_mtim); }
+        public static Buf st_mtim(@Returned Buf s) { return s.from(st_mtim); }
+        public static @CType("struct timespec") Address st_ctim(@Returned @CType("struct stat") Address s) { return s.add(st_ctim); }
+        public static Buf st_ctim(@Returned Buf s) { return s.from(st_ctim); }
+        public static Address __glibc_reserved(@Returned @CType("struct stat") Address s) { return s.add(__glibc_reserved); }
+        public static Buf __glibc_reserved(@Returned Buf s) { return s.from(__glibc_reserved); }
     }
 
     /** {@code struct timespec} - struct_timespec.h:11, 16 bytes */
-    public static final class timespec {
+    @CType("struct timespec") public static final class timespec {
         private timespec() {}
         public static final int SIZE = 16;
         /** {@code __time_t tv_sec} */ public static final int tv_sec = 0;
         /** {@code __syscall_slong_t tv_nsec} */ public static final int tv_nsec = 8;
-        public static long tv_sec(Address s) { return s.add(tv_sec).getLong(); }
-        public static void tv_sec(Address s, long v) { s.add(tv_sec).putLong(v); }
-        public static long tv_nsec(Address s) { return s.add(tv_nsec).getLong(); }
-        public static void tv_nsec(Address s, long v) { s.add(tv_nsec).putLong(v); }
+        public static long tv_sec(@CType("struct timespec") Address s) { return s.add(tv_sec).getLong(); }
+        public static void tv_sec(@CType("struct timespec") Address s, long v) { s.add(tv_sec).putLong(v); }
+        public static long tv_sec(Buf s) { return s.getLong(tv_sec); }
+        public static void tv_sec(Buf s, long v) { s.putLong(tv_sec, v); }
+        public static long tv_nsec(@CType("struct timespec") Address s) { return s.add(tv_nsec).getLong(); }
+        public static void tv_nsec(@CType("struct timespec") Address s, long v) { s.add(tv_nsec).putLong(v); }
+        public static long tv_nsec(Buf s) { return s.getLong(tv_nsec); }
+        public static void tv_nsec(Buf s, long v) { s.putLong(tv_nsec, v); }
     }
 
     /** {@code struct dirent} - dirent.h:22, 280 bytes */
-    public static final class dirent {
+    @CType("struct dirent") public static final class dirent {
         private dirent() {}
         public static final int SIZE = 280;
         /** {@code __ino_t d_ino} */ public static final int d_ino = 0;
@@ -72,18 +106,28 @@ public final class PosixOffsets {
         /** {@code unsigned short d_reclen} */ public static final int d_reclen = 16;
         /** {@code unsigned char d_type} */ public static final int d_type = 18;
         /** {@code char[256] d_name} */ public static final int d_name = 19;
-        public static long d_ino(Address s) { return s.add(d_ino).getLong(); }
-        public static void d_ino(Address s, long v) { s.add(d_ino).putLong(v); }
-        public static long d_off(Address s) { return s.add(d_off).getLong(); }
-        public static void d_off(Address s, long v) { s.add(d_off).putLong(v); }
-        public static short d_reclen(Address s) { return s.add(d_reclen).getShort(); }
-        public static void d_reclen(Address s, short v) { s.add(d_reclen).putShort(v); }
-        public static byte d_type(Address s) { return s.add(d_type).getByte(); }
-        public static void d_type(Address s, byte v) { s.add(d_type).putByte(v); }
+        public static long d_ino(@CType("struct dirent") Address s) { return s.add(d_ino).getLong(); }
+        public static void d_ino(@CType("struct dirent") Address s, long v) { s.add(d_ino).putLong(v); }
+        public static long d_ino(Buf s) { return s.getLong(d_ino); }
+        public static void d_ino(Buf s, long v) { s.putLong(d_ino, v); }
+        public static long d_off(@CType("struct dirent") Address s) { return s.add(d_off).getLong(); }
+        public static void d_off(@CType("struct dirent") Address s, long v) { s.add(d_off).putLong(v); }
+        public static long d_off(Buf s) { return s.getLong(d_off); }
+        public static void d_off(Buf s, long v) { s.putLong(d_off, v); }
+        public static short d_reclen(@CType("struct dirent") Address s) { return s.add(d_reclen).getShort(); }
+        public static void d_reclen(@CType("struct dirent") Address s, short v) { s.add(d_reclen).putShort(v); }
+        public static short d_reclen(Buf s) { return s.getShort(d_reclen); }
+        public static void d_reclen(Buf s, short v) { s.putShort(d_reclen, v); }
+        public static byte d_type(@CType("struct dirent") Address s) { return s.add(d_type).getByte(); }
+        public static void d_type(@CType("struct dirent") Address s, byte v) { s.add(d_type).putByte(v); }
+        public static byte d_type(Buf s) { return s.getByte(d_type); }
+        public static void d_type(Buf s, byte v) { s.putByte(d_type, v); }
+        public static Address d_name(@Returned @CType("struct dirent") Address s) { return s.add(d_name); }
+        public static Buf d_name(@Returned Buf s) { return s.from(d_name); }
     }
 
     /** {@code struct utsname} - utsname.h:48, 390 bytes */
-    public static final class utsname {
+    @CType("struct utsname") public static final class utsname {
         private utsname() {}
         public static final int SIZE = 390;
         /** {@code char[65] sysname} */ public static final int sysname = 0;
@@ -92,6 +136,18 @@ public final class PosixOffsets {
         /** {@code char[65] version} */ public static final int version = 195;
         /** {@code char[65] machine} */ public static final int machine = 260;
         /** {@code char[65] __domainname} */ public static final int __domainname = 325;
+        public static Address sysname(@Returned @CType("struct utsname") Address s) { return s.add(sysname); }
+        public static Buf sysname(@Returned Buf s) { return s.from(sysname); }
+        public static Address nodename(@Returned @CType("struct utsname") Address s) { return s.add(nodename); }
+        public static Buf nodename(@Returned Buf s) { return s.from(nodename); }
+        public static Address release(@Returned @CType("struct utsname") Address s) { return s.add(release); }
+        public static Buf release(@Returned Buf s) { return s.from(release); }
+        public static Address version(@Returned @CType("struct utsname") Address s) { return s.add(version); }
+        public static Buf version(@Returned Buf s) { return s.from(version); }
+        public static Address machine(@Returned @CType("struct utsname") Address s) { return s.add(machine); }
+        public static Buf machine(@Returned Buf s) { return s.from(machine); }
+        public static Address __domainname(@Returned @CType("struct utsname") Address s) { return s.add(__domainname); }
+        public static Buf __domainname(@Returned Buf s) { return s.from(__domainname); }
     }
 
 }

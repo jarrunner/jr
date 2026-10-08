@@ -225,14 +225,14 @@ public final class JavaInstall {
     }
 
     private static String tempPath() {
-        var buf = alloc(261);
-        var len = WinApi.getTempPathA(261, buf);
-        return len == 0 || len >= 261 ? "C:\\Windows\\Temp\\" : string(buf, len);
+        var buf = alloc(4096 * 2);
+        var len = WinApi.getTempPathW(4096, buf);
+        return len == 0 || len >= 4096 ? "C:\\Windows\\Temp\\" : wstring(buf, len);
     }
 
     private static boolean extractZip(String zipPath, String destDir) {
-        var buf = alloc(261);
-        var sysDir = string(buf, WinApi.getSystemDirectoryA(buf, 261));
+        var buf = alloc(261 * 2);
+        var sysDir = wstring(buf, WinApi.getSystemDirectoryW(buf, 261));
         var cmd = "\"" + sysDir + "\\tar.exe\" -xf \"" + zipPath + "\" -C \"" + destDir + "\"";
         return ProcessLauncher.runHiddenAndWait(cmd);
     }
@@ -245,8 +245,7 @@ public final class JavaInstall {
             var line = readConsoleLine();
             return line == null || line.isEmpty() || line.charAt(0) == 'y' || line.charAt(0) == 'Y';
         }
-        return WinApi.messageBoxA(NULL, cstr(message), cstr("Java Not Found - Auto Install"),
-                WinApi.MB_YESNO | WinApi.MB_ICONQUESTION) == WinApi.IDYES;
+        return WinApi.messageBoxW(NULL, message, "Java Not Found - Auto Install", WinApi.MB_YESNO | WinApi.MB_ICONQUESTION) == WinApi.IDYES;
     }
 
     private static String readConsoleLine() {
@@ -256,7 +255,7 @@ public final class JavaInstall {
         if (WinApi.readFile(handle, buf, 256, read, NULL) == 0) {
             return null;
         }
-        var line = string(buf, read.getInt());
+        var line = text(buf, intOf(read));
         var eol = 0;
         while (eol < line.length() && line.charAt(eol) != '\r' && line.charAt(eol) != '\n') eol++;
         return line.substring(0, eol);

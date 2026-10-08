@@ -13,8 +13,8 @@ public final class Repair {
         if (jar != null && !jar.isEmpty()) {
             var dir = Paths.dirOf(jar);
             var n = 0;
-            for (var f : Dirs.matching(dir, Paths.baseNameNoExt(jar) + ".*.aot")) {
-                n += WinApi.deleteFileA(N.cstr(dir + "\\" + f)) != 0 ? 1 : 0;
+            for (var f : Dirs.matching(dir, AotCache.baseName(jar) + ".*.aot")) {
+                n += WinApi.deleteFileW(N.wcstr(dir + "\\" + f)) != 0 ? 1 : 0;
             }
             sb.append("- AOT caches deleted: ").append(n).append(" (the next launch makes a new one)\n");
             if (remote != null && FileIo.exists(jar)) {
@@ -23,8 +23,8 @@ public final class Repair {
                     RemoteJar.reverify(jar, AsciiStr.lower(config.runSha256));
                     sb.append("- Jar verified by SHA-256: ").append(jar).append('\n');
                 } else {
-                    WinApi.deleteFileA(N.cstr(jar));
-                    WinApi.deleteFileA(N.cstr(jar + ".jr-sha256"));
+                    WinApi.deleteFileW(N.wcstr(jar));
+                    WinApi.deleteFileW(N.wcstr(jar + ".jr-sha256"));
                     sb.append("- Jar did not match its SHA-256 and was deleted; the next launch downloads it again: ").append(jar).append('\n');
                 }
             }

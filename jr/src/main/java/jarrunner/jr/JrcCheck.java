@@ -22,9 +22,9 @@ public final class JrcCheck {
     private JrcCheck() {}
 
     /** Returns the report: "" when clean. Lines starting "error:" mean the bake must be refused. */
-    public static String check(String bytes) {
+    public static String check(String text) {
         var c = new JrcCheck();
-        var r = JsonReader.parse(Utf8.decode(bytes));
+        var r = JsonReader.parse(text);
         if (r.isError()) {
             c.error("not valid JSON: ", r.error());
         } else if (r.kind() != JsonValue.OBJECT) {

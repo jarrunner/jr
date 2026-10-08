@@ -15,10 +15,10 @@ public final class Progress {
     private final boolean guiMode;
     private final boolean hasConsole;
     private long lastShownPercent = -1;
-    private Address hwndWindow;
-    private Address hwndBar;
-    private Address iconLarge;
-    private Address iconSmall;
+    @Handle private Address hwndWindow;
+    @Handle private Address hwndBar;
+    @Handle private Address iconLarge;
+    @Handle private Address iconSmall;
 
     public Progress(boolean guiMode, boolean hasConsole, String label) {
         this(guiMode, hasConsole, ExeInfo.baseNameNoExt() + " - Installing Java", label);
@@ -30,24 +30,20 @@ public final class Progress {
         this.hasConsole = hasConsole;
 
         if (guiMode) {
-            var iccex = alloc(8);
-            iccex.putInt(8);
-            iccex.add(4).putInt(WinApi.ICC_PROGRESS_CLASS);
+            var iccex = alloc(WinOffsets.INITCOMMONCONTROLSEX.SIZE);
+            WinOffsets.INITCOMMONCONTROLSEX.dwSize(iccex, WinOffsets.INITCOMMONCONTROLSEX.SIZE);
+            WinOffsets.INITCOMMONCONTROLSEX.dwICC(iccex, WinApi.ICC_PROGRESS_CLASS);
             WinApi.initCommonControlsEx(iccex);
 
-            hwndWindow = WinApi.createWindowExA(WinApi.WS_EX_TOPMOST, cstr("#32770"),
-                    cstr(title), WinApi.WS_CAPTION | WinApi.WS_SYSMENU,
-                    WinApi.CW_USEDEFAULT, WinApi.CW_USEDEFAULT, 420, 120,
-                    NULL, NULL, NULL, NULL);
+            hwndWindow = WinApi.createWindowExW(WinApi.WS_EX_TOPMOST, "#32770", title, WinApi.WS_CAPTION | WinApi.WS_SYSMENU, WinApi.CW_USEDEFAULT, WinApi.CW_USEDEFAULT, 420, 120, NULL, NULL, NULL, NULL);
 
             if (hwndWindow.toLong() != 0) {
                 showOwnIcon();
-                WinApi.createWindowExA(0, cstr("STATIC"), cstr(label), WinApi.WS_CHILD | WinApi.WS_VISIBLE,
-                        10, 10, 390, 20, hwndWindow, NULL, NULL, NULL);
-                hwndBar = WinApi.createWindowExA(0, cstr("msctls_progress32"), NULL,
+                WinApi.createWindowExW(0, "STATIC", label, WinApi.WS_CHILD | WinApi.WS_VISIBLE, 10, 10, 390, 20, hwndWindow, NULL, NULL, NULL);
+                hwndBar = WinApi.createWindowExW(0, wcstr("msctls_progress32"), NULL,
                         WinApi.WS_CHILD | WinApi.WS_VISIBLE, 10, 40, 390, 24,
                         hwndWindow, NULL, NULL, NULL);
-                WinApi.sendMessageA(hwndBar, WinApi.PBM_SETRANGE, 0L, 0x00640000L);
+                WinApi.sendMessageW(hwndBar, WinApi.PBM_SETRANGE, 0L, 0x00640000L);
                 WinApi.showWindow(hwndWindow, WinApi.SW_SHOW);
                 WinApi.updateWindow(hwndWindow);
             }
@@ -74,7 +70,7 @@ public final class Progress {
 
         if (guiMode) {
             if (hwndBar != null && hwndBar.toLong() != 0) {
-                WinApi.sendMessageA(hwndBar, WinApi.PBM_SETPOS, percent, 0L);
+                WinApi.sendMessageW(hwndBar, WinApi.PBM_SETPOS, percent, 0L);
             }
             pumpMessages();
         } else if (hasConsole) {
@@ -129,9 +125,9 @@ public final class Progress {
     private void pumpMessages() {
         memScoped(() -> {
             var msg = alloc(WinOffsets.MSG.SIZE);
-            while (WinApi.peekMessageA(msg, NULL, 0, 0, WinApi.PM_REMOVE) != 0) {
+            while (WinApi.peekMessageW(msg, NULL, 0, 0, WinApi.PM_REMOVE) != 0) {
                 WinApi.translateMessage(msg);
-                WinApi.dispatchMessageA(msg);
+                WinApi.dispatchMessageW(msg);
             }
         });
     }

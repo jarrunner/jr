@@ -29,9 +29,9 @@ public final class Ui {
                 ErrorDialog.show(title, title + "\n" + (blank > 0 ? message.substring(0, blank) : message), report, saved);
             }
         } else if (hasConsole) {
-            System.out.print("\n[INFO] " + title + "\n" + message + "\n\n");
+            Stderr.out("\n[INFO] " + title + "\n" + message + "\n\n");
         } else {
-            WinApi.messageBoxA(NULL, cstr(message), cstr(title), type);
+            WinApi.messageBoxW(NULL, message, title, type);
         }
         Log.write(type == WinApi.MB_ICONERROR ? "ERROR" : "INFO", title + ": " + message);
     }
@@ -44,8 +44,7 @@ public final class Ui {
         var h = WinApi.globalAlloc(WinApi.GMEM_MOVEABLE, (n + 1) * 2L);
         var p = h.toLong() == 0 ? NULL : WinApi.globalLock(h);
         if (p.toLong() != 0) {
-            for (var i = 0; i < n; i++) p.add(i * 2).putChar(s.charAt(i));
-            p.add(n * 2).putChar((char) 0);
+            wcstrInto(p, s);
             WinApi.globalUnlock(h);
             WinApi.setClipboardData(WinApi.CF_UNICODETEXT, h);
         }

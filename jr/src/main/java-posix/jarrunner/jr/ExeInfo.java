@@ -4,10 +4,7 @@ import static jarrunner.jr.N.*;
 
 /** This executable's own path/name, used to find the sibling .jrc file and for display purposes -
  *  mirrors launcher.c's getExeBaseName/getExeFullPathWithoutExt (and the Windows ExeInfo's
- *  GetModuleFileNameA). LINUX ONLY for now: realpath("/proc/self/exe") - macOS has no /proc and
- *  needs _NSGetExecutablePath instead (bound in PosixApi when built against jr-posix-macos.h /
- *  posix-macos.symbols; this class needs a macOS-specific twin when that build is done - see
- *  PRP-21's status file). */
+ *  GetModuleFileNameA). The lookup itself differs per OS and lives in Os.exePath(). */
 public final class ExeInfo {
     private ExeInfo() {}
 
@@ -20,9 +17,7 @@ public final class ExeInfo {
     }
 
     public static String fullPath() {
-        var buf = alloc(PosixApi.PATH_MAX);
-        var p = PosixApi.realpath(cstr("/proc/self/exe"), buf);
-        return p.toLong() == 0 ? "" : string(buf);
+        return Os.exePath();
     }
 
     /** No .exe extension to strip on POSIX - kept as a no-op so callers need no #ifdef. */

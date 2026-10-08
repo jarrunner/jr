@@ -36,7 +36,7 @@ public final class ReRun {
                 if (AsciiStr.equalsIgnoreCase(selfFull, target)) {
                     throw new ReError("-Xjr:make cannot overwrite the running exe itself; use -Xjr:edit on a copy");
                 }
-                if (WinApi.copyFileA(cstr(ExeInfo.fullPath()), cstr(target), 0) == 0) {
+                if (WinApi.copyFileW(ExeInfo.fullPath(), target, 0) == 0) {
                     throw new ReError("Cannot create " + target + " (error " + WinApi.getLastError() + ")");
                 }
                 created = true;
@@ -65,15 +65,15 @@ public final class ReRun {
             return new Result(true, report.toString());
         } catch (ReError e) {
             if (created) {
-                WinApi.deleteFileA(cstr(target)); // no half-made output left behind
+                WinApi.deleteFileW(target); // no half-made output left behind
             }
             return new Result(false, e.getMessage() + (created ? "\n(the new exe was not kept)" : ""));
         }
     }
 
     private static String fullPathName(String path) {
-        var buf = alloc(WinApi.MAX_PATH);
-        var len = WinApi.getFullPathNameA(cstr(path), WinApi.MAX_PATH, buf, NULL);
-        return len == 0 || len >= WinApi.MAX_PATH ? null : string(buf, WinApi.MAX_PATH);
+        var buf = alloc(4096 * 2);
+        var len = WinApi.getFullPathNameW(path, 4096, buf, NULL);
+        return len == 0 || len >= 4096 ? null : wstring(buf, len);
     }
 }

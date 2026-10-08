@@ -2,8 +2,6 @@ package jarrunner.jr;
 
 import org.teavm.interop.Address;
 
-import static jarrunner.jr.N.*;
-
 /**
  * (i) Icon: an .ico file is a directory plus images; in an exe the images become RT_ICON resources
  * and the directory an RT_GROUP_ICON that points at them by id. The FIRST group is the one Explorer
@@ -21,18 +19,17 @@ public final class ReIcon {
     private static final int FILE_ENTRY_SIZE = 16;
 
     public static void queue(Address module, ReEntries list, String icoPath, StringBuilder report) {
-        var ico = FileIo.readAllNative(icoPath);
+        var ico = FileIo.readAllBytes(icoPath);
         if (ico == null) {
             throw new ReError("Cannot read icon file: " + icoPath);
         }
-        var icoData = ico.data();
-        var icoSize = ico.size();
+        var icoSize = ico.length;
         if (icoSize < 6) {
             throw new ReError("Not a valid .ico file: " + icoPath);
         }
-        var reserved = icoData.getShort();
-        var type = icoData.add(2).getShort();
-        var count = icoData.add(4).getShort() & 0xFFFF;
+        var reserved = Le.u16(ico, 0);
+        var type = Le.u16(ico, 2);
+        var count = Le.u16(ico, 4);
         if (reserved != 0 || type != 1 || count == 0 || 6 + count * FILE_ENTRY_SIZE > icoSize) {
             throw new ReError("Not a valid .ico file: " + icoPath);
         }
@@ -46,10 +43,10 @@ public final class ReIcon {
             groupName = first;
             for (var glang : ReCallbacks.getLangs(module, ResId.of(WinApi.RT_GROUP_ICON), groupName)) {
                 var old = ReEntries.find(module, ResId.of(WinApi.RT_GROUP_ICON), groupName, glang);
-                if (old != null && old.size() >= 6) {
-                    var oldCount = old.data().add(4).getShort() & 0xFFFF;
-                    for (var k = 0; k < oldCount && 6 + (k + 1) * GROUP_ENTRY_SIZE <= old.size(); k++) {
-                        var imgId = old.data().add(6 + k * GROUP_ENTRY_SIZE + 12).getShort() & 0xFFFF;
+                if (old != null && old.length >= 6) {
+                    var oldCount = Le.u16(old, 4);
+                    for (var k = 0; k < oldCount && 6 + (k + 1) * GROUP_ENTRY_SIZE <= old.length; k++) {
+                        var imgId = Le.u16(old, 6 + k * GROUP_ENTRY_SIZE + 12);
                         if (!list.queueReplace(module, ResId.of(WinApi.RT_ICON), ResId.of(imgId))) {
                             throw new ReError("Too many resource changes in one run");
                         }
@@ -68,48 +65,41 @@ public final class ReIcon {
             throw new ReError("No free icon resource ids left in the target");
         }
 
-        var groupSize = 6 + count * GROUP_ENTRY_SIZE;
-        var group = alloc(groupSize);
-        for (var i = 0; i < 6; i++) { // reserved, type=1, count - copied from the .ico file verbatim
-            group.add(i).putByte(icoData.add(i).getByte());
-        }
+        var group = new ReBuf();
+        group.put(java.util.Arrays.copyOf(ico, 6)); // reserved, type=1, count - copied from the .ico file verbatim
 
         for (var i = 0; i < count; i++) {
-            var fe = icoData.add(6 + i * FILE_ENTRY_SIZE);
-            var width = fe.getByte();
-            var height = fe.add(1).getByte();
-            var colors = fe.add(2).getByte();
-            var planes = fe.add(4).getShort();
-            var bitCount = fe.add(6).getShort();
-            var bytesU = fe.add(8).getInt() & 0xFFFFFFFFL;
-            var offsetU = fe.add(12).getInt() & 0xFFFFFFFFL;
+            var fe = 6 + i * FILE_ENTRY_SIZE;
+            var width = ico[fe];
+            var height = ico[fe + 1];
+            var colors = ico[fe + 2];
+            var planes = Le.u16(ico, fe + 4);
+            var bitCount = Le.u16(ico, fe + 6);
+            var bytesU = Le.i32(ico, fe + 8) & 0xFFFFFFFFL;
+            var offsetU = Le.i32(ico, fe + 12) & 0xFFFFFFFFL;
             if (offsetU > icoSize || bytesU > icoSize - offsetU || bytesU == 0) {
                 throw new ReError("Icon file is truncated or corrupt: " + icoPath);
             }
             var bytes = (int) bytesU;
             var offset = (int) offsetU;
 
-            var image = alloc(bytes);
-            for (var b = 0; b < bytes; b++) {
-                image.add(b).putByte(icoData.add(offset + b).getByte());
-            }
+            var image = java.util.Arrays.copyOfRange(ico, offset, offset + bytes);
             var imgId = maxId + 1 + i;
-            if (!list.add(ResId.of(WinApi.RT_ICON), ResId.of(imgId), lang, image, bytes)) {
+            if (!list.add(ResId.of(WinApi.RT_ICON), ResId.of(imgId), lang, image)) {
                 throw new ReError("Too many resource changes in one run");
             }
 
-            var ge = group.add(6 + i * GROUP_ENTRY_SIZE);
-            ge.putByte(width);
-            ge.add(1).putByte(height);
-            ge.add(2).putByte(colors);
-            ge.add(3).putByte((byte) 0);
-            ge.add(4).putShort(planes);
-            ge.add(6).putShort(bitCount);
-            ge.add(8).putInt(bytes);
-            ge.add(12).putShort((short) imgId);
+            group.putByte(width);
+            group.putByte(height);
+            group.putByte(colors);
+            group.putByte(0);
+            group.putShort(planes);
+            group.putShort(bitCount);
+            group.putInt(bytes);
+            group.putShort(imgId);
         }
 
-        if (!list.add(ResId.of(WinApi.RT_GROUP_ICON), groupName, lang, group, groupSize)) {
+        if (!list.add(ResId.of(WinApi.RT_GROUP_ICON), groupName, lang, group.bytes())) {
             throw new ReError("Too many resource changes in one run");
         }
 

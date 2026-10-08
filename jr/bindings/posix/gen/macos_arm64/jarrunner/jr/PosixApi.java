@@ -13,28 +13,55 @@ public final class PosixApi {
     @Import(name = "exit") public static native void exit(int arg0);
 
     /** {@code char *getenv(const char *)} - _stdlib.h:167 */
-    @Import(name = "getenv") public static native Address getenv(Address arg0);
+    @Import(name = "getenv") @CType("char") public static native Address getenv(@CType("char") Address arg0);
 
     /** {@code int setenv(const char *__name, const char *__value, int __overwrite)} - _stdlib.h:258 */
-    @Import(name = "setenv") public static native int setenv(Address __name, Address __value, int __overwrite);
+    @Import(name = "setenv") public static native int setenv(@CType("char") Address __name, @CType("char") Address __value, int __overwrite);
+
+    /** {@code setenv} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int setenv(String __name, String __value, int __overwrite) {
+        var scope_ = N.mark();
+        var result_ = setenv(N.utf8(__name), N.utf8(__value), __overwrite);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code FILE *fopen(const char *restrict __filename, const char *restrict __mode)} - _stdio.h:243 */
-    @Import(name = "fopen") public static native Address fopen(Address __filename, Address __mode);
+    @Import(name = "fopen") @CType("struct __sFILE") public static native Address fopen(@CType("char") Address __filename, @CType("char") Address __mode);
+
+    /** {@code fopen} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    @CType("struct __sFILE") public static Address fopen(String __filename, String __mode) {
+        var scope_ = N.mark();
+        var result_ = fopen(N.utf8(__filename), N.utf8(__mode));
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code int fputs(const char *restrict, FILE *restrict)} - _stdio.h:247 */
-    @Import(name = "fputs") public static native int fputs(Address arg0, Address arg1);
+    @Import(name = "fputs") public static native int fputs(@CType("char") Address arg0, @CType("struct __sFILE") Address arg1);
+
+    /** {@code fputs} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int fputs(String arg0, @CType("struct __sFILE") Address arg1) {
+        var scope_ = N.mark();
+        var result_ = fputs(N.utf8(arg0), arg1);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code int fflush(FILE *)} - _stdio.h:236 */
-    @Import(name = "fflush") public static native int fflush(Address arg0);
+    @Import(name = "fflush") public static native int fflush(@CType("struct __sFILE") Address arg0);
 
     /** {@code int fclose(FILE *)} - _stdio.h:233 */
-    @Import(name = "fclose") public static native int fclose(Address arg0);
+    @Import(name = "fclose") public static native int fclose(@CType("struct __sFILE") Address arg0);
 
     /** {@code unsigned long fread(void *restrict __ptr, size_t __size, size_t __nitems, FILE *restrict __stream)} - _stdio.h:248 */
-    @Import(name = "fread") public static native long fread(Address __ptr, long __size, long __nitems, Address __stream);
+    @Import(name = "fread") public static native long fread(Address __ptr, long __size, long __nitems, @CType("struct __sFILE") Address __stream);
 
     /** {@code unsigned long fwrite(const void *restrict __ptr, size_t __size, size_t __nitems, FILE *restrict __stream)} - _stdio.h:255 */
-    @Import(name = "fwrite") public static native long fwrite(Address __ptr, long __size, long __nitems, Address __stream);
+    @Import(name = "fwrite") public static native long fwrite(Address __ptr, long __size, long __nitems, @CType("struct __sFILE") Address __stream);
+
+    /** {@code ssize_t write(int __fd, const void *__buf, size_t __nbyte)} - unistd.h:508 */
+    @Import(name = "write") public static native long write(int __fd, Address __buf, long __nbyte);
 
     /** {@code void *malloc(size_t __size)} - _malloc.h:54 */
     @Import(name = "malloc") public static native Address malloc(long __size);
@@ -46,55 +73,119 @@ public final class PosixApi {
     @Import(name = "memset") public static native Address memset(Address __b, int __c, long __len);
 
     /** {@code time_t time(time_t *)} - _time.h:121 */
-    @Import(name = "time") public static native long time(Address arg0);
+    @Import(name = "time") public static native long time(@CType("int64") Address arg0);
 
     /** {@code int clock_gettime(clockid_t __clock_id, struct timespec *__tp)} - _time.h:181 */
-    @Import(name = "clock_gettime") public static native int clockGettime(int __clock_id, Address __tp);
+    @Import(name = "clock_gettime") public static native int clockGettime(int __clock_id, @CType("struct timespec") Address __tp);
 
     /** {@code int stat(const char *, struct stat *)} - stat.h:387 */
-    @Import(name = "stat") public static native int stat(Address arg0, Address arg1);
+    @Import(name = "stat") public static native int stat(@CType("char") Address arg0, @CType("struct stat") Address arg1);
+
+    /** {@code stat} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int stat(String arg0, @CType("struct stat") Address arg1) {
+        var scope_ = N.mark();
+        var result_ = stat(N.utf8(arg0), arg1);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code int access(const char *, int)} - unistd.h:443 */
-    @Import(name = "access") public static native int access(Address arg0, int arg1);
+    @Import(name = "access") public static native int access(@CType("char") Address arg0, int arg1);
+
+    /** {@code access} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int access(String arg0, int arg1) {
+        var scope_ = N.mark();
+        var result_ = access(N.utf8(arg0), arg1);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code int unlink(const char *)} - unistd.h:506 */
-    @Import(name = "unlink") public static native int unlink(Address arg0);
+    @Import(name = "unlink") public static native int unlink(@CType("char") Address arg0);
+
+    /** {@code unlink} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int unlink(String arg0) {
+        var scope_ = N.mark();
+        var result_ = unlink(N.utf8(arg0));
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code int rename(const char *__old, const char *__new)} - _stdio.h:269 */
-    @Import(name = "rename") public static native int rename(Address __old, Address __new);
+    @Import(name = "rename") public static native int rename(@CType("char") Address __old, @CType("char") Address __new);
+
+    /** {@code rename} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int rename(String __old, String __new) {
+        var scope_ = N.mark();
+        var result_ = rename(N.utf8(__old), N.utf8(__new));
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code int mkdir(const char *, mode_t)} - stat.h:385 */
-    @Import(name = "mkdir") public static native int mkdir(Address arg0, short mode_t);
+    @Import(name = "mkdir") public static native int mkdir(@CType("char") Address arg0, short mode_t);
+
+    /** {@code mkdir} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int mkdir(String arg0, short mode_t) {
+        var scope_ = N.mark();
+        var result_ = mkdir(N.utf8(arg0), mode_t);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code int rmdir(const char *)} - unistd.h:486 */
-    @Import(name = "rmdir") public static native int rmdir(Address arg0);
+    @Import(name = "rmdir") public static native int rmdir(@CType("char") Address arg0);
+
+    /** {@code rmdir} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int rmdir(String arg0) {
+        var scope_ = N.mark();
+        var result_ = rmdir(N.utf8(arg0));
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code DIR *opendir(const char *)} - dirent.h:111 */
-    @Import(name = "opendir") public static native Address opendir(Address arg0);
+    @Import(name = "opendir") public static native Address opendir(@CType("char") Address arg0);
+
+    /** {@code opendir} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static Address opendir(String arg0) {
+        var scope_ = N.mark();
+        var result_ = opendir(N.utf8(arg0));
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code struct dirent *readdir(DIR *)} - dirent.h:113 */
-    @Import(name = "readdir") public static native Address readdir(Address arg0);
+    @Import(name = "readdir") @CType("struct dirent") public static native Address readdir(Address arg0);
 
     /** {@code int closedir(DIR *)} - dirent.h:109 */
     @Import(name = "closedir") public static native int closedir(Address arg0);
 
     /** {@code char *realpath(const char *restrict, char *restrict)} - _stdlib.h:253 */
-    @Import(name = "realpath") public static native Address realpath(Address arg0, Address arg1);
+    @Import(name = "realpath") @CType("char") public static native Address realpath(@CType("char") Address arg0, @CType("char") Address arg1);
 
     /** {@code char *getcwd(char *, size_t __size)} - unistd.h:461 */
-    @Import(name = "getcwd") public static native Address getcwd(Address arg0, long __size);
+    @Import(name = "getcwd") @CType("char") public static native Address getcwd(@CType("char") Address arg0, long __size);
 
     /** {@code int posix_spawn(pid_t *restrict, const char *restrict, const posix_spawn_file_actions_t *, const posix_spawnattr_t *restrict, char *const __argv[], char *const __envp[])} - spawn.h:60 */
-    @Import(name = "posix_spawn") public static native int posixSpawn(Address arg0, Address arg1, Address arg2, Address arg3, Address __argv, Address __envp);
+    @Import(name = "posix_spawn") public static native int posixSpawn(@CType("int32") Address arg0, @CType("char") Address arg1, @CType("pointer") Address arg2, @CType("pointer") Address arg3, Address __argv, Address __envp);
+
+    /** {@code posix_spawn} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int posixSpawn(@CType("int32") Address arg0, String arg1, @CType("pointer") Address arg2, @CType("pointer") Address arg3, Address __argv, Address __envp) {
+        var scope_ = N.mark();
+        var result_ = posixSpawn(arg0, N.utf8(arg1), arg2, arg3, __argv, __envp);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code pid_t waitpid(pid_t, int *, int)} - wait.h:247 */
-    @Import(name = "waitpid") public static native int waitpid(int pid_t, Address arg1, int arg2);
+    @Import(name = "waitpid") public static native int waitpid(int pid_t, @CType("int32") Address arg1, int arg2);
 
     /** {@code int isatty(int)} - unistd.h:475 */
     @Import(name = "isatty") public static native int isatty(int arg0);
 
     /** {@code int uname(struct utsname *)} - utsname.h:83 */
-    @Import(name = "uname") public static native int uname(Address arg0);
+    @Import(name = "uname") public static native int uname(@CType("struct utsname") Address arg0);
 
     /** {@code int jx_wexitstatus(int status)} - jr-posix.h:24 */
     @Import(name = "jx_wexitstatus") public static native int wexitstatus(int status);
@@ -103,7 +194,7 @@ public final class PosixApi {
     @Import(name = "jx_wifexited") public static native int wifexited(int status);
 
     /** {@code char **jx_environ()} - jr-posix.h:32 */
-    @Import(name = "jx_environ") public static native Address getEnviron();
+    @Import(name = "jx_environ") @CType("pointer") public static native Address getEnviron();
 
     public static final int O_RDONLY = 0; // int, fcntl.h:96
     public static final int F_OK = 0; // int, unistd.h:89
@@ -113,6 +204,12 @@ public final class PosixApi {
     public static final int EINTR = 4; // int, errno.h:91
     public static final int DT_DIR = 4; // int, dirent.h:126
     /** {@code extern int _NSGetExecutablePath(char *buf, uint32_t *bufsize)} - dyld.h:105 */
-    @Import(name = "_NSGetExecutablePath") public static native int nsGetExecutablePath(Address buf, Address bufsize);
+    @Import(name = "_NSGetExecutablePath") public static native int nsGetExecutablePath(@CType("char") Address buf, @CType("int32") Address bufsize);
+
+    /** {@code extern const struct mach_header *_dyld_get_image_header(uint32_t image_index)} - dyld.h:61 */
+    @Import(name = "_dyld_get_image_header") @CType("struct mach_header") public static native Address dyldGetImageHeader(int image_index);
+
+    /** {@code extern uint8_t *getsectiondata(const struct mach_header_64 *mhp, const char *segname, const char *sectname, unsigned long *size)} - getsect.h:91 */
+    @Import(name = "getsectiondata") public static native Address getsectiondata(@CType("struct mach_header_64") Address mhp, @CType("char") Address segname, @CType("char") Address sectname, @CType("int64") Address size);
 
 }

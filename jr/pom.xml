@@ -11,6 +11,11 @@
     <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <teavm.version>0.15.0</teavm.version>
+    <!-- teavm_native_check (PRP-35): the native-memory rules, enforced by javac. build-posix.sh reads this same
+         line, so both source trees are checked against one configuration. -->
+    <!-- PRP-35 phase 3: the Checks.ON constant comes from src/checks-off (release) or, with -Dchecks, src/checks-on. -->
+    <jr.checks.src>src/checks-off/java</jr.checks.src>
+    <nativecheck>wrappers=jarrunner.jr.Buf trust=jarrunner.jr.Buf.wrap scope=jarrunner.jr.N.memScoped alloc=jarrunner.jr.N.alloc raw=jarrunner.jr.N,jarrunner.jr.Arena,jarrunner.jr.Buf,jarrunner.jr.WinApi,jarrunner.jr.WinOffsets,jarrunner.jr.PosixApi,jarrunner.jr.PosixOffsets</nativecheck>
   </properties>
   <dependencies>
     <dependency>
@@ -24,4 +29,45 @@
       <version>${teavm.version}</version>
     </dependency>
   </dependencies>
+  <profiles>
+    <profile>
+      <id>checks</id>
+      <activation><property><name>checks</name></property></activation>
+      <properties><jr.checks.src>src/checks-on/java</jr.checks.src></properties>
+    </profile>
+  </profiles>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <id>checks-source</id>
+            <phase>generate-sources</phase>
+            <goals><goal>add-source</goal></goals>
+            <configuration><sources><source>${jr.checks.src}</source></sources></configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.14.0</version>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>io.github.jarrunner</groupId>
+              <artifactId>teavm_native_check</artifactId>
+              <version>1.0</version>
+            </path>
+          </annotationProcessorPaths>
+          <compilerArgs>
+            <arg>-Xplugin:NativeCheck ${nativecheck}</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

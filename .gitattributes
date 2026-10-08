@@ -1,0 +1,5 @@
+# Shell scripts and C headers run or compile on macOS/Linux: always LF, whatever core.autocrlf says
+# on the Windows machine that checks them out. A CRLF shebang ("#!/bin/sh\r") fails as "bad
+# interpreter" (PRP-11 hit this on a Mac).
+*.sh text eol=lf
+*.h  text eol=lf

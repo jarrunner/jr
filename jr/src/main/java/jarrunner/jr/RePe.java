@@ -21,8 +21,7 @@ public final class RePe {
 
     /** Returns true if a signature was found and stripped, false if there was none to strip. */
     public static boolean stripSignature(String path) {
-        var h = WinApi.createFileW(wcstr(path), WinApi.GENERIC_READ | WinApi.GENERIC_WRITE, 0, NULL,
-                WinApi.OPEN_EXISTING, 0, NULL);
+        var h = WinApi.createFileW(path, WinApi.GENERIC_READ | WinApi.GENERIC_WRITE, 0, NULL, WinApi.OPEN_EXISTING, 0, NULL);
         if (h == WinApi.INVALID_HANDLE_VALUE) {
             throw new ReError("Cannot open for writing (error " + WinApi.getLastError() + ") - is it running?");
         }
@@ -31,25 +30,25 @@ public final class RePe {
 
             var dos = alloc(WinOffsets.IMAGE_DOS_HEADER.SIZE);
             if (WinApi.readFile(h, dos, WinOffsets.IMAGE_DOS_HEADER.SIZE, got, NULL) == 0
-                    || got.getInt() != WinOffsets.IMAGE_DOS_HEADER.SIZE
+                    || intOf(got) != WinOffsets.IMAGE_DOS_HEADER.SIZE
                     || WinOffsets.IMAGE_DOS_HEADER.e_magic(dos) != (short) WinApi.IMAGE_DOS_SIGNATURE) {
                 throw new ReError("Not a Windows executable");
             }
             var lfanew = WinOffsets.IMAGE_DOS_HEADER.e_lfanew(dos);
 
             var sig = intVar();
-            if (!seek(h, lfanew) || WinApi.readFile(h, sig, 4, got, NULL) == 0 || got.getInt() != 4
-                    || sig.getInt() != WinApi.IMAGE_NT_SIGNATURE) {
+            if (!seek(h, lfanew) || WinApi.readFile(h, sig, 4, got, NULL) == 0 || intOf(got) != 4
+                    || intOf(sig) != WinApi.IMAGE_NT_SIGNATURE) {
                 throw new ReError("Not a Windows executable");
             }
 
             // The optional header follows the 20-byte file header; its magic says 32 or 64 bit
-            var magicBuf = intVar();
+            var magicBuf = shortVar();
             if (!seek(h, lfanew + 4 + WinOffsets.IMAGE_FILE_HEADER.SIZE)
-                    || WinApi.readFile(h, magicBuf, 2, got, NULL) == 0 || got.getInt() != 2) {
+                    || WinApi.readFile(h, magicBuf, 2, got, NULL) == 0 || intOf(got) != 2) {
                 throw new ReError("Not a Windows executable");
             }
-            var magic = magicBuf.getShort();
+            var magic = shortOf(magicBuf);
             int dataDirectoryOffset;
             if (magic == (short) WinApi.IMAGE_NT_OPTIONAL_HDR64_MAGIC) {
                 dataDirectoryOffset = WinOffsets.IMAGE_OPTIONAL_HEADER64.DataDirectory;
@@ -63,7 +62,7 @@ public final class RePe {
                     + WinApi.IMAGE_DIRECTORY_ENTRY_SECURITY * WinOffsets.IMAGE_DATA_DIRECTORY.SIZE;
             var dir = alloc(WinOffsets.IMAGE_DATA_DIRECTORY.SIZE);
             if (!seek(h, dirPos) || WinApi.readFile(h, dir, WinOffsets.IMAGE_DATA_DIRECTORY.SIZE, got, NULL) == 0
-                    || got.getInt() != WinOffsets.IMAGE_DATA_DIRECTORY.SIZE) {
+                    || intOf(got) != WinOffsets.IMAGE_DATA_DIRECTORY.SIZE) {
                 throw new ReError("Not a Windows executable");
             }
 
@@ -78,9 +77,9 @@ public final class RePe {
                 throw new ReError("Cannot remove the existing signature (error " + WinApi.getLastError() + ")");
             }
             // For this directory, VirtualAddress is a file offset, not an RVA
-            var fileSize = longVar();
+            var fileSize = alloc(WinOffsets.LARGE_INTEGER.SIZE);
             if (WinApi.getFileSizeEx(h, fileSize) != 0
-                    && (virtualAddress & 0xFFFFFFFFL) + (size & 0xFFFFFFFFL) >= fileSize.getLong()
+                    && (virtualAddress & 0xFFFFFFFFL) + (size & 0xFFFFFFFFL) >= WinOffsets.LARGE_INTEGER.QuadPart(fileSize)
                     && seek(h, virtualAddress)) {
                 WinApi.setEndOfFile(h);
             }

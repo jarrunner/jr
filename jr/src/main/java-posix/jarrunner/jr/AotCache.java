@@ -32,16 +32,16 @@ public final class AotCache {
         }
 
         memScoped(() -> {
-            var dh = PosixApi.opendir(cstr(dir));
+            var dh = PosixApi.opendir(dir);
             if (dh.toLong() == 0) {
                 return;
             }
             var prefix = base + ".";
             for (var e = PosixApi.readdir(dh); e.toLong() != 0; e = PosixApi.readdir(dh)) {
-                var name = string(e.add(PosixOffsets.dirent.d_name), 256);
+                var name = string(PosixOffsets.dirent.d_name(e), 256);
                 if (name.startsWith(prefix) && name.endsWith(".aot") && !name.equals(currentFileName)) {
                     var fullPath = dir + "/" + name;
-                    PosixApi.unlink(cstr(fullPath));
+                    PosixApi.unlink(fullPath);
                     Log.info("Cleaned up old AOT file: " + fullPath);
                 }
             }

@@ -47,7 +47,7 @@ $definitions = (Get-Content -Raw $definitionsPath) -replace "`r`n", "`n"
 # function declaration"). wincrypt.h needs no such treatment: windows.h already pulls it in
 # transitively.
 $oldTop = "#pragma once`n#include " + '"config.h"'
-$newTop = "#pragma once`n#include <Windows.h>`n#include <time.h>`n#include <stdio.h>`n#include <winhttp.h>`n#include <bcrypt.h>`n#include <commctrl.h>`n#include " + '"mssign.h"' + "`n#include " + '"jr-shims.h"' + "`n#include " + '"config.h"'
+$newTop = "#pragma once`n#include <Windows.h>`n#include <time.h>`n#include <stdio.h>`n#include <string.h>`n#include <winhttp.h>`n#include <bcrypt.h>`n#include <commctrl.h>`n#include " + '"mssign.h"' + "`n#include " + '"jr-shims.h"' + "`n#include " + '"config.h"'
 if ($definitions -notmatch [regex]::Escape($oldTop)) {
     throw "definitions.h's opening lines did not match the expected TeaVM-generated content - TeaVM version may have changed this file, check manually."
 }

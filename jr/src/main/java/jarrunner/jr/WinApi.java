@@ -12,26 +12,28 @@ public final class WinApi {
     /** {@code void exit(int _Code)} - stdlib.h:242 */
     @Import(name = "exit") public static native void exit(int _Code);
 
-    /** {@code char *getenv(const char *_VarName)} - stdlib.h:296 */
-    @Import(name = "getenv") public static native Address getenv(Address _VarName);
-
-    /** {@code FILE *fopen(const char *restrict _Filename, const char *restrict _Mode)} - stdio.h:521 */
-    @Import(name = "fopen") public static native Address fopen(Address _Filename, Address _Mode);
-
     /** {@code int fputs(const char *restrict _Str, FILE *restrict _File)} - stdio.h:525 */
-    @Import(name = "fputs") public static native int fputs(Address _Str, Address _File);
+    @Import(name = "fputs") public static native int fputs(@CType("char") Address _Str, @CType("struct _iobuf") Address _File);
+
+    /** {@code fputs} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int fputs(String _Str, @CType("struct _iobuf") Address _File) {
+        var scope_ = N.mark();
+        var result_ = fputs(N.utf8(_Str), _File);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code int fflush(FILE *_File)} - stdio.h:502 */
-    @Import(name = "fflush") public static native int fflush(Address _File);
+    @Import(name = "fflush") public static native int fflush(@CType("struct _iobuf") Address _File);
 
     /** {@code int fclose(FILE *_File)} - stdio.h:493 */
-    @Import(name = "fclose") public static native int fclose(Address _File);
+    @Import(name = "fclose") public static native int fclose(@CType("struct _iobuf") Address _File);
 
     /** {@code unsigned long long fread(void *restrict _DstBuf, size_t _ElementSize, size_t _Count, FILE *restrict _File)} - stdio.h:526 */
-    @Import(name = "fread") public static native long fread(Address _DstBuf, long _ElementSize, long _Count, Address _File);
+    @Import(name = "fread") public static native long fread(Address _DstBuf, long _ElementSize, long _Count, @CType("struct _iobuf") Address _File);
 
     /** {@code unsigned long long fwrite(const void *restrict _Str, size_t _Size, size_t _Count, FILE *restrict _File)} - stdio.h:549 */
-    @Import(name = "fwrite") public static native long fwrite(Address _Str, long _Size, long _Count, Address _File);
+    @Import(name = "fwrite") public static native long fwrite(Address _Str, long _Size, long _Count, @CType("struct _iobuf") Address _File);
 
     /** {@code void *malloc(size_t _Size)} - corecrt_malloc.h:44 */
     @Import(name = "malloc") public static native Address malloc(long _Size);
@@ -42,20 +44,31 @@ public final class WinApi {
     /** {@code void *memset(void *_Dst, int _Val, size_t _Size)} - corecrt_memory.h:23 */
     @Import(name = "memset") public static native Address memset(Address _Dst, int _Val, long _Size);
 
+    /** {@code unsigned long long strlen(const char *_Str)} - string.h:27 */
+    @Import(name = "strlen") public static native long strlen(@CType("char") Address _Str);
+
+    /** {@code strlen} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static long strlen(String _Str) {
+        var scope_ = N.mark();
+        var result_ = strlen(N.utf8(_Str));
+        N.release(scope_);
+        return result_;
+    }
+
     /** {@code time_t time(time_t *_Time)} - time.h:128 */
-    @Import(name = "time") public static native long time(Address _Time);
+    @Import(name = "time") public static native long time(@CType("int64") Address _Time);
 
     /** {@code WINBOOL QueryPerformanceCounter(LARGE_INTEGER *lpPerformanceCount)} - profileapi.h:16 */
-    @Import(name = "QueryPerformanceCounter") public static native int queryPerformanceCounter(Address lpPerformanceCount);
+    @Import(name = "QueryPerformanceCounter") public static native int queryPerformanceCounter(@CType("union _LARGE_INTEGER") Address lpPerformanceCount);
 
     /** {@code WINBOOL QueryPerformanceFrequency(LARGE_INTEGER *lpFrequency)} - profileapi.h:17 */
-    @Import(name = "QueryPerformanceFrequency") public static native int queryPerformanceFrequency(Address lpFrequency);
+    @Import(name = "QueryPerformanceFrequency") public static native int queryPerformanceFrequency(@CType("union _LARGE_INTEGER") Address lpFrequency);
 
     /** {@code HWND GetConsoleWindow()} - consoleapi3.h:88 */
-    @Import(name = "GetConsoleWindow") public static native Address getConsoleWindow();
+    @Import(name = "GetConsoleWindow") @CType("struct HWND__") public static native Address getConsoleWindow();
 
     /** {@code WINBOOL ShowWindow(HWND hWnd, int nCmdShow)} - winuser.h:2213 */
-    @Import(name = "ShowWindow") public static native int showWindow(Address hWnd, int nCmdShow);
+    @Import(name = "ShowWindow") public static native int showWindow(@CType("struct HWND__") Address hWnd, int nCmdShow);
 
     /** {@code WINBOOL FreeConsole()} - consoleapi.h:51 */
     @Import(name = "FreeConsole") public static native int freeConsole();
@@ -70,43 +83,99 @@ public final class WinApi {
     @Import(name = "SetStdHandle") public static native int setStdHandle(int nStdHandle, Address hHandle);
 
     /** {@code WINBOOL GetConsoleMode(HANDLE console_handle, LPDWORD mode)} - consoleapi.h:81 */
-    @Import(name = "GetConsoleMode") public static native int getConsoleMode(Address console_handle, Address mode);
+    @Import(name = "GetConsoleMode") public static native int getConsoleMode(Address console_handle, @CType("int32") Address mode);
 
-    /** {@code HANDLE CreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)} - fileapi.h:53 */
-    @Import(name = "CreateFileA") public static native Address createFileA(Address lpFileName, int dwDesiredAccess, int dwShareMode, Address lpSecurityAttributes, int dwCreationDisposition, int dwFlagsAndAttributes, Address hTemplateFile);
+    /** {@code HANDLE CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)} - fileapi.h:64 */
+    @Import(name = "CreateFileW") public static native Address createFileW(@CType("wchar_t") Address lpFileName, int dwDesiredAccess, int dwShareMode, @CType("struct _SECURITY_ATTRIBUTES") Address lpSecurityAttributes, int dwCreationDisposition, int dwFlagsAndAttributes, Address hTemplateFile);
 
-    /** {@code DWORD GetFileAttributesA(LPCSTR lpFileName)} - fileapi.h:77 */
-    @Import(name = "GetFileAttributesA") public static native int getFileAttributesA(Address lpFileName);
+    /** {@code CreateFileW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static Address createFileW(String lpFileName, int dwDesiredAccess, int dwShareMode, @CType("struct _SECURITY_ATTRIBUTES") Address lpSecurityAttributes, int dwCreationDisposition, int dwFlagsAndAttributes, Address hTemplateFile) {
+        var scope_ = N.mark();
+        var result_ = createFileW(N.wcstr(lpFileName), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+        N.release(scope_);
+        return result_;
+    }
 
-    /** {@code WINBOOL GetFileAttributesExA(LPCSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId, LPVOID lpFileInformation)} - fileapi.h:203 */
-    @Import(name = "GetFileAttributesExA") public static native int getFileAttributesExA(Address lpFileName, int fInfoLevelId, Address lpFileInformation);
+    /** {@code DWORD GetFileAttributesW(LPCWSTR lpFileName)} - fileapi.h:31 */
+    @Import(name = "GetFileAttributesW") public static native int getFileAttributesW(@CType("wchar_t") Address lpFileName);
 
-    /** {@code HANDLE FindFirstFileA(LPCSTR lpFileName, LPWIN32_FIND_DATAA lpFindFileData)} - fileapi.h:71 */
-    @Import(name = "FindFirstFileA") public static native Address findFirstFileA(Address lpFileName, Address lpFindFileData);
+    /** {@code GetFileAttributesW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int getFileAttributesW(String lpFileName) {
+        var scope_ = N.mark();
+        var result_ = getFileAttributesW(N.wcstr(lpFileName));
+        N.release(scope_);
+        return result_;
+    }
 
-    /** {@code WINBOOL FindNextFileA(HANDLE hFindFile, LPWIN32_FIND_DATAA lpFindFileData)} - fileapi.h:198 */
-    @Import(name = "FindNextFileA") public static native int findNextFileA(Address hFindFile, Address lpFindFileData);
+    /** {@code WINBOOL GetFileAttributesExW(LPCWSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId, LPVOID lpFileInformation)} - fileapi.h:204 */
+    @Import(name = "GetFileAttributesExW") public static native int getFileAttributesExW(@CType("wchar_t") Address lpFileName, int fInfoLevelId, Address lpFileInformation);
+
+    /** {@code GetFileAttributesExW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int getFileAttributesExW(String lpFileName, int fInfoLevelId, Address lpFileInformation) {
+        var scope_ = N.mark();
+        var result_ = getFileAttributesExW(N.wcstr(lpFileName), fInfoLevelId, lpFileInformation);
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code HANDLE FindFirstFileW(LPCWSTR lpFileName, LPWIN32_FIND_DATAW lpFindFileData)} - fileapi.h:72 */
+    @Import(name = "FindFirstFileW") public static native Address findFirstFileW(@CType("wchar_t") Address lpFileName, @CType("struct _WIN32_FIND_DATAW") Address lpFindFileData);
+
+    /** {@code FindFirstFileW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static Address findFirstFileW(String lpFileName, @CType("struct _WIN32_FIND_DATAW") Address lpFindFileData) {
+        var scope_ = N.mark();
+        var result_ = findFirstFileW(N.wcstr(lpFileName), lpFindFileData);
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code WINBOOL FindNextFileW(HANDLE hFindFile, LPWIN32_FIND_DATAW lpFindFileData)} - fileapi.h:199 */
+    @Import(name = "FindNextFileW") public static native int findNextFileW(Address hFindFile, @CType("struct _WIN32_FIND_DATAW") Address lpFindFileData);
 
     /** {@code WINBOOL FindClose(HANDLE hFindFile)} - fileapi.h:195 */
     @Import(name = "FindClose") public static native int findClose(Address hFindFile);
 
-    /** {@code WINBOOL DeleteFileA(LPCSTR lpFileName)} - fileapi.h:193 */
-    @Import(name = "DeleteFileA") public static native int deleteFileA(Address lpFileName);
+    /** {@code WINBOOL DeleteFileW(LPCWSTR lpFileName)} - fileapi.h:194 */
+    @Import(name = "DeleteFileW") public static native int deleteFileW(@CType("wchar_t") Address lpFileName);
 
-    /** {@code DWORD GetModuleFileNameA(HMODULE hModule, LPSTR lpFilename, DWORD nSize)} - libloaderapi.h:113 */
-    @Import(name = "GetModuleFileNameA") public static native int getModuleFileNameA(Address hModule, Address lpFilename, int nSize);
+    /** {@code DeleteFileW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int deleteFileW(String lpFileName) {
+        var scope_ = N.mark();
+        var result_ = deleteFileW(N.wcstr(lpFileName));
+        N.release(scope_);
+        return result_;
+    }
 
-    /** {@code DWORD GetCurrentDirectoryA(DWORD nBufferLength, LPSTR lpBuffer)} - processenv.h:22 */
-    @Import(name = "GetCurrentDirectoryA") public static native int getCurrentDirectoryA(int nBufferLength, Address lpBuffer);
+    /** {@code DWORD GetModuleFileNameW(HMODULE hModule, LPWSTR lpFilename, DWORD nSize)} - libloaderapi.h:114 */
+    @Import(name = "GetModuleFileNameW") public static native int getModuleFileNameW(@CType("struct HINSTANCE__") Address hModule, @CType("wchar_t") Address lpFilename, int nSize);
 
-    /** {@code WINBOOL SetEnvironmentVariableA(LPCSTR lpName, LPCSTR lpValue)} - processenv.h:64 */
-    @Import(name = "SetEnvironmentVariableA") public static native int setEnvironmentVariableA(Address lpName, Address lpValue);
+    /** {@code DWORD GetCurrentDirectoryW(DWORD nBufferLength, LPWSTR lpBuffer)} - processenv.h:23 */
+    @Import(name = "GetCurrentDirectoryW") public static native int getCurrentDirectoryW(int nBufferLength, @CType("wchar_t") Address lpBuffer);
 
-    /** {@code int MessageBoxA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)} - winuser.h:3716 */
-    @Import(name = "MessageBoxA") public static native int messageBoxA(Address hWnd, Address lpText, Address lpCaption, int uType);
+    /** {@code WINBOOL SetEnvironmentVariableW(LPCWSTR lpName, LPCWSTR lpValue)} - processenv.h:65 */
+    @Import(name = "SetEnvironmentVariableW") public static native int setEnvironmentVariableW(@CType("wchar_t") Address lpName, @CType("wchar_t") Address lpValue);
+
+    /** {@code SetEnvironmentVariableW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int setEnvironmentVariableW(String lpName, String lpValue) {
+        var scope_ = N.mark();
+        var result_ = setEnvironmentVariableW(N.wcstr(lpName), N.wcstr(lpValue));
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code int MessageBoxW(HWND hWnd, LPCWSTR lpText, LPCWSTR lpCaption, UINT uType)} - winuser.h:3717 */
+    @Import(name = "MessageBoxW") public static native int messageBoxW(@CType("struct HWND__") Address hWnd, @CType("wchar_t") Address lpText, @CType("wchar_t") Address lpCaption, int uType);
+
+    /** {@code MessageBoxW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int messageBoxW(@CType("struct HWND__") Address hWnd, String lpText, String lpCaption, int uType) {
+        var scope_ = N.mark();
+        var result_ = messageBoxW(hWnd, N.wcstr(lpText), N.wcstr(lpCaption), uType);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code WINBOOL OpenClipboard(HWND hWndNewOwner)} - winuser.h:2479 */
-    @Import(name = "OpenClipboard") public static native int openClipboard(Address hWndNewOwner);
+    @Import(name = "OpenClipboard") public static native int openClipboard(@CType("struct HWND__") Address hWndNewOwner);
 
     /** {@code WINBOOL EmptyClipboard()} - winuser.h:2494 */
     @Import(name = "EmptyClipboard") public static native int emptyClipboard();
@@ -127,37 +196,66 @@ public final class WinApi {
     @Import(name = "GlobalUnlock") public static native int globalUnlock(Address hMem);
 
     /** {@code WINBOOL ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)} - fileapi.h:206 */
-    @Import(name = "ReadFile") public static native int readFile(Address hFile, Address lpBuffer, int nNumberOfBytesToRead, Address lpNumberOfBytesRead, Address lpOverlapped);
+    @Import(name = "ReadFile") public static native int readFile(Address hFile, Address lpBuffer, int nNumberOfBytesToRead, @CType("int32") Address lpNumberOfBytesRead, @CType("struct _OVERLAPPED") Address lpOverlapped);
 
-    /** {@code HMODULE LoadLibraryA(LPCSTR lpLibFileName)} - libloaderapi.h:103 */
-    @Import(name = "LoadLibraryA") public static native Address loadLibraryA(Address lpLibFileName);
+    /** {@code HMODULE LoadLibraryW(LPCWSTR lpLibFileName)} - libloaderapi.h:104 */
+    @Import(name = "LoadLibraryW") @CType("struct HINSTANCE__") public static native Address loadLibraryW(@CType("wchar_t") Address lpLibFileName);
 
-    /** {@code HMODULE LoadLibraryExA(LPCSTR lpLibFileName, HANDLE hFile, DWORD dwFlags)} - libloaderapi.h:170 */
-    @Import(name = "LoadLibraryExA") public static native Address loadLibraryExA(Address lpLibFileName, Address hFile, int dwFlags);
+    /** {@code LoadLibraryW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    @CType("struct HINSTANCE__") public static Address loadLibraryW(String lpLibFileName) {
+        var scope_ = N.mark();
+        var result_ = loadLibraryW(N.wcstr(lpLibFileName));
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName)} - libloaderapi.h:112 */
-    @Import(name = "GetProcAddress") public static native Address getProcAddress(Address hModule, Address lpProcName);
+    @Import(name = "GetProcAddress") public static native Address getProcAddress(@CType("struct HINSTANCE__") Address hModule, @CType("char") Address lpProcName);
 
-    /** {@code HMODULE GetModuleHandleA(LPCSTR lpModuleName)} - libloaderapi.h:166 */
-    @Import(name = "GetModuleHandleA") public static native Address getModuleHandleA(Address lpModuleName);
+    /** {@code GetProcAddress} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static Address getProcAddress(@CType("struct HINSTANCE__") Address hModule, String lpProcName) {
+        var scope_ = N.mark();
+        var result_ = getProcAddress(hModule, N.utf8(lpProcName));
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code HMODULE GetModuleHandleW(LPCWSTR lpModuleName)} - libloaderapi.h:167 */
+    @Import(name = "GetModuleHandleW") @CType("struct HINSTANCE__") public static native Address getModuleHandleW(@CType("wchar_t") Address lpModuleName);
+
+    /** {@code GetModuleHandleW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    @CType("struct HINSTANCE__") public static Address getModuleHandleW(String lpModuleName) {
+        var scope_ = N.mark();
+        var result_ = getModuleHandleW(N.wcstr(lpModuleName));
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code HANDLE GetCurrentProcess()} - processthreadsapi.h:302 */
     @Import(name = "GetCurrentProcess") public static native Address getCurrentProcess();
 
     /** {@code WINBOOL FreeLibrary(HMODULE hLibModule)} - libloaderapi.h:111 */
-    @Import(name = "FreeLibrary") public static native int freeLibrary(Address hLibModule);
+    @Import(name = "FreeLibrary") public static native int freeLibrary(@CType("struct HINSTANCE__") Address hLibModule);
 
-    /** {@code DWORD GetFinalPathNameByHandleA(HANDLE hFile, LPSTR lpszFilePath, DWORD cchFilePath, DWORD dwFlags)} - fileapi.h:149 */
-    @Import(name = "GetFinalPathNameByHandleA") public static native int getFinalPathNameByHandleA(Address hFile, Address lpszFilePath, int cchFilePath, int dwFlags);
+    /** {@code DWORD GetFinalPathNameByHandleW(HANDLE hFile, LPWSTR lpszFilePath, DWORD cchFilePath, DWORD dwFlags)} - fileapi.h:150 */
+    @Import(name = "GetFinalPathNameByHandleW") public static native int getFinalPathNameByHandleW(Address hFile, @CType("wchar_t") Address lpszFilePath, int cchFilePath, int dwFlags);
 
-    /** {@code WINBOOL CreateProcessA(LPCSTR lpApplicationName, LPSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, WINBOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCSTR lpCurrentDirectory, LPSTARTUPINFOA lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation)} - processthreadsapi.h:288 */
-    @Import(name = "CreateProcessA") public static native int createProcessA(Address lpApplicationName, Address lpCommandLine, Address lpProcessAttributes, Address lpThreadAttributes, int bInheritHandles, int dwCreationFlags, Address lpEnvironment, Address lpCurrentDirectory, Address lpStartupInfo, Address lpProcessInformation);
+    /** {@code WINBOOL CreateProcessW(LPCWSTR lpApplicationName, LPWSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, WINBOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory, LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation)} - processthreadsapi.h:289 */
+    @Import(name = "CreateProcessW") public static native int createProcessW(@CType("wchar_t") Address lpApplicationName, @CType("wchar_t") Address lpCommandLine, @CType("struct _SECURITY_ATTRIBUTES") Address lpProcessAttributes, @CType("struct _SECURITY_ATTRIBUTES") Address lpThreadAttributes, int bInheritHandles, int dwCreationFlags, Address lpEnvironment, @CType("wchar_t") Address lpCurrentDirectory, @CType("struct _STARTUPINFOW") Address lpStartupInfo, @CType("struct _PROCESS_INFORMATION") Address lpProcessInformation);
+
+    /** {@code CreateProcessW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int createProcessW(String lpApplicationName, @CType("wchar_t") Address lpCommandLine, @CType("struct _SECURITY_ATTRIBUTES") Address lpProcessAttributes, @CType("struct _SECURITY_ATTRIBUTES") Address lpThreadAttributes, int bInheritHandles, int dwCreationFlags, Address lpEnvironment, String lpCurrentDirectory, @CType("struct _STARTUPINFOW") Address lpStartupInfo, @CType("struct _PROCESS_INFORMATION") Address lpProcessInformation) {
+        var scope_ = N.mark();
+        var result_ = createProcessW(N.wcstr(lpApplicationName), lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment, N.wcstr(lpCurrentDirectory), lpStartupInfo, lpProcessInformation);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code DWORD WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds)} - synchapi.h:115 */
     @Import(name = "WaitForSingleObject") public static native int waitForSingleObject(Address hHandle, int dwMilliseconds);
 
     /** {@code WINBOOL GetExitCodeProcess(HANDLE hProcess, LPDWORD lpExitCode)} - processthreadsapi.h:29 */
-    @Import(name = "GetExitCodeProcess") public static native int getExitCodeProcess(Address hProcess, Address lpExitCode);
+    @Import(name = "GetExitCodeProcess") public static native int getExitCodeProcess(Address hProcess, @CType("int32") Address lpExitCode);
 
     /** {@code WINBOOL CloseHandle(HANDLE hObject)} - handleapi.h:19 */
     @Import(name = "CloseHandle") public static native int closeHandle(Address hObject);
@@ -175,40 +273,96 @@ public final class WinApi {
     @Import(name = "_get_osfhandle") public static native long getOsfHandle(int _FileHandle);
 
     /** {@code HINTERNET WinHttpOpen(LPCWSTR, DWORD, LPCWSTR, LPCWSTR, DWORD)} - winhttp.h:915 */
-    @Import(name = "WinHttpOpen") public static native Address winHttpOpen(Address lpcwstr, int dword, Address lpcwstr2, Address lpcwstr3, int dword2);
+    @Import(name = "WinHttpOpen") public static native Address winHttpOpen(@CType("wchar_t") Address lpcwstr, int dword, @CType("wchar_t") Address lpcwstr2, @CType("wchar_t") Address lpcwstr3, int dword2);
+
+    /** {@code WinHttpOpen} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static Address winHttpOpen(String lpcwstr, int dword, String lpcwstr2, String lpcwstr3, int dword2) {
+        var scope_ = N.mark();
+        var result_ = winHttpOpen(N.wcstr(lpcwstr), dword, N.wcstr(lpcwstr2), N.wcstr(lpcwstr3), dword2);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code HINTERNET WinHttpConnect(HINTERNET, LPCWSTR, INTERNET_PORT, DWORD)} - winhttp.h:899 */
-    @Import(name = "WinHttpConnect") public static native Address winHttpConnect(Address hinternet, Address lpcwstr, short internet_port, int dword);
+    @Import(name = "WinHttpConnect") public static native Address winHttpConnect(Address hinternet, @CType("wchar_t") Address lpcwstr, short internet_port, int dword);
+
+    /** {@code WinHttpConnect} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static Address winHttpConnect(Address hinternet, String lpcwstr, short internet_port, int dword) {
+        var scope_ = N.mark();
+        var result_ = winHttpConnect(hinternet, N.wcstr(lpcwstr), internet_port, dword);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code HINTERNET WinHttpOpenRequest(HINTERNET, LPCWSTR, LPCWSTR, LPCWSTR, LPCWSTR, LPCWSTR *, DWORD)} - winhttp.h:916 */
-    @Import(name = "WinHttpOpenRequest") public static native Address winHttpOpenRequest(Address hinternet, Address lpcwstr, Address lpcwstr2, Address lpcwstr3, Address lpcwstr4, Address arg5, int dword);
+    @Import(name = "WinHttpOpenRequest") public static native Address winHttpOpenRequest(Address hinternet, @CType("wchar_t") Address lpcwstr, @CType("wchar_t") Address lpcwstr2, @CType("wchar_t") Address lpcwstr3, @CType("wchar_t") Address lpcwstr4, @CType("pointer") Address arg5, int dword);
+
+    /** {@code WinHttpOpenRequest} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static Address winHttpOpenRequest(Address hinternet, String lpcwstr, String lpcwstr2, String lpcwstr3, String lpcwstr4, @CType("pointer") Address arg5, int dword) {
+        var scope_ = N.mark();
+        var result_ = winHttpOpenRequest(hinternet, N.wcstr(lpcwstr), N.wcstr(lpcwstr2), N.wcstr(lpcwstr3), N.wcstr(lpcwstr4), arg5, dword);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code WINBOOL WinHttpSendRequest(HINTERNET, LPCWSTR, DWORD, LPVOID, DWORD, DWORD, DWORD_PTR)} - winhttp.h:926 */
-    @Import(name = "WinHttpSendRequest") public static native int winHttpSendRequest(Address hinternet, Address lpcwstr, int dword, Address lpvoid, int dword2, int dword3, long dword_ptr);
+    @Import(name = "WinHttpSendRequest") public static native int winHttpSendRequest(Address hinternet, @CType("wchar_t") Address lpcwstr, int dword, Address lpvoid, int dword2, int dword3, long dword_ptr);
+
+    /** {@code WinHttpSendRequest} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int winHttpSendRequest(Address hinternet, String lpcwstr, int dword, Address lpvoid, int dword2, int dword3, long dword_ptr) {
+        var scope_ = N.mark();
+        var result_ = winHttpSendRequest(hinternet, N.wcstr(lpcwstr), dword, lpvoid, dword2, dword3, dword_ptr);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code WINBOOL WinHttpReceiveResponse(HINTERNET, LPVOID)} - winhttp.h:924 */
     @Import(name = "WinHttpReceiveResponse") public static native int winHttpReceiveResponse(Address hinternet, Address lpvoid);
 
     /** {@code WINBOOL WinHttpQueryHeaders(HINTERNET, DWORD, LPCWSTR, LPVOID, LPDWORD, LPDWORD)} - winhttp.h:920 */
-    @Import(name = "WinHttpQueryHeaders") public static native int winHttpQueryHeaders(Address hinternet, int dword, Address lpcwstr, Address lpvoid, Address lpdword, Address lpdword2);
+    @Import(name = "WinHttpQueryHeaders") public static native int winHttpQueryHeaders(Address hinternet, int dword, @CType("wchar_t") Address lpcwstr, Address lpvoid, @CType("int32") Address lpdword, @CType("int32") Address lpdword2);
+
+    /** {@code WinHttpQueryHeaders} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int winHttpQueryHeaders(Address hinternet, int dword, String lpcwstr, Address lpvoid, @CType("int32") Address lpdword, @CType("int32") Address lpdword2) {
+        var scope_ = N.mark();
+        var result_ = winHttpQueryHeaders(hinternet, dword, N.wcstr(lpcwstr), lpvoid, lpdword, lpdword2);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code WINBOOL WinHttpQueryDataAvailable(HINTERNET, LPDWORD)} - winhttp.h:919 */
-    @Import(name = "WinHttpQueryDataAvailable") public static native int winHttpQueryDataAvailable(Address hinternet, Address lpdword);
+    @Import(name = "WinHttpQueryDataAvailable") public static native int winHttpQueryDataAvailable(Address hinternet, @CType("int32") Address lpdword);
 
     /** {@code WINBOOL WinHttpReadData(HINTERNET, LPVOID, DWORD, LPDWORD)} - winhttp.h:922 */
-    @Import(name = "WinHttpReadData") public static native int winHttpReadData(Address hinternet, Address lpvoid, int dword, Address lpdword);
+    @Import(name = "WinHttpReadData") public static native int winHttpReadData(Address hinternet, Address lpvoid, int dword, @CType("int32") Address lpdword);
 
     /** {@code WINBOOL WinHttpCloseHandle(HINTERNET)} - winhttp.h:898 */
     @Import(name = "WinHttpCloseHandle") public static native int winHttpCloseHandle(Address hinternet);
 
     /** {@code NTSTATUS BCryptOpenAlgorithmProvider(BCRYPT_ALG_HANDLE *phAlgorithm, LPCWSTR pszAlgId, LPCWSTR pszImplementation, ULONG dwFlags)} - bcrypt.h:762 */
-    @Import(name = "BCryptOpenAlgorithmProvider") public static native int bCryptOpenAlgorithmProvider(Address phAlgorithm, Address pszAlgId, Address pszImplementation, int dwFlags);
+    @Import(name = "BCryptOpenAlgorithmProvider") public static native int bCryptOpenAlgorithmProvider(@CType("pointer") Address phAlgorithm, @CType("wchar_t") Address pszAlgId, @CType("wchar_t") Address pszImplementation, int dwFlags);
+
+    /** {@code BCryptOpenAlgorithmProvider} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int bCryptOpenAlgorithmProvider(@CType("pointer") Address phAlgorithm, String pszAlgId, String pszImplementation, int dwFlags) {
+        var scope_ = N.mark();
+        var result_ = bCryptOpenAlgorithmProvider(phAlgorithm, N.wcstr(pszAlgId), N.wcstr(pszImplementation), dwFlags);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code NTSTATUS BCryptGetProperty(BCRYPT_HANDLE hObject, LPCWSTR pszProperty, PUCHAR pbOutput, ULONG cbOutput, ULONG *pcbResult, ULONG dwFlags)} - bcrypt.h:765 */
-    @Import(name = "BCryptGetProperty") public static native int bCryptGetProperty(Address hObject, Address pszProperty, Address pbOutput, int cbOutput, Address pcbResult, int dwFlags);
+    @Import(name = "BCryptGetProperty") public static native int bCryptGetProperty(Address hObject, @CType("wchar_t") Address pszProperty, Address pbOutput, int cbOutput, @CType("int32") Address pcbResult, int dwFlags);
+
+    /** {@code BCryptGetProperty} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int bCryptGetProperty(Address hObject, String pszProperty, Address pbOutput, int cbOutput, @CType("int32") Address pcbResult, int dwFlags) {
+        var scope_ = N.mark();
+        var result_ = bCryptGetProperty(hObject, N.wcstr(pszProperty), pbOutput, cbOutput, pcbResult, dwFlags);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code NTSTATUS BCryptCreateHash(BCRYPT_ALG_HANDLE hAlgorithm, BCRYPT_HASH_HANDLE *phHash, PUCHAR pbHashObject, ULONG cbHashObject, PUCHAR pbSecret, ULONG cbSecret, ULONG dwFlags)} - bcrypt.h:785 */
-    @Import(name = "BCryptCreateHash") public static native int bCryptCreateHash(Address hAlgorithm, Address phHash, Address pbHashObject, int cbHashObject, Address pbSecret, int cbSecret, int dwFlags);
+    @Import(name = "BCryptCreateHash") public static native int bCryptCreateHash(Address hAlgorithm, @CType("pointer") Address phHash, Address pbHashObject, int cbHashObject, Address pbSecret, int cbSecret, int dwFlags);
 
     /** {@code NTSTATUS BCryptHashData(BCRYPT_HASH_HANDLE hHash, PUCHAR pbInput, ULONG cbInput, ULONG dwFlags)} - bcrypt.h:786 */
     @Import(name = "BCryptHashData") public static native int bCryptHashData(Address hHash, Address pbInput, int cbInput, int dwFlags);
@@ -222,143 +376,287 @@ public final class WinApi {
     /** {@code NTSTATUS BCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE hAlgorithm, ULONG dwFlags)} - bcrypt.h:767 */
     @Import(name = "BCryptCloseAlgorithmProvider") public static native int bCryptCloseAlgorithmProvider(Address hAlgorithm, int dwFlags);
 
-    /** {@code WINBOOL CreateDirectoryA(LPCSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes)} - fileapi.h:191 */
-    @Import(name = "CreateDirectoryA") public static native int createDirectoryA(Address lpPathName, Address lpSecurityAttributes);
+    /** {@code WINBOOL CreateDirectoryW(LPCWSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes)} - fileapi.h:192 */
+    @Import(name = "CreateDirectoryW") public static native int createDirectoryW(@CType("wchar_t") Address lpPathName, @CType("struct _SECURITY_ATTRIBUTES") Address lpSecurityAttributes);
 
-    /** {@code WINBOOL RemoveDirectoryA(LPCSTR lpPathName)} - fileapi.h:207 */
-    @Import(name = "RemoveDirectoryA") public static native int removeDirectoryA(Address lpPathName);
+    /** {@code CreateDirectoryW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int createDirectoryW(String lpPathName, @CType("struct _SECURITY_ATTRIBUTES") Address lpSecurityAttributes) {
+        var scope_ = N.mark();
+        var result_ = createDirectoryW(N.wcstr(lpPathName), lpSecurityAttributes);
+        N.release(scope_);
+        return result_;
+    }
 
-    /** {@code WINBOOL MoveFileExA(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, DWORD dwFlags)} - winbase.h:2467 */
-    @Import(name = "MoveFileExA") public static native int moveFileExA(Address lpExistingFileName, Address lpNewFileName, int dwFlags);
+    /** {@code WINBOOL RemoveDirectoryW(LPCWSTR lpPathName)} - fileapi.h:208 */
+    @Import(name = "RemoveDirectoryW") public static native int removeDirectoryW(@CType("wchar_t") Address lpPathName);
 
-    /** {@code DWORD GetTempPathA(DWORD nBufferLength, LPSTR lpBuffer)} - fileapi.h:215 */
-    @Import(name = "GetTempPathA") public static native int getTempPathA(int nBufferLength, Address lpBuffer);
+    /** {@code RemoveDirectoryW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int removeDirectoryW(String lpPathName) {
+        var scope_ = N.mark();
+        var result_ = removeDirectoryW(N.wcstr(lpPathName));
+        N.release(scope_);
+        return result_;
+    }
 
-    /** {@code UINT GetSystemDirectoryA(LPSTR lpBuffer, UINT uSize)} - sysinfoapi.h:123 */
-    @Import(name = "GetSystemDirectoryA") public static native int getSystemDirectoryA(Address lpBuffer, int uSize);
+    /** {@code WINBOOL MoveFileExW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, DWORD dwFlags)} - winbase.h:2468 */
+    @Import(name = "MoveFileExW") public static native int moveFileExW(@CType("wchar_t") Address lpExistingFileName, @CType("wchar_t") Address lpNewFileName, int dwFlags);
 
-    /** {@code WINBOOL SetFileAttributesA(LPCSTR lpFileName, DWORD dwFileAttributes)} - fileapi.h:210 */
-    @Import(name = "SetFileAttributesA") public static native int setFileAttributesA(Address lpFileName, int dwFileAttributes);
+    /** {@code MoveFileExW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int moveFileExW(String lpExistingFileName, String lpNewFileName, int dwFlags) {
+        var scope_ = N.mark();
+        var result_ = moveFileExW(N.wcstr(lpExistingFileName), N.wcstr(lpNewFileName), dwFlags);
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code DWORD GetTempPathW(DWORD nBufferLength, LPWSTR lpBuffer)} - fileapi.h:216 */
+    @Import(name = "GetTempPathW") public static native int getTempPathW(int nBufferLength, @CType("wchar_t") Address lpBuffer);
+
+    /** {@code UINT GetSystemDirectoryW(LPWSTR lpBuffer, UINT uSize)} - sysinfoapi.h:124 */
+    @Import(name = "GetSystemDirectoryW") public static native int getSystemDirectoryW(@CType("wchar_t") Address lpBuffer, int uSize);
+
+    /** {@code WINBOOL SetFileAttributesW(LPCWSTR lpFileName, DWORD dwFileAttributes)} - fileapi.h:211 */
+    @Import(name = "SetFileAttributesW") public static native int setFileAttributesW(@CType("wchar_t") Address lpFileName, int dwFileAttributes);
+
+    /** {@code SetFileAttributesW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int setFileAttributesW(String lpFileName, int dwFileAttributes) {
+        var scope_ = N.mark();
+        var result_ = setFileAttributesW(N.wcstr(lpFileName), dwFileAttributes);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code WINBOOL InitCommonControlsEx(const INITCOMMONCONTROLSEX *)} - commctrl.h:74 */
-    @Import(name = "InitCommonControlsEx") public static native int initCommonControlsEx(Address arg0);
+    @Import(name = "InitCommonControlsEx") public static native int initCommonControlsEx(@CType("struct tagINITCOMMONCONTROLSEX") Address arg0);
 
-    /** {@code HWND CreateWindowExA(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)} - winuser.h:2203 */
-    @Import(name = "CreateWindowExA") public static native Address createWindowExA(int dwExStyle, Address lpClassName, Address lpWindowName, int dwStyle, int X, int Y, int nWidth, int nHeight, Address hWndParent, Address hMenu, Address hInstance, Address lpParam);
+    /** {@code HWND CreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)} - winuser.h:2204 */
+    @Import(name = "CreateWindowExW") @CType("struct HWND__") public static native Address createWindowExW(int dwExStyle, @CType("wchar_t") Address lpClassName, @CType("wchar_t") Address lpWindowName, int dwStyle, int X, int Y, int nWidth, int nHeight, @CType("struct HWND__") Address hWndParent, @CType("struct HMENU__") Address hMenu, @CType("struct HINSTANCE__") Address hInstance, Address lpParam);
+
+    /** {@code CreateWindowExW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    @CType("struct HWND__") public static Address createWindowExW(int dwExStyle, String lpClassName, String lpWindowName, int dwStyle, int X, int Y, int nWidth, int nHeight, @CType("struct HWND__") Address hWndParent, @CType("struct HMENU__") Address hMenu, @CType("struct HINSTANCE__") Address hInstance, Address lpParam) {
+        var scope_ = N.mark();
+        var result_ = createWindowExW(dwExStyle, N.wcstr(lpClassName), N.wcstr(lpWindowName), dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code UINT ExtractIconExW(LPCWSTR lpszFile, int nIconIndex, HICON *phiconLarge, HICON *phiconSmall, UINT nIcons)} - shellapi.h:151 */
-    @Import(name = "ExtractIconExW") public static native int extractIconExW(Address lpszFile, int nIconIndex, Address phiconLarge, Address phiconSmall, int nIcons);
+    @Import(name = "ExtractIconExW") public static native int extractIconExW(@CType("wchar_t") Address lpszFile, int nIconIndex, @CType("pointer") Address phiconLarge, @CType("pointer") Address phiconSmall, int nIcons);
+
+    /** {@code ExtractIconExW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int extractIconExW(String lpszFile, int nIconIndex, @CType("pointer") Address phiconLarge, @CType("pointer") Address phiconSmall, int nIcons) {
+        var scope_ = N.mark();
+        var result_ = extractIconExW(N.wcstr(lpszFile), nIconIndex, phiconLarge, phiconSmall, nIcons);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code HMENU GetSystemMenu(HWND hWnd, WINBOOL bRevert)} - winuser.h:3277 */
-    @Import(name = "GetSystemMenu") public static native Address getSystemMenu(Address hWnd, int bRevert);
+    @Import(name = "GetSystemMenu") @CType("struct HMENU__") public static native Address getSystemMenu(@CType("struct HWND__") Address hWnd, int bRevert);
 
     /** {@code WINBOOL EnableMenuItem(HMENU hMenu, UINT uIDEnableItem, UINT uEnable)} - winuser.h:3282 */
-    @Import(name = "EnableMenuItem") public static native int enableMenuItem(Address hMenu, int uIDEnableItem, int uEnable);
+    @Import(name = "EnableMenuItem") public static native int enableMenuItem(@CType("struct HMENU__") Address hMenu, int uIDEnableItem, int uEnable);
 
     /** {@code WINBOOL DestroyIcon(HICON hIcon)} - winuser.h:4165 */
-    @Import(name = "DestroyIcon") public static native int destroyIcon(Address hIcon);
+    @Import(name = "DestroyIcon") public static native int destroyIcon(@CType("struct HICON__") Address hIcon);
 
     /** {@code WINBOOL DestroyWindow(HWND hWnd)} - winuser.h:2212 */
-    @Import(name = "DestroyWindow") public static native int destroyWindow(Address hWnd);
+    @Import(name = "DestroyWindow") public static native int destroyWindow(@CType("struct HWND__") Address hWnd);
 
     /** {@code WINBOOL UpdateWindow(HWND hWnd)} - winuser.h:3502 */
-    @Import(name = "UpdateWindow") public static native int updateWindow(Address hWnd);
+    @Import(name = "UpdateWindow") public static native int updateWindow(@CType("struct HWND__") Address hWnd);
 
-    /** {@code LRESULT SendMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)} - winuser.h:2049 */
-    @Import(name = "SendMessageA") public static native long sendMessageA(Address hWnd, int Msg, long wParam, long lParam);
+    /** {@code LRESULT SendMessageW(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)} - winuser.h:2050 */
+    @Import(name = "SendMessageW") public static native long sendMessageW(@CType("struct HWND__") Address hWnd, int Msg, long wParam, long lParam);
 
-    /** {@code WINBOOL PeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg)} - winuser.h:1973 */
-    @Import(name = "PeekMessageA") public static native int peekMessageA(Address lpMsg, Address hWnd, int wMsgFilterMin, int wMsgFilterMax, int wRemoveMsg);
+    /** {@code WINBOOL PeekMessageW(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg)} - winuser.h:1974 */
+    @Import(name = "PeekMessageW") public static native int peekMessageW(@CType("struct tagMSG") Address lpMsg, @CType("struct HWND__") Address hWnd, int wMsgFilterMin, int wMsgFilterMax, int wRemoveMsg);
 
     /** {@code WINBOOL TranslateMessage(const MSG *lpMsg)} - winuser.h:1969 */
-    @Import(name = "TranslateMessage") public static native int translateMessage(Address lpMsg);
+    @Import(name = "TranslateMessage") public static native int translateMessage(@CType("struct tagMSG") Address lpMsg);
 
-    /** {@code LRESULT DispatchMessageA(const MSG *lpMsg)} - winuser.h:1970 */
-    @Import(name = "DispatchMessageA") public static native long dispatchMessageA(Address lpMsg);
+    /** {@code LRESULT DispatchMessageW(const MSG *lpMsg)} - winuser.h:1971 */
+    @Import(name = "DispatchMessageW") public static native long dispatchMessageW(@CType("struct tagMSG") Address lpMsg);
 
     /** {@code DWORD GetLastError()} - errhandlingapi.h:49 */
     @Import(name = "GetLastError") public static native int getLastError();
 
     /** {@code HANDLE BeginUpdateResourceW(LPCWSTR pFileName, WINBOOL bDeleteExistingResources)} - winbase.h:2052 */
-    @Import(name = "BeginUpdateResourceW") public static native Address beginUpdateResourceW(Address pFileName, int bDeleteExistingResources);
+    @Import(name = "BeginUpdateResourceW") public static native Address beginUpdateResourceW(@CType("wchar_t") Address pFileName, int bDeleteExistingResources);
+
+    /** {@code BeginUpdateResourceW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static Address beginUpdateResourceW(String pFileName, int bDeleteExistingResources) {
+        var scope_ = N.mark();
+        var result_ = beginUpdateResourceW(N.wcstr(pFileName), bDeleteExistingResources);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code WINBOOL UpdateResourceW(HANDLE hUpdate, LPCWSTR lpType, LPCWSTR lpName, WORD wLanguage, LPVOID lpData, DWORD cb)} - winbase.h:2054 */
-    @Import(name = "UpdateResourceW") public static native int updateResourceW(Address hUpdate, Address lpType, Address lpName, short wLanguage, Address lpData, int cb);
+    @Import(name = "UpdateResourceW") public static native int updateResourceW(Address hUpdate, @CType("wchar_t") Address lpType, @CType("wchar_t") Address lpName, short wLanguage, Address lpData, int cb);
+
+    /** {@code UpdateResourceW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int updateResourceW(Address hUpdate, String lpType, String lpName, short wLanguage, Address lpData, int cb) {
+        var scope_ = N.mark();
+        var result_ = updateResourceW(hUpdate, N.wcstr(lpType), N.wcstr(lpName), wLanguage, lpData, cb);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code WINBOOL EndUpdateResourceW(HANDLE hUpdate, WINBOOL fDiscard)} - winbase.h:2056 */
     @Import(name = "EndUpdateResourceW") public static native int endUpdateResourceW(Address hUpdate, int fDiscard);
 
     /** {@code HMODULE LoadLibraryExW(LPCWSTR lpLibFileName, HANDLE hFile, DWORD dwFlags)} - libloaderapi.h:171 */
-    @Import(name = "LoadLibraryExW") public static native Address loadLibraryExW(Address lpLibFileName, Address hFile, int dwFlags);
+    @Import(name = "LoadLibraryExW") @CType("struct HINSTANCE__") public static native Address loadLibraryExW(@CType("wchar_t") Address lpLibFileName, Address hFile, int dwFlags);
+
+    /** {@code LoadLibraryExW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    @CType("struct HINSTANCE__") public static Address loadLibraryExW(String lpLibFileName, Address hFile, int dwFlags) {
+        var scope_ = N.mark();
+        var result_ = loadLibraryExW(N.wcstr(lpLibFileName), hFile, dwFlags);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code HRSRC FindResourceExW(HMODULE hModule, LPCWSTR lpType, LPCWSTR lpName, WORD wLanguage)} - libloaderapi.h:165 */
-    @Import(name = "FindResourceExW") public static native Address findResourceExW(Address hModule, Address lpType, Address lpName, short wLanguage);
+    @Import(name = "FindResourceExW") @CType("struct HRSRC__") public static native Address findResourceExW(@CType("struct HINSTANCE__") Address hModule, @CType("wchar_t") Address lpType, @CType("wchar_t") Address lpName, short wLanguage);
+
+    /** {@code FindResourceExW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    @CType("struct HRSRC__") public static Address findResourceExW(@CType("struct HINSTANCE__") Address hModule, String lpType, String lpName, short wLanguage) {
+        var scope_ = N.mark();
+        var result_ = findResourceExW(hModule, N.wcstr(lpType), N.wcstr(lpName), wLanguage);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code HGLOBAL LoadResource(HMODULE hModule, HRSRC hResInfo)} - libloaderapi.h:73 */
-    @Import(name = "LoadResource") public static native Address loadResource(Address hModule, Address hResInfo);
+    @Import(name = "LoadResource") public static native Address loadResource(@CType("struct HINSTANCE__") Address hModule, @CType("struct HRSRC__") Address hResInfo);
 
     /** {@code DWORD SizeofResource(HMODULE hModule, HRSRC hResInfo)} - libloaderapi.h:172 */
-    @Import(name = "SizeofResource") public static native int sizeofResource(Address hModule, Address hResInfo);
+    @Import(name = "SizeofResource") public static native int sizeofResource(@CType("struct HINSTANCE__") Address hModule, @CType("struct HRSRC__") Address hResInfo);
 
     /** {@code LPVOID LockResource(HGLOBAL hResData)} - libloaderapi.h:74 */
     @Import(name = "LockResource") public static native Address lockResource(Address hResData);
 
     /** {@code WINBOOL EnumResourceNamesW(HMODULE hModule, LPCWSTR lpType, ENUMRESNAMEPROCW lpEnumFunc, LONG_PTR lParam)} - libloaderapi.h:71 */
-    @Import(name = "EnumResourceNamesW") public static native int enumResourceNamesW(Address hModule, Address lpType, Address lpEnumFunc, long lParam);
+    @Import(name = "EnumResourceNamesW") public static native int enumResourceNamesW(@CType("struct HINSTANCE__") Address hModule, @CType("wchar_t") Address lpType, Address lpEnumFunc, long lParam);
+
+    /** {@code EnumResourceNamesW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int enumResourceNamesW(@CType("struct HINSTANCE__") Address hModule, String lpType, Address lpEnumFunc, long lParam) {
+        var scope_ = N.mark();
+        var result_ = enumResourceNamesW(hModule, N.wcstr(lpType), lpEnumFunc, lParam);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code WINBOOL EnumResourceLanguagesW(HMODULE hModule, LPCWSTR lpType, LPCWSTR lpName, ENUMRESLANGPROCW lpEnumFunc, LONG_PTR lParam)} - libloaderapi.h:85 */
-    @Import(name = "EnumResourceLanguagesW") public static native int enumResourceLanguagesW(Address hModule, Address lpType, Address lpName, Address lpEnumFunc, long lParam);
+    @Import(name = "EnumResourceLanguagesW") public static native int enumResourceLanguagesW(@CType("struct HINSTANCE__") Address hModule, @CType("wchar_t") Address lpType, @CType("wchar_t") Address lpName, Address lpEnumFunc, long lParam);
+
+    /** {@code EnumResourceLanguagesW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int enumResourceLanguagesW(@CType("struct HINSTANCE__") Address hModule, String lpType, String lpName, Address lpEnumFunc, long lParam) {
+        var scope_ = N.mark();
+        var result_ = enumResourceLanguagesW(hModule, N.wcstr(lpType), N.wcstr(lpName), lpEnumFunc, lParam);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code WINBOOL EnumResourceTypesW(HMODULE hModule, ENUMRESTYPEPROCW lpEnumFunc, LONG_PTR lParam)} - winbase.h:2046 */
-    @Import(name = "EnumResourceTypesW") public static native int enumResourceTypesW(Address hModule, Address lpEnumFunc, long lParam);
+    @Import(name = "EnumResourceTypesW") public static native int enumResourceTypesW(@CType("struct HINSTANCE__") Address hModule, Address lpEnumFunc, long lParam);
 
     /** {@code WINBOOL VerQueryValueW(LPCVOID pBlock, LPCWSTR lpSubBlock, LPVOID *lplpBuffer, PUINT puLen)} - winver.h:163 */
-    @Import(name = "VerQueryValueW") public static native int verQueryValueW(Address pBlock, Address lpSubBlock, Address lplpBuffer, Address puLen);
+    @Import(name = "VerQueryValueW") public static native int verQueryValueW(Address pBlock, @CType("wchar_t") Address lpSubBlock, @CType("pointer") Address lplpBuffer, @CType("int32") Address puLen);
+
+    /** {@code VerQueryValueW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int verQueryValueW(Address pBlock, String lpSubBlock, @CType("pointer") Address lplpBuffer, @CType("int32") Address puLen) {
+        var scope_ = N.mark();
+        var result_ = verQueryValueW(pBlock, N.wcstr(lpSubBlock), lplpBuffer, puLen);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code WINBOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped)} - fileapi.h:214 */
-    @Import(name = "WriteFile") public static native int writeFile(Address hFile, Address lpBuffer, int nNumberOfBytesToWrite, Address lpNumberOfBytesWritten, Address lpOverlapped);
+    @Import(name = "WriteFile") public static native int writeFile(Address hFile, Address lpBuffer, int nNumberOfBytesToWrite, @CType("int32") Address lpNumberOfBytesWritten, @CType("struct _OVERLAPPED") Address lpOverlapped);
 
     /** {@code DWORD SetFilePointer(HANDLE hFile, LONG lDistanceToMove, PLONG lpDistanceToMoveHigh, DWORD dwMoveMethod)} - fileapi.h:33 */
-    @Import(name = "SetFilePointer") public static native int setFilePointer(Address hFile, int lDistanceToMove, Address lpDistanceToMoveHigh, int dwMoveMethod);
+    @Import(name = "SetFilePointer") public static native int setFilePointer(Address hFile, int lDistanceToMove, @CType("int32") Address lpDistanceToMoveHigh, int dwMoveMethod);
 
     /** {@code WINBOOL GetFileSizeEx(HANDLE hFile, PLARGE_INTEGER lpFileSize)} - fileapi.h:78 */
-    @Import(name = "GetFileSizeEx") public static native int getFileSizeEx(Address hFile, Address lpFileSize);
+    @Import(name = "GetFileSizeEx") public static native int getFileSizeEx(Address hFile, @CType("union _LARGE_INTEGER") Address lpFileSize);
 
     /** {@code WINBOOL SetEndOfFile(HANDLE hFile)} - fileapi.h:209 */
     @Import(name = "SetEndOfFile") public static native int setEndOfFile(Address hFile);
 
-    /** {@code WINBOOL CopyFileA(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, WINBOOL bFailIfExists)} - winbase.h:2303 */
-    @Import(name = "CopyFileA") public static native int copyFileA(Address lpExistingFileName, Address lpNewFileName, int bFailIfExists);
+    /** {@code WINBOOL CopyFileW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, WINBOOL bFailIfExists)} - winbase.h:2304 */
+    @Import(name = "CopyFileW") public static native int copyFileW(@CType("wchar_t") Address lpExistingFileName, @CType("wchar_t") Address lpNewFileName, int bFailIfExists);
 
-    /** {@code DWORD GetFullPathNameA(LPCSTR lpFileName, DWORD nBufferLength, LPSTR lpBuffer, LPSTR *lpFilePart)} - fileapi.h:81 */
-    @Import(name = "GetFullPathNameA") public static native int getFullPathNameA(Address lpFileName, int nBufferLength, Address lpBuffer, Address lpFilePart);
+    /** {@code CopyFileW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int copyFileW(String lpExistingFileName, String lpNewFileName, int bFailIfExists) {
+        var scope_ = N.mark();
+        var result_ = copyFileW(N.wcstr(lpExistingFileName), N.wcstr(lpNewFileName), bFailIfExists);
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code DWORD GetFullPathNameW(LPCWSTR lpFileName, DWORD nBufferLength, LPWSTR lpBuffer, LPWSTR *lpFilePart)} - fileapi.h:82 */
+    @Import(name = "GetFullPathNameW") public static native int getFullPathNameW(@CType("wchar_t") Address lpFileName, int nBufferLength, @CType("wchar_t") Address lpBuffer, @CType("pointer") Address lpFilePart);
+
+    /** {@code GetFullPathNameW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int getFullPathNameW(String lpFileName, int nBufferLength, @CType("wchar_t") Address lpBuffer, @CType("pointer") Address lpFilePart) {
+        var scope_ = N.mark();
+        var result_ = getFullPathNameW(N.wcstr(lpFileName), nBufferLength, lpBuffer, lpFilePart);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code HCERTSTORE CertOpenStore(LPCSTR lpszStoreProvider, DWORD dwEncodingType, HCRYPTPROV_LEGACY hCryptProv, DWORD dwFlags, const void *pvPara)} - wincrypt.h:3976 */
-    @Import(name = "CertOpenStore") public static native Address certOpenStore(Address lpszStoreProvider, int dwEncodingType, long hCryptProv, int dwFlags, Address pvPara);
+    @Import(name = "CertOpenStore") public static native Address certOpenStore(@CType("char") Address lpszStoreProvider, int dwEncodingType, long hCryptProv, int dwFlags, Address pvPara);
+
+    /** {@code CertOpenStore} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static Address certOpenStore(String lpszStoreProvider, int dwEncodingType, long hCryptProv, int dwFlags, Address pvPara) {
+        var scope_ = N.mark();
+        var result_ = certOpenStore(N.utf8(lpszStoreProvider), dwEncodingType, hCryptProv, dwFlags, pvPara);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code PCCERT_CONTEXT CertFindCertificateInStore(HCERTSTORE hCertStore, DWORD dwCertEncodingType, DWORD dwFindFlags, DWORD dwFindType, const void *pvFindPara, PCCERT_CONTEXT pPrevCertContext)} - wincrypt.h:4081 */
-    @Import(name = "CertFindCertificateInStore") public static native Address certFindCertificateInStore(Address hCertStore, int dwCertEncodingType, int dwFindFlags, int dwFindType, Address pvFindPara, Address pPrevCertContext);
+    @Import(name = "CertFindCertificateInStore") @CType("struct _CERT_CONTEXT") public static native Address certFindCertificateInStore(Address hCertStore, int dwCertEncodingType, int dwFindFlags, int dwFindType, Address pvFindPara, @CType("struct _CERT_CONTEXT") Address pPrevCertContext);
 
     /** {@code WINBOOL CertCloseStore(HCERTSTORE hCertStore, DWORD dwFlags)} - wincrypt.h:4078 */
     @Import(name = "CertCloseStore") public static native int certCloseStore(Address hCertStore, int dwFlags);
 
     /** {@code PCCERT_CONTEXT CertEnumCertificatesInStore(HCERTSTORE hCertStore, PCCERT_CONTEXT pPrevCertContext)} - wincrypt.h:4080 */
-    @Import(name = "CertEnumCertificatesInStore") public static native Address certEnumCertificatesInStore(Address hCertStore, Address pPrevCertContext);
+    @Import(name = "CertEnumCertificatesInStore") @CType("struct _CERT_CONTEXT") public static native Address certEnumCertificatesInStore(Address hCertStore, @CType("struct _CERT_CONTEXT") Address pPrevCertContext);
 
     /** {@code WINBOOL CertFreeCertificateContext(PCCERT_CONTEXT pCertContext)} - wincrypt.h:4159 */
-    @Import(name = "CertFreeCertificateContext") public static native int certFreeCertificateContext(Address pCertContext);
+    @Import(name = "CertFreeCertificateContext") public static native int certFreeCertificateContext(@CType("struct _CERT_CONTEXT") Address pCertContext);
 
     /** {@code WINBOOL CryptAcquireCertificatePrivateKey(PCCERT_CONTEXT pCert, DWORD dwFlags, void *pvParameters, HCRYPTPROV_OR_NCRYPT_KEY_HANDLE *phCryptProvOrNCryptKey, DWORD *pdwKeySpec, WINBOOL *pfCallerFreeProvOrNCryptKey)} - wincrypt.h:4584 */
-    @Import(name = "CryptAcquireCertificatePrivateKey") public static native int cryptAcquireCertificatePrivateKey(Address pCert, int dwFlags, Address pvParameters, Address phCryptProvOrNCryptKey, Address pdwKeySpec, Address pfCallerFreeProvOrNCryptKey);
+    @Import(name = "CryptAcquireCertificatePrivateKey") public static native int cryptAcquireCertificatePrivateKey(@CType("struct _CERT_CONTEXT") Address pCert, int dwFlags, Address pvParameters, @CType("int64") Address phCryptProvOrNCryptKey, @CType("int32") Address pdwKeySpec, @CType("int32") Address pfCallerFreeProvOrNCryptKey);
 
     /** {@code HCERTSTORE PFXImportCertStore(CRYPT_DATA_BLOB *pPFX, LPCWSTR szPassword, DWORD dwFlags)} - wincrypt.h:5695 */
-    @Import(name = "PFXImportCertStore") public static native Address pfxImportCertStore(Address pPFX, Address szPassword, int dwFlags);
+    @Import(name = "PFXImportCertStore") public static native Address pfxImportCertStore(@CType("struct _CRYPTOAPI_BLOB") Address pPFX, @CType("wchar_t") Address szPassword, int dwFlags);
+
+    /** {@code PFXImportCertStore} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static Address pfxImportCertStore(@CType("struct _CRYPTOAPI_BLOB") Address pPFX, String szPassword, int dwFlags) {
+        var scope_ = N.mark();
+        var result_ = pfxImportCertStore(pPFX, N.wcstr(szPassword), dwFlags);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code DWORD CertGetNameStringW(PCCERT_CONTEXT pCertContext, DWORD dwType, DWORD dwFlags, void *pvTypePara, LPWSTR pszNameString, DWORD cchNameString)} - wincrypt.h:4621 */
-    @Import(name = "CertGetNameStringW") public static native int certGetNameStringW(Address pCertContext, int dwType, int dwFlags, Address pvTypePara, Address pszNameString, int cchNameString);
+    @Import(name = "CertGetNameStringW") public static native int certGetNameStringW(@CType("struct _CERT_CONTEXT") Address pCertContext, int dwType, int dwFlags, Address pvTypePara, @CType("wchar_t") Address pszNameString, int cchNameString);
 
     /** {@code HRESULT SignerSignEx2(DWORD dwFlags, SIGNER_SUBJECT_INFO *pSubjectInfo, SIGNER_CERT *pSignerCert, SIGNER_SIGNATURE_INFO *pSignatureInfo, void *pProviderInfo, DWORD dwTimestampFlags, PCSTR pszTimestampAlgorithmOid, PCWSTR pwszTimestampURL, PCRYPT_ATTRIBUTES psRequest, void *pSipData, SIGNER_CONTEXT **ppSignerContext, void *pCryptoPolicy, void *pReserved)} - mssign.h:55 */
-    @Import(name = "SignerSignEx2") public static native int signerSignEx2(int dwFlags, Address pSubjectInfo, Address pSignerCert, Address pSignatureInfo, Address pProviderInfo, int dwTimestampFlags, Address pszTimestampAlgorithmOid, Address pwszTimestampURL, Address psRequest, Address pSipData, Address ppSignerContext, Address pCryptoPolicy, Address pReserved);
+    @Import(name = "SignerSignEx2") public static native int signerSignEx2(int dwFlags, Address pSubjectInfo, Address pSignerCert, Address pSignatureInfo, Address pProviderInfo, int dwTimestampFlags, @CType("char") Address pszTimestampAlgorithmOid, @CType("wchar_t") Address pwszTimestampURL, @CType("struct _CRYPT_ATTRIBUTES") Address psRequest, Address pSipData, @CType("pointer") Address ppSignerContext, Address pCryptoPolicy, Address pReserved);
+
+    /** {@code SignerSignEx2} with its read-only text as Strings (N.utf8, N.wcstr), freed when the call returns. */
+    public static int signerSignEx2(int dwFlags, Address pSubjectInfo, Address pSignerCert, Address pSignatureInfo, Address pProviderInfo, int dwTimestampFlags, String pszTimestampAlgorithmOid, String pwszTimestampURL, @CType("struct _CRYPT_ATTRIBUTES") Address psRequest, Address pSipData, @CType("pointer") Address ppSignerContext, Address pCryptoPolicy, Address pReserved) {
+        var scope_ = N.mark();
+        var result_ = signerSignEx2(dwFlags, pSubjectInfo, pSignerCert, pSignatureInfo, pProviderInfo, dwTimestampFlags, N.utf8(pszTimestampAlgorithmOid), N.wcstr(pwszTimestampURL), psRequest, pSipData, ppSignerContext, pCryptoPolicy, pReserved);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code HRESULT SignerFreeSignerContext(SIGNER_CONTEXT *pSignerContext)} - mssign.h:60 */
     @Import(name = "SignerFreeSignerContext") public static native int signerFreeSignerContext(Address pSignerContext);
@@ -455,23 +753,55 @@ public final class WinApi {
     public static final String BCRYPT_SHA256_ALGORITHM = "SHA256"; // wide L"" literal (pass via Wstr), unsigned short*, bcrypt.h:352
     public static final String BCRYPT_OBJECT_LENGTH = "ObjectLength"; // wide L"" literal (pass via Wstr), unsigned short*, bcrypt.h:135
     public static final String BCRYPT_HASH_LENGTH = "HashDigestLength"; // wide L"" literal (pass via Wstr), unsigned short*, bcrypt.h:125
-    /** {@code LONG RegOpenKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult)} - winreg.h:417 */
-    @Import(name = "RegOpenKeyExA") public static native int regOpenKeyExA(Address hKey, Address lpSubKey, int ulOptions, int samDesired, Address phkResult);
+    /** {@code LONG RegOpenKeyExW(HKEY hKey, LPCWSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult)} - winreg.h:418 */
+    @Import(name = "RegOpenKeyExW") public static native int regOpenKeyExW(@CType("struct HKEY__") Address hKey, @CType("wchar_t") Address lpSubKey, int ulOptions, int samDesired, @CType("pointer") Address phkResult);
 
-    /** {@code LONG RegEnumKeyExA(HKEY hKey, DWORD dwIndex, LPSTR lpName, LPDWORD lpcchName, LPDWORD lpReserved, LPSTR lpClass, LPDWORD lpcchClass, PFILETIME lpftLastWriteTime)} - winreg.h:410 */
-    @Import(name = "RegEnumKeyExA") public static native int regEnumKeyExA(Address hKey, int dwIndex, Address lpName, Address lpcchName, Address lpReserved, Address lpClass, Address lpcchClass, Address lpftLastWriteTime);
+    /** {@code RegOpenKeyExW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int regOpenKeyExW(@CType("struct HKEY__") Address hKey, String lpSubKey, int ulOptions, int samDesired, @CType("pointer") Address phkResult) {
+        var scope_ = N.mark();
+        var result_ = regOpenKeyExW(hKey, N.wcstr(lpSubKey), ulOptions, samDesired, phkResult);
+        N.release(scope_);
+        return result_;
+    }
 
-    /** {@code LONG RegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)} - winreg.h:421 */
-    @Import(name = "RegQueryValueExA") public static native int regQueryValueExA(Address hKey, Address lpValueName, Address lpReserved, Address lpType, Address lpData, Address lpcbData);
+    /** {@code LONG RegEnumKeyExW(HKEY hKey, DWORD dwIndex, LPWSTR lpName, LPDWORD lpcchName, LPDWORD lpReserved, LPWSTR lpClass, LPDWORD lpcchClass, PFILETIME lpftLastWriteTime)} - winreg.h:411 */
+    @Import(name = "RegEnumKeyExW") public static native int regEnumKeyExW(@CType("struct HKEY__") Address hKey, int dwIndex, @CType("wchar_t") Address lpName, @CType("int32") Address lpcchName, @CType("int32") Address lpReserved, @CType("wchar_t") Address lpClass, @CType("int32") Address lpcchClass, @CType("struct _FILETIME") Address lpftLastWriteTime);
+
+    /** {@code LONG RegQueryValueExW(HKEY hKey, LPCWSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)} - winreg.h:422 */
+    @Import(name = "RegQueryValueExW") public static native int regQueryValueExW(@CType("struct HKEY__") Address hKey, @CType("wchar_t") Address lpValueName, @CType("int32") Address lpReserved, @CType("int32") Address lpType, Address lpData, @CType("int32") Address lpcbData);
+
+    /** {@code RegQueryValueExW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int regQueryValueExW(@CType("struct HKEY__") Address hKey, String lpValueName, @CType("int32") Address lpReserved, @CType("int32") Address lpType, Address lpData, @CType("int32") Address lpcbData) {
+        var scope_ = N.mark();
+        var result_ = regQueryValueExW(hKey, N.wcstr(lpValueName), lpReserved, lpType, lpData, lpcbData);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code LONG RegCloseKey(HKEY hKey)} - winreg.h:403 */
-    @Import(name = "RegCloseKey") public static native int regCloseKey(Address hKey);
+    @Import(name = "RegCloseKey") public static native int regCloseKey(@CType("struct HKEY__") Address hKey);
 
-    /** {@code DWORD GetFileVersionInfoSizeA(LPCSTR lptstrFilename, LPDWORD lpdwHandle)} - winver.h:149 */
-    @Import(name = "GetFileVersionInfoSizeA") public static native int getFileVersionInfoSizeA(Address lptstrFilename, Address lpdwHandle);
+    /** {@code DWORD GetFileVersionInfoSizeW(LPCWSTR lptstrFilename, LPDWORD lpdwHandle)} - winver.h:150 */
+    @Import(name = "GetFileVersionInfoSizeW") public static native int getFileVersionInfoSizeW(@CType("wchar_t") Address lptstrFilename, @CType("int32") Address lpdwHandle);
 
-    /** {@code WINBOOL GetFileVersionInfoA(LPCSTR lptstrFilename, DWORD dwHandle, DWORD dwLen, LPVOID lpData)} - winver.h:153 */
-    @Import(name = "GetFileVersionInfoA") public static native int getFileVersionInfoA(Address lptstrFilename, int dwHandle, int dwLen, Address lpData);
+    /** {@code GetFileVersionInfoSizeW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int getFileVersionInfoSizeW(String lptstrFilename, @CType("int32") Address lpdwHandle) {
+        var scope_ = N.mark();
+        var result_ = getFileVersionInfoSizeW(N.wcstr(lptstrFilename), lpdwHandle);
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code WINBOOL GetFileVersionInfoW(LPCWSTR lptstrFilename, DWORD dwHandle, DWORD dwLen, LPVOID lpData)} - winver.h:154 */
+    @Import(name = "GetFileVersionInfoW") public static native int getFileVersionInfoW(@CType("wchar_t") Address lptstrFilename, int dwHandle, int dwLen, Address lpData);
+
+    /** {@code GetFileVersionInfoW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int getFileVersionInfoW(String lptstrFilename, int dwHandle, int dwLen, Address lpData) {
+        var scope_ = N.mark();
+        var result_ = getFileVersionInfoW(N.wcstr(lptstrFilename), dwHandle, dwLen, lpData);
+        N.release(scope_);
+        return result_;
+    }
 
     public static final Address HKEY_LOCAL_MACHINE = Address.fromLong(-2147483646L); // void*, winreg.h:48
     public static final Address HKEY_CURRENT_USER = Address.fromLong(-2147483647L); // void*, winreg.h:47
@@ -484,10 +814,7 @@ public final class WinApi {
     @Import(name = "SetHandleInformation") public static native int setHandleInformation(Address hObject, int dwMask, int dwFlags);
 
     /** {@code WINBOOL GetConsoleScreenBufferInfo(HANDLE console_output, PCONSOLE_SCREEN_BUFFER_INFO console_screen_buffer_info)} - consoleapi2.h:72 */
-    @Import(name = "GetConsoleScreenBufferInfo") public static native int getConsoleScreenBufferInfo(Address console_output, Address console_screen_buffer_info);
-
-    /** {@code HANDLE CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)} - fileapi.h:64 */
-    @Import(name = "CreateFileW") public static native Address createFileW(Address lpFileName, int dwDesiredAccess, int dwShareMode, Address lpSecurityAttributes, int dwCreationDisposition, int dwFlagsAndAttributes, Address hTemplateFile);
+    @Import(name = "GetConsoleScreenBufferInfo") public static native int getConsoleScreenBufferInfo(Address console_output, @CType("struct _CONSOLE_SCREEN_BUFFER_INFO") Address console_screen_buffer_info);
 
     /** {@code ULONGLONG GetTickCount64()} - sysinfoapi.h:42 */
     @Import(name = "GetTickCount64") public static native long getTickCount64();
@@ -495,53 +822,66 @@ public final class WinApi {
     public static final int HANDLE_FLAG_INHERIT = 1; // int, winbase.h:1355
     public static final int CREATE_ALWAYS = 2; // int, fileapi.h:19
     public static final int WAIT_TIMEOUT = 258; // long, winerror.h:356
-    /** {@code #define JX_ReadConsoleOutputCharacterA(5 arguments)} - a function-like macro, expanded by the C compiler at the call; result: int, 4 bytes, per clang */
-    @Import(name = "JX_ReadConsoleOutputCharacterA") public static native int readConsoleOutputCharacterA(Address arg0, Address arg1, int arg2, Address arg3, Address arg4);
+    /** {@code #define JX_ReadConsoleOutputCharacterW(5 arguments)} - a function-like macro, expanded by the C compiler at the call; result: int, 4 bytes, per clang */
+    @Import(name = "JX_ReadConsoleOutputCharacterW") public static native int readConsoleOutputCharacterW(Address arg0, Address arg1, int arg2, Address arg3, Address arg4);
 
     /** {@code int atexit(void (*)(void) __attribute__((cdecl)))} - stdlib.h:273 */
-    @Import(name = "atexit") public static native int atexit(Address arg0);
+    @Import(name = "atexit") public static native int atexit(@Escapes Address arg0);
 
     /** {@code void ExitProcess(UINT uExitCode)} - processthreadsapi.h:28 */
     @Import(name = "ExitProcess") public static native void exitProcess(int uExitCode);
 
     /** {@code HINSTANCE ShellExecuteW(HWND hwnd, LPCWSTR lpOperation, LPCWSTR lpFile, LPCWSTR lpParameters, LPCWSTR lpDirectory, INT nShowCmd)} - shellapi.h:76 */
-    @Import(name = "ShellExecuteW") public static native Address shellExecuteW(Address hwnd, Address lpOperation, Address lpFile, Address lpParameters, Address lpDirectory, int nShowCmd);
+    @Import(name = "ShellExecuteW") @CType("struct HINSTANCE__") public static native Address shellExecuteW(@CType("struct HWND__") Address hwnd, @CType("wchar_t") Address lpOperation, @CType("wchar_t") Address lpFile, @CType("wchar_t") Address lpParameters, @CType("wchar_t") Address lpDirectory, int nShowCmd);
+
+    /** {@code ShellExecuteW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    @CType("struct HINSTANCE__") public static Address shellExecuteW(@CType("struct HWND__") Address hwnd, String lpOperation, String lpFile, String lpParameters, String lpDirectory, int nShowCmd) {
+        var scope_ = N.mark();
+        var result_ = shellExecuteW(hwnd, N.wcstr(lpOperation), N.wcstr(lpFile), N.wcstr(lpParameters), N.wcstr(lpDirectory), nShowCmd);
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code WINBOOL SetWindowTextW(HWND hWnd, LPCWSTR lpString)} - winuser.h:3638 */
-    @Import(name = "SetWindowTextW") public static native int setWindowTextW(Address hWnd, Address lpString);
+    @Import(name = "SetWindowTextW") public static native int setWindowTextW(@CType("struct HWND__") Address hWnd, @CType("wchar_t") Address lpString);
+
+    /** {@code SetWindowTextW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int setWindowTextW(@CType("struct HWND__") Address hWnd, String lpString) {
+        var scope_ = N.mark();
+        var result_ = setWindowTextW(hWnd, N.wcstr(lpString));
+        N.release(scope_);
+        return result_;
+    }
 
     /** {@code int GetWindowTextW(HWND hWnd, LPWSTR lpString, int nMaxCount)} - winuser.h:3640 */
-    @Import(name = "GetWindowTextW") public static native int getWindowTextW(Address hWnd, Address lpString, int nMaxCount);
+    @Import(name = "GetWindowTextW") public static native int getWindowTextW(@CType("struct HWND__") Address hWnd, @CType("wchar_t") Address lpString, int nMaxCount);
 
     /** {@code int GetWindowTextLengthW(HWND hWnd)} - winuser.h:3642 */
-    @Import(name = "GetWindowTextLengthW") public static native int getWindowTextLengthW(Address hWnd);
-
-    /** {@code WINBOOL SetWindowTextA(HWND hWnd, LPCSTR lpString)} - winuser.h:3637 */
-    @Import(name = "SetWindowTextA") public static native int setWindowTextA(Address hWnd, Address lpString);
+    @Import(name = "GetWindowTextLengthW") public static native int getWindowTextLengthW(@CType("struct HWND__") Address hWnd);
 
     /** {@code WINBOOL IsDialogMessageW(HWND hDlg, LPMSG lpMsg)} - winuser.h:4618 */
-    @Import(name = "IsDialogMessageW") public static native int isDialogMessageW(Address hDlg, Address lpMsg);
+    @Import(name = "IsDialogMessageW") public static native int isDialogMessageW(@CType("struct HWND__") Address hDlg, @CType("struct tagMSG") Address lpMsg);
 
     /** {@code HWND SetFocus(HWND hWnd)} - winuser.h:2576 */
-    @Import(name = "SetFocus") public static native Address setFocus(Address hWnd);
+    @Import(name = "SetFocus") @CType("struct HWND__") public static native Address setFocus(@CType("struct HWND__") Address hWnd);
 
     /** {@code WINBOOL IsChild(HWND hWndParent, HWND hWnd)} - winuser.h:2211 */
-    @Import(name = "IsChild") public static native int isChild(Address hWndParent, Address hWnd);
+    @Import(name = "IsChild") public static native int isChild(@CType("struct HWND__") Address hWndParent, @CType("struct HWND__") Address hWnd);
 
     /** {@code WINBOOL IsWindowVisible(HWND hWnd)} - winuser.h:2307 */
-    @Import(name = "IsWindowVisible") public static native int isWindowVisible(Address hWnd);
+    @Import(name = "IsWindowVisible") public static native int isWindowVisible(@CType("struct HWND__") Address hWnd);
 
     /** {@code WINBOOL SetForegroundWindow(HWND hWnd)} - winuser.h:3507 */
-    @Import(name = "SetForegroundWindow") public static native int setForegroundWindow(Address hWnd);
+    @Import(name = "SetForegroundWindow") public static native int setForegroundWindow(@CType("struct HWND__") Address hWnd);
 
     /** {@code DWORD MsgWaitForMultipleObjects(DWORD nCount, const HANDLE *pHandles, WINBOOL fWaitAll, DWORD dwMilliseconds, DWORD dwWakeMask)} - winuser.h:2989 */
-    @Import(name = "MsgWaitForMultipleObjects") public static native int msgWaitForMultipleObjects(int nCount, Address pHandles, int fWaitAll, int dwMilliseconds, int dwWakeMask);
+    @Import(name = "MsgWaitForMultipleObjects") public static native int msgWaitForMultipleObjects(int nCount, @CType("pointer") Address pHandles, int fWaitAll, int dwMilliseconds, int dwWakeMask);
 
     /** {@code HGDIOBJ GetStockObject(int i)} - wingdi.h:3086 */
     @Import(name = "GetStockObject") public static native Address getStockObject(int i);
 
     /** {@code void GetSystemTimeAsFileTime(LPFILETIME lpSystemTimeAsFileTime)} - sysinfoapi.h:38 */
-    @Import(name = "GetSystemTimeAsFileTime") public static native void getSystemTimeAsFileTime(Address lpSystemTimeAsFileTime);
+    @Import(name = "GetSystemTimeAsFileTime") public static native void getSystemTimeAsFileTime(@CType("struct _FILETIME") Address lpSystemTimeAsFileTime);
 
     public static final int ES_MULTILINE = 4; // long, winuser.h:4388
     public static final int ES_AUTOVSCROLL = 64; // long, winuser.h:4392
@@ -574,16 +914,16 @@ public final class WinApi {
     @Import(name = "SystemParametersInfoW") public static native int systemParametersInfoW(int uiAction, int uiParam, Address pvParam, int fWinIni);
 
     /** {@code HFONT CreateFontIndirectW(const LOGFONTW *lplf)} - wingdi.h:2901 */
-    @Import(name = "CreateFontIndirectW") public static native Address createFontIndirectW(Address lplf);
+    @Import(name = "CreateFontIndirectW") @CType("struct HFONT__") public static native Address createFontIndirectW(@CType("struct tagLOGFONTW") Address lplf);
 
     /** {@code HDC GetDC(HWND hWnd)} - winuser.h:3511 */
-    @Import(name = "GetDC") public static native Address getDC(Address hWnd);
+    @Import(name = "GetDC") @CType("struct HDC__") public static native Address getDC(@CType("struct HWND__") Address hWnd);
 
     /** {@code int ReleaseDC(HWND hWnd, HDC hDC)} - winuser.h:3550 */
-    @Import(name = "ReleaseDC") public static native int releaseDC(Address hWnd, Address hDC);
+    @Import(name = "ReleaseDC") public static native int releaseDC(@CType("struct HWND__") Address hWnd, @CType("struct HDC__") Address hDC);
 
     /** {@code int GetDeviceCaps(HDC hdc, int index)} - wingdi.h:3051 */
-    @Import(name = "GetDeviceCaps") public static native int getDeviceCaps(Address hdc, int index);
+    @Import(name = "GetDeviceCaps") public static native int getDeviceCaps(@CType("struct HDC__") Address hdc, int index);
 
     public static final int LOGPIXELSY = 90; // int, wingdi.h:1539
     public static final int SPI_GETNONCLIENTMETRICS = 41; // int, winuser.h:5099
@@ -592,4 +932,77 @@ public final class WinApi {
 
     public static final int SM_CXSMICON = 49; // int, winuser.h:3128
     public static final int SM_CXICON = 11; // int, winuser.h:3084
+    /** {@code FILE *_wfopen(const wchar_t *restrict _Filename, const wchar_t *restrict _Mode)} - corecrt_wstdio.h:651 */
+    @Import(name = "_wfopen") @CType("struct _iobuf") public static native Address wfopen(@CType("wchar_t") Address _Filename, @CType("wchar_t") Address _Mode);
+
+    /** {@code _wfopen} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    @CType("struct _iobuf") public static Address wfopen(String _Filename, String _Mode) {
+        var scope_ = N.mark();
+        var result_ = wfopen(N.wcstr(_Filename), N.wcstr(_Mode));
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code DWORD GetEnvironmentVariableW(LPCWSTR lpName, LPWSTR lpBuffer, DWORD nSize)} - processenv.h:63 */
+    @Import(name = "GetEnvironmentVariableW") public static native int getEnvironmentVariableW(@CType("wchar_t") Address lpName, @CType("wchar_t") Address lpBuffer, int nSize);
+
+    /** {@code GetEnvironmentVariableW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int getEnvironmentVariableW(String lpName, @CType("wchar_t") Address lpBuffer, int nSize) {
+        var scope_ = N.mark();
+        var result_ = getEnvironmentVariableW(N.wcstr(lpName), lpBuffer, nSize);
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code LPWSTR GetCommandLineW()} - processenv.h:19 */
+    @Import(name = "GetCommandLineW") @CType("wchar_t") public static native Address getCommandLineW();
+
+    /** {@code LPWSTR *CommandLineToArgvW(LPCWSTR lpCmdLine, int *pNumArgs)} - shellapi.h:867 */
+    @Import(name = "CommandLineToArgvW") @CType("pointer") public static native Address commandLineToArgvW(@CType("wchar_t") Address lpCmdLine, @CType("int32") Address pNumArgs);
+
+    /** {@code HLOCAL LocalFree(HLOCAL hMem)} - winbase.h:1133 */
+    @Import(name = "LocalFree") public static native Address localFree(Address hMem);
+
+    /** {@code WINBOOL WriteConsoleW(HANDLE console_output, const void *buffer, DWORD number_of_chars_to_write, LPDWORD number_of_chars_written, LPVOID reserved)} - consoleapi.h:105 */
+    @Import(name = "WriteConsoleW") public static native int writeConsoleW(Address console_output, Address buffer, int number_of_chars_to_write, @CType("int32") Address number_of_chars_written, Address reserved);
+
+    /** {@code int WideCharToMultiByte(UINT CodePage, DWORD dwFlags, LPCWCH lpWideCharStr, int cchWideChar, LPSTR lpMultiByteStr, int cbMultiByte, LPCCH lpDefaultChar, LPBOOL lpUsedDefaultChar)} - stringapiset.h:42 */
+    @Import(name = "WideCharToMultiByte") public static native int wideCharToMultiByte(int CodePage, int dwFlags, @CType("wchar_t") Address lpWideCharStr, int cchWideChar, @CType("char") Address lpMultiByteStr, int cbMultiByte, @CType("char") Address lpDefaultChar, @CType("int32") Address lpUsedDefaultChar);
+
+    /** {@code WideCharToMultiByte} with its read-only text as Strings (N.wcstr, N.utf8), freed when the call returns. */
+    public static int wideCharToMultiByte(int CodePage, int dwFlags, String lpWideCharStr, int cchWideChar, @CType("char") Address lpMultiByteStr, int cbMultiByte, String lpDefaultChar, @CType("int32") Address lpUsedDefaultChar) {
+        var scope_ = N.mark();
+        var result_ = wideCharToMultiByte(CodePage, dwFlags, N.wcstr(lpWideCharStr), cchWideChar, lpMultiByteStr, cbMultiByte, N.utf8(lpDefaultChar), lpUsedDefaultChar);
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code int MultiByteToWideChar(UINT CodePage, DWORD dwFlags, LPCCH lpMultiByteStr, int cbMultiByte, LPWSTR lpWideCharStr, int cchWideChar)} - stringapiset.h:41 */
+    @Import(name = "MultiByteToWideChar") public static native int multiByteToWideChar(int CodePage, int dwFlags, @CType("char") Address lpMultiByteStr, int cbMultiByte, @CType("wchar_t") Address lpWideCharStr, int cchWideChar);
+
+    /** {@code MultiByteToWideChar} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int multiByteToWideChar(int CodePage, int dwFlags, String lpMultiByteStr, int cbMultiByte, @CType("wchar_t") Address lpWideCharStr, int cchWideChar) {
+        var scope_ = N.mark();
+        var result_ = multiByteToWideChar(CodePage, dwFlags, N.utf8(lpMultiByteStr), cbMultiByte, lpWideCharStr, cchWideChar);
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code UINT GetACP()} - winnls.h:942 */
+    @Import(name = "GetACP") public static native int getACP();
+
+    public static final int CP_ACP = 0; // int, winnls.h:177
+    public static final int CP_UTF8 = 0x0000FDE9; // int, winnls.h:184
+    public static final int MB_ERR_INVALID_CHARS = 8; // int, winnls.h:41
+    /** {@code DWORD GetShortPathNameW(LPCWSTR lpszLongPath, LPWSTR lpszShortPath, DWORD cchBuffer)} - fileapi.h:104 */
+    @Import(name = "GetShortPathNameW") public static native int getShortPathNameW(@CType("wchar_t") Address lpszLongPath, @CType("wchar_t") Address lpszShortPath, int cchBuffer);
+
+    /** {@code GetShortPathNameW} with its read-only text as Strings (N.wcstr), freed when the call returns. */
+    public static int getShortPathNameW(String lpszLongPath, @CType("wchar_t") Address lpszShortPath, int cchBuffer) {
+        var scope_ = N.mark();
+        var result_ = getShortPathNameW(N.wcstr(lpszLongPath), lpszShortPath, cchBuffer);
+        N.release(scope_);
+        return result_;
+    }
+
 }

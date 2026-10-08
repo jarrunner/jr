@@ -17,19 +17,19 @@ public final class FileInfo {
      *  signal (not converted to a calendar date) - or -1 if the file cannot be read. */
     public static long lastWriteTimeRaw(String path) {
         var addr = alloc(STRUCT_SIZE);
-        if (WinApi.getFileAttributesExA(cstr(path), GET_FILEEX_INFO_STANDARD, addr) == 0) {
+        if (WinApi.getFileAttributesExW(path, GET_FILEEX_INFO_STANDARD, addr) == 0) {
             return -1;
         }
-        var ftOffset = WinOffsets.WIN32_FILE_ATTRIBUTE_DATA.ftLastWriteTime;
-        var low = WinOffsets.FILETIME.dwLowDateTime(addr.add(ftOffset)) & 0xFFFFFFFFL;
-        var high = WinOffsets.FILETIME.dwHighDateTime(addr.add(ftOffset)) & 0xFFFFFFFFL;
+        var ft = WinOffsets.WIN32_FILE_ATTRIBUTE_DATA.ftLastWriteTime(addr);
+        var low = WinOffsets.FILETIME.dwLowDateTime(ft) & 0xFFFFFFFFL;
+        var high = WinOffsets.FILETIME.dwHighDateTime(ft) & 0xFFFFFFFFL;
         return (high << 32) | low;
     }
 
     /** File size in bytes, or -1 if the file cannot be read. */
     public static long size(String path) {
         var addr = alloc(STRUCT_SIZE);
-        if (WinApi.getFileAttributesExA(cstr(path), GET_FILEEX_INFO_STANDARD, addr) == 0) {
+        if (WinApi.getFileAttributesExW(path, GET_FILEEX_INFO_STANDARD, addr) == 0) {
             return -1;
         }
         var high = WinOffsets.WIN32_FILE_ATTRIBUTE_DATA.nFileSizeHigh(addr) & 0xFFFFFFFFL;

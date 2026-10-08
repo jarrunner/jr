@@ -10,6 +10,7 @@ fflush fflush
 fclose fclose
 fread fread
 fwrite fwrite
+write write
 malloc malloc
 free free
 memset memset

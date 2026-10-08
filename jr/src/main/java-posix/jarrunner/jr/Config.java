@@ -18,15 +18,48 @@ public class Config {
     boolean javaVersionSet = false, javaKeysSet = false;
     String javaRangeError;
     int javaAutoInstall = -1; // -1 = not specified, use built-in default (enabled)
+    // PRP-36: the jrc-json the maven plugin embeds, the same keys as the Windows Config
+    boolean embedded = false; // found, but read from this binary's own __DATA,__jrc section, not a file
+    String loadError;         // a config that could not be read; reported before anything runs
+    String javaType = "";     // read for parity; this build does not download Java
+    String runUrl = "";       // run.url / run.maven / run.sha256 - a remote jar, see RemoteJar
+    String runMaven = "";
+    String runSha256 = "";
+    String runVerify = "";    // per-run jar check: "" = crc32 (default), "sha256", "none" - see JarCheck
+    String runCrc32 = "";
+    String appId = "";
+    String appVersion = "";
+    String updateUrl = "";
+    String updateChannel = "";
+    String supportName = "", supportEmail = "", supportIssues = "", supportUrl = "";
+    // jrc-json jar.sources to download, in order: "m<group:artifact:version>\n" or "u<https url>\n" entries
+    String sources = "";
+    JsonValue jsonRoot;       // the parsed jrc-json, passed to the app as -D properties (PosixCmdLineBuilder)
 
+    boolean hasRunTarget() {
+        return !runUrl.isEmpty() || !runMaven.isEmpty() || !sources.isEmpty();
+    }
+
+    /** As on Windows (PRP-30): an embedded config wins and a file beside the binary is then ignored, so
+     *  nobody can change an app's behaviour by planting a file next to it; a jrc-json is read only when
+     *  embedded; a key=value .jrc on disk is still read for a binary with nothing embedded. */
     public static Config load(String path) {
         var config = new Config();
-        var text = FileIo.readAll(path);
+        var text = Os.embeddedConfig();
+        config.embedded = text != null;
+        if (text == null) {
+            text = FileIo.readAll(path);
+        }
         if (text == null) {
             return config;
         }
         config.found = true;
-        Log.info("Loading config file: " + path);
+        Log.info("Loading config: " + (config.embedded ? "embedded __DATA,__jrc section" : path));
+        if (JrcJson.looksLikeJson(text)) {
+            config.loadError = config.embedded ? JrcJson.load(text, config)
+                    : "A jrc-json is read only when it is embedded in the binary; build the app with jr-maven-plugin.";
+            return config;
+        }
         for (var rawLine : Lines.split(text)) {
             var line = rawLine.strip();
             if (line.isEmpty() || line.startsWith("#")) {
@@ -72,6 +105,24 @@ public class Config {
             case "java.preferred" -> { javaKeysSet = true; javaPreferred = JavaRange.declared(this, key, value); }
             case "java.max" -> { javaKeysSet = true; javaMax = JavaRange.declared(this, key, value); }
             case "java.autoinstall" -> { javaAutoInstall = isTrue(value) ? 1 : 0; Log.info("java.autoinstall=" + value); }
+            case "support.name" -> supportName = value;
+            case "support.email" -> supportEmail = value;
+            case "support.issues" -> supportIssues = value;
+            case "support.url" -> supportUrl = value;
+            case "run.url" -> { runUrl = value; Log.info("run.url=" + value); }
+            case "run.maven" -> { runMaven = value; Log.info("run.maven=" + value); }
+            case "run.sha256" -> runSha256 = value;
+            case "run.crc32" -> runCrc32 = AsciiStr.lower(value);
+            case "run.verify" -> {
+                var lower = AsciiStr.lower(value);
+                if (lower.equals("crc32") || lower.equals("sha256") || lower.equals("none")) runVerify = lower;
+                else Log.warn("Unrecognised run.verify '" + value + "' (expected crc32, sha256 or none); using crc32");
+            }
+            case "java.type" -> {
+                var lower = AsciiStr.lower(value);
+                if (lower.equals("jdk") || lower.equals("jre")) javaType = lower;
+                else Log.warn("Unrecognised java.type '" + value + "' (expected jdk or jre)");
+            }
             default -> {
                 return false;
             }

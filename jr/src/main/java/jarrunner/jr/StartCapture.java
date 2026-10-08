@@ -26,7 +26,7 @@ public final class StartCapture {
                 var con = console();
                 var ok = con != WinApi.INVALID_HANDLE_VALUE && WinApi.getConsoleScreenBufferInfo(con, info) != 0;
                 WinApi.closeHandle(con);
-                return ok ? WinOffsets.COORD.Y(info.add(WinOffsets.CONSOLE_SCREEN_BUFFER_INFO.dwCursorPosition)) : -1;
+                return ok ? WinOffsets.COORD.Y(WinOffsets.CONSOLE_SCREEN_BUFFER_INFO.dwCursorPosition(info)) : -1;
             });
             return NULL;
         }
@@ -38,7 +38,7 @@ public final class StartCapture {
         // (one still open by a running copy simply stays).
         var base = ExeInfo.baseNameNoExt();
         for (var old : Dirs.matching(dir, base + "-*.stderr.txt")) {
-            WinApi.deleteFileA(cstr(dir + "\\" + old));
+            WinApi.deleteFileW(dir + "\\" + old);
         }
         file = dir + "\\" + base + "-" + startTick + ".stderr.txt";
         var h = appendHandle();
@@ -69,19 +69,19 @@ public final class StartCapture {
         if (con == WinApi.INVALID_HANDLE_VALUE || WinApi.getConsoleScreenBufferInfo(con, info) == 0) {
             return "";
         }
-        var width = WinOffsets.COORD.X(info.add(WinOffsets.CONSOLE_SCREEN_BUFFER_INFO.dwSize));
-        var last = WinOffsets.COORD.Y(info.add(WinOffsets.CONSOLE_SCREEN_BUFFER_INFO.dwCursorPosition));
+        var width = WinOffsets.COORD.X(WinOffsets.CONSOLE_SCREEN_BUFFER_INFO.dwSize(info));
+        var last = WinOffsets.COORD.Y(WinOffsets.CONSOLE_SCREEN_BUFFER_INFO.dwCursorPosition(info));
         var first = Math.max(Math.max(consoleRow, 0), last - MAX_ROWS);
-        var buf = alloc(width + 1);
+        var buf = alloc(width * 2 + 2);
         var coord = alloc(WinOffsets.COORD.SIZE);
         var read = intVar();
         var sb = new StringBuilder();
         for (var row = first; row <= last; row++) {
             WinOffsets.COORD.Y(coord, (short) row);
-            if (WinApi.readConsoleOutputCharacterA(con, buf, width, coord, read) == 0) {
+            if (WinApi.readConsoleOutputCharacterW(con, buf, width, coord, read) == 0) {
                 break;
             }
-            var line = string(buf, read.getInt()).stripTrailing();
+            var line = wstring(buf, intOf(read)).stripTrailing();
             if (!line.isEmpty()) {
                 sb.append(line).append('\n');
             }
@@ -91,24 +91,23 @@ public final class StartCapture {
     }
 
     private static Address console() {
-        return WinApi.createFileA(cstr("CONOUT$"), WinApi.GENERIC_READ | WinApi.GENERIC_WRITE,
-                WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE, NULL, WinApi.OPEN_EXISTING, 0, NULL);
+        return WinApi.createFileW("CONOUT$", WinApi.GENERIC_READ | WinApi.GENERIC_WRITE, WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE, NULL, WinApi.OPEN_EXISTING, 0, NULL);
     }
 
     /** Append-only, so jr, msvcrt and the JDK's own C runtime can all write to the file without overwriting each other. */
     private static Address appendHandle() {
-        return WinApi.createFileA(cstr(file), WinApi.FILE_APPEND_DATA, WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE,
-                NULL, WinApi.OPEN_ALWAYS, WinApi.FILE_ATTRIBUTE_NORMAL, NULL);
+        return WinApi.createFileW(file, WinApi.FILE_APPEND_DATA, WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE, NULL, WinApi.OPEN_ALWAYS, WinApi.FILE_ATTRIBUTE_NORMAL, NULL);
     }
 
     /** In-process GUI mode: points the Universal CRT's fd 2 (the JDK's stderr) at the capture file too. */
+    @Unsafe("trusts that the CRT's _open_osfhandle and _dup2 have the signature CrtFdFn declares")
     static void bindJdkStderr() {
         if (file.isEmpty()) {
             return;
         }
-        var ucrt = WinApi.loadLibraryA(cstr("ucrtbase.dll"));
-        var open = ucrt.toLong() == 0 ? NULL : WinApi.getProcAddress(ucrt, cstr("_open_osfhandle"));
-        var dup2 = ucrt.toLong() == 0 ? NULL : WinApi.getProcAddress(ucrt, cstr("_dup2"));
+        var ucrt = WinApi.loadLibraryW("ucrtbase.dll");
+        var open = ucrt.toLong() == 0 ? NULL : WinApi.getProcAddress(ucrt, "_open_osfhandle");
+        var dup2 = ucrt.toLong() == 0 ? NULL : WinApi.getProcAddress(ucrt, "_dup2");
         var h = appendHandle();
         if (open.toLong() == 0 || dup2.toLong() == 0 || h == WinApi.INVALID_HANDLE_VALUE) {
             return;

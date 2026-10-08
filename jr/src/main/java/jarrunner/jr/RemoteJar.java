@@ -128,13 +128,13 @@ public final class RemoteJar {
         }
         var actual = Sha256.ofFile(part);
         if (actual == null || !AsciiStr.equalsIgnoreCase(actual, sha)) {
-            WinApi.deleteFileA(cstr(part));
+            WinApi.deleteFileW(part);
             return err("The downloaded application does not match run.sha256, so it was not run.\n\n"
                     + url + "\nexpected " + sha + "\nactual   " + actual
                     + "\n\nThis exe expects another jar: reinstall it, or run it with -Xjr:update.");
         }
-        if (WinApi.moveFileExA(cstr(part), cstr(target), 0) == 0 && !FileIo.exists(target)) {
-            WinApi.deleteFileA(cstr(part));
+        if (WinApi.moveFileExW(part, target, 0) == 0 && !FileIo.exists(target)) {
+            WinApi.deleteFileW(part);
             return err("Could not move the verified download into place:\n" + target);
         }
         markVerified(target, sha);

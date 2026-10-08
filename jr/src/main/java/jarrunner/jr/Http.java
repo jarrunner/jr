@@ -17,6 +17,7 @@ public final class Http {
 
     private static final int READ_CHUNK = 65536;
 
+    /** The body as text (decoded, see N.text), at most maxBytes of it, or null. */
     public static String getToBuffer(String url, int maxBytes) {
         var host = hostOf(url);
         var path = pathOf(url);
@@ -28,7 +29,7 @@ public final class Http {
             if (session.toLong() == 0) {
                 return null;
             }
-            var connect = WinApi.winHttpConnect(session, wcstr(host), (short) (https ? 443 : 80), 0);
+            var connect = WinApi.winHttpConnect(session, host, (short) (https ? 443 : 80), 0);
             if (connect.toLong() == 0) {
                 WinApi.winHttpCloseHandle(session);
                 return null;
@@ -46,22 +47,20 @@ public final class Http {
             var available = intVar();
             var read = intVar();
             while (sb.length() < maxBytes) {
-                if (WinApi.winHttpQueryDataAvailable(request, available) == 0 || available.getInt() == 0) {
+                if (WinApi.winHttpQueryDataAvailable(request, available) == 0 || intOf(available) == 0) {
                     break;
                 }
-                var toRead = Math.min(available.getInt(), READ_CHUNK);
-                if (WinApi.winHttpReadData(request, buf, toRead, read) == 0 || read.getInt() == 0) {
+                var toRead = Math.min(intOf(available), READ_CHUNK);
+                if (WinApi.winHttpReadData(request, buf, toRead, read) == 0 || intOf(read) == 0) {
                     break;
                 }
-                for (var i = 0; i < read.getInt(); i++) {
-                    sb.append((char) (buf.add(i).getByte() & 0xFF));
-                }
+                for (var b : bytesOf(buf, intOf(read))) sb.append((char) (b & 0xFF));
             }
 
             WinApi.winHttpCloseHandle(request);
             WinApi.winHttpCloseHandle(connect);
             WinApi.winHttpCloseHandle(session);
-            return sb.toString();
+            return text(sb.toString()); // UTF-8 (a BOM dropped); see N.text
         });
     }
 
@@ -87,7 +86,7 @@ public final class Http {
             if (session.toLong() == 0) {
                 return false;
             }
-            var connect = WinApi.winHttpConnect(session, wcstr(host), (short) (https ? 443 : 80), 0);
+            var connect = WinApi.winHttpConnect(session, host, (short) (https ? 443 : 80), 0);
             if (connect.toLong() == 0) {
                 WinApi.winHttpCloseHandle(session);
                 return false;
@@ -117,7 +116,7 @@ public final class Http {
             var remaining = queryNumber(request, WinApi.WINHTTP_QUERY_CONTENT_LENGTH);
             var totalBytes = remaining > 0 ? offset + remaining : 0L;
 
-            var out = WinApi.fopen(cstr(outPath), cstr(appending ? "ab" : "wb"));
+            var out = FileIo.open(outPath, appending ? "ab" : "wb");
             if (out.toLong() == 0) {
                 WinApi.winHttpCloseHandle(request);
                 WinApi.winHttpCloseHandle(connect);
@@ -131,15 +130,15 @@ public final class Http {
             var totalRead = offset;
             var ok = true;
             while (true) {
-                if (WinApi.winHttpQueryDataAvailable(request, available) == 0 || available.getInt() == 0) {
+                if (WinApi.winHttpQueryDataAvailable(request, available) == 0 || intOf(available) == 0) {
                     break;
                 }
-                var toRead = Math.min(available.getInt(), READ_CHUNK);
+                var toRead = Math.min(intOf(available), READ_CHUNK);
                 if (WinApi.winHttpReadData(request, buf, toRead, read) == 0) {
                     ok = false;
                     break;
                 }
-                var got = read.getInt();
+                var got = intOf(read);
                 if (got == 0) {
                     break;
                 }
@@ -173,11 +172,11 @@ public final class Http {
     private static long queryNumber(Address request, int header) {
         var value = intVar();
         var size = intVar();
-        size.putInt(4);
+        setInt(size, 4);
         if (WinApi.winHttpQueryHeaders(request, header | WinApi.WINHTTP_QUERY_FLAG_NUMBER, NULL, value, size, NULL) == 0) {
             return -1;
         }
-        return value.getInt() & 0xFFFFFFFFL;
+        return intOf(value) & 0xFFFFFFFFL;
     }
 
     private static String hostOf(String url) {

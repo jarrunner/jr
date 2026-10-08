@@ -12,12 +12,12 @@ public final class JsonDump {
             Stderr.println("cannot read " + path);
             return 1;
         }
-        var v = JsonReader.parse(Utf8.decode(raw));
+        var v = JsonReader.parse(raw);
         if (v.isError()) {
             Stderr.println(path + ": " + v.error());
             return 1;
         }
-        System.out.println(JsonWriter.write(v));
+        Stderr.out(JsonWriter.write(v) + "\n");
         return 0;
     }
 
@@ -34,7 +34,7 @@ public final class JsonDump {
             return 1;
         }
         var report = JrcCheck.check(raw);
-        System.out.print(report.isEmpty() ? path + ": ok\n" : report);
+        Stderr.out(report.isEmpty() ? path + ": ok\n" : report);
         return JrcCheck.hasErrors(report) ? 1 : 0;
     }
 }

@@ -13,9 +13,8 @@ import static jarrunner.jr.N.*;
 public final class Dirs {
     private Dirs() {}
 
-    private static final int FIND_DATA_SIZE = WinOffsets.WIN32_FIND_DATAA.SIZE;
-    private static final int FIND_DATA_FILENAME_OFFSET = WinOffsets.WIN32_FIND_DATAA.cFileName;
-    private static final int FIND_DATA_FILENAME_MAX = WinApi.MAX_PATH; // cFileName is CHAR[MAX_PATH]
+    private static final int FIND_DATA_SIZE = WinOffsets.WIN32_FIND_DATAW.SIZE;
+    private static final int FIND_DATA_FILENAME_MAX = WinApi.MAX_PATH; // cFileName is WCHAR[MAX_PATH]
     private static final int FILE_ATTRIBUTE_DIRECTORY = WinApi.FILE_ATTRIBUTE_DIRECTORY;
 
     /** Creates every missing path segment (segments after the drive-letter prefix). */
@@ -23,43 +22,43 @@ public final class Dirs {
         var p = path.endsWith("\\") || path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
         for (var i = 3; i < p.length(); i++) { // +3 skips "C:\" - always an absolute drive path here
             if (p.charAt(i) == '\\' || p.charAt(i) == '/') {
-                WinApi.createDirectoryA(cstr(p.substring(0, i)), NULL);
+                WinApi.createDirectoryW(p.substring(0, i), NULL);
             }
         }
-        WinApi.createDirectoryA(cstr(p), NULL);
+        WinApi.createDirectoryW(p, NULL);
     }
 
     /** Scoped per directory level, so a deep tree holds at most one level's names at a time. */
     public static void removeDirTree(String path) {
         memScoped(() -> {
-            var attr = WinApi.getFileAttributesA(cstr(path));
+            var attr = WinApi.getFileAttributesW(path);
             if (attr == WinApi.INVALID_FILE_ATTRIBUTES) {
                 return;
             }
             if ((attr & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-                WinApi.deleteFileA(cstr(path));
+                WinApi.deleteFileW(path);
                 return;
             }
             var findData = alloc(FIND_DATA_SIZE);
-            var findHandle = WinApi.findFirstFileA(cstr(path + "\\*"), findData);
+            var findHandle = WinApi.findFirstFileW(path + "\\*", findData);
             if (findHandle.toLong() != 0 && findHandle != WinApi.INVALID_HANDLE_VALUE) {
                 do {
                     var name = fileName(findData);
                     if (name.equals(".") || name.equals("..")) {
                         continue;
                     }
-                    var childAttr = WinOffsets.WIN32_FIND_DATAA.dwFileAttributes(findData);
+                    var childAttr = WinOffsets.WIN32_FIND_DATAW.dwFileAttributes(findData);
                     var child = path + "\\" + name;
                     if ((childAttr & FILE_ATTRIBUTE_DIRECTORY) != 0) {
                         removeDirTree(child);
                     } else {
-                        WinApi.setFileAttributesA(cstr(child), WinApi.FILE_ATTRIBUTE_NORMAL);
-                        WinApi.deleteFileA(cstr(child));
+                        WinApi.setFileAttributesW(child, WinApi.FILE_ATTRIBUTE_NORMAL);
+                        WinApi.deleteFileW(child);
                     }
-                } while (WinApi.findNextFileA(findHandle, findData) != 0);
+                } while (WinApi.findNextFileW(findHandle, findData) != 0);
                 WinApi.findClose(findHandle);
             }
-            WinApi.removeDirectoryA(cstr(path));
+            WinApi.removeDirectoryW(path);
         });
     }
 
@@ -76,17 +75,17 @@ public final class Dirs {
         return memScoped(() -> {
             var out = new ArrayList<String>();
             var findData = alloc(FIND_DATA_SIZE);
-            var findHandle = WinApi.findFirstFileA(cstr(parentDir + "\\*"), findData);
+            var findHandle = WinApi.findFirstFileW(parentDir + "\\*", findData);
             if (findHandle.toLong() == 0 || findHandle == WinApi.INVALID_HANDLE_VALUE) {
                 return out;
             }
             do {
                 var name = fileName(findData);
                 if (!name.equals(".") && !name.equals("..")
-                        && (WinOffsets.WIN32_FIND_DATAA.dwFileAttributes(findData) & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+                        && (WinOffsets.WIN32_FIND_DATAW.dwFileAttributes(findData) & FILE_ATTRIBUTE_DIRECTORY) != 0) {
                     out.add(name);
                 }
-            } while (WinApi.findNextFileA(findHandle, findData) != 0);
+            } while (WinApi.findNextFileW(findHandle, findData) != 0);
             WinApi.findClose(findHandle);
             return out;
         });
@@ -97,15 +96,15 @@ public final class Dirs {
         return memScoped(() -> {
             var out = new ArrayList<String>();
             var findData = alloc(FIND_DATA_SIZE);
-            var findHandle = WinApi.findFirstFileA(cstr(dir + "\\" + pattern), findData);
+            var findHandle = WinApi.findFirstFileW(dir + "\\" + pattern, findData);
             if (findHandle.toLong() == 0 || findHandle == WinApi.INVALID_HANDLE_VALUE) {
                 return out;
             }
             do {
-                if ((WinOffsets.WIN32_FIND_DATAA.dwFileAttributes(findData) & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+                if ((WinOffsets.WIN32_FIND_DATAW.dwFileAttributes(findData) & FILE_ATTRIBUTE_DIRECTORY) == 0) {
                     out.add(fileName(findData));
                 }
-            } while (WinApi.findNextFileA(findHandle, findData) != 0);
+            } while (WinApi.findNextFileW(findHandle, findData) != 0);
             WinApi.findClose(findHandle);
             return out;
         });
@@ -117,10 +116,10 @@ public final class Dirs {
 
     public static boolean moveDirectory(String src, String dst) {
         removeDirTree(dst); // clear any empty leftover from a previous partial attempt
-        return WinApi.moveFileExA(cstr(src), cstr(dst), WinApi.MOVEFILE_COPY_ALLOWED) != 0;
+        return WinApi.moveFileExW(src, dst, WinApi.MOVEFILE_COPY_ALLOWED) != 0;
     }
 
     static String fileName(Address findData) {
-        return string(findData.add(FIND_DATA_FILENAME_OFFSET), FIND_DATA_FILENAME_MAX);
+        return wstring(WinOffsets.WIN32_FIND_DATAW.cFileName(findData), FIND_DATA_FILENAME_MAX);
     }
 }

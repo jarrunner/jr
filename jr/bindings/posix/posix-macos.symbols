@@ -2,3 +2,6 @@
 # needs _NSGetExecutablePath from mach-o/dyld.h (jr-posix-macos.h pulls that header in). Part of
 # libSystem, always linked, no extra -l flag.
 _NSGetExecutablePath nsGetExecutablePath
+# The app config embedded in this binary (PRP-36): the main image's header, then the __DATA,__jrc section in it.
+_dyld_get_image_header dyldGetImageHeader
+getsectiondata getsectiondata

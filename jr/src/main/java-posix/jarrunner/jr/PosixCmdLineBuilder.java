@@ -16,6 +16,9 @@ public final class PosixCmdLineBuilder {
         var jarPath = JarPath.fromArgsString(config.javaArgs);
         var out = new ArrayList<String>();
         addJrProps(out, config);
+        if (!config.vmArgs.contains("-Xdock:")) {
+            Os.bundleVmArgs(out); // before vm.args, which may override it
+        }
         addWhitespaceSplit(out, config.vmArgs);
         addAotArg(out, jarPath, enableAOT, javaMajor);
         addWhitespaceSplit(out, config.javaArgs);
@@ -59,33 +62,60 @@ public final class PosixCmdLineBuilder {
         }
     }
 
-    /** Same -Dio.github.jarrunner.jr.* properties as the Windows CmdLineBuilder (PRP-30). The POSIX
-     *  Config has no jrc-json fields yet, so only timings and the exe path. */
+    /** Same -Dio.github.jarrunner.jr.* properties as the Windows CmdLineBuilder (PRP-30): timings, the exe
+     *  path, and the whole jrc-json, one property per leaf named by its path (app.id, update.url, ...). */
     private static void addJrProps(List<String> out, Config config) {
         out.add("-Dio.github.jarrunner.jr.startMicros=" + Timing.startMicros());
         out.add("-Dio.github.jarrunner.jr.beforeJvmMicros=" + Timing.elapsedMicros());
         out.add("-Dio.github.jarrunner.jr.exe=" + ExeInfo.fullPath());
+        if (config != null && config.jsonRoot != null) {
+            flatten(out, "", config.jsonRoot);
+        }
     }
 
-    /** Same hand-rolled tokenizer as JarPath - a raw .jrc string (vm.args/java.args/app.args) has
-     *  no quoting of its own to preserve, unlike extraArgs which arrives pre-tokenized already. */
+    private static void flatten(List<String> out, String path, JsonValue v) {
+        var k = v.kind();
+        if (k == JsonValue.OBJECT || k == JsonValue.ARRAY) {
+            for (var i = 0; i < v.size(); i++) {
+                var name = k == JsonValue.OBJECT ? v.keyAt(i) : Integer.toString(i);
+                flatten(out, path.isEmpty() ? name : path + "." + name, v.at(i));
+            }
+        } else if (k == JsonValue.STRING || k == JsonValue.NUMBER) {
+            var value = k == JsonValue.STRING ? v.str() : v.num();
+            if (value != null && !value.isEmpty()) out.add("-Dio.github.jarrunner.jr." + path + "=" + value);
+        } else if (k == JsonValue.TRUE || k == JsonValue.FALSE) {
+            out.add("-Dio.github.jarrunner.jr." + path + "=" + (k == JsonValue.TRUE ? "true" : "false"));
+        }
+    }
+
+    /** Splits a raw .jrc string (vm.args/java.args/app.args) into arguments on whitespace, where double
+     *  quotes group (and are removed): java.args=-jar "/home/me/My Apps/app.jar" is two arguments, as on
+     *  Windows. Before PRP-34 the quotes were passed on literally and the path was cut at its first space. */
     private static void addWhitespaceSplit(List<String> out, String s) {
         if (s == null || s.isBlank()) {
             return;
         }
-        var start = -1;
+        var cur = new StringBuilder();
+        var inToken = false;
+        var quoted = false;
         for (var i = 0; i < s.length(); i++) {
-            if (Character.isWhitespace(s.charAt(i))) {
-                if (start >= 0) {
-                    out.add(s.substring(start, i));
-                    start = -1;
+            var c = s.charAt(i);
+            if (c == '"') {
+                quoted = !quoted;
+                inToken = true;
+            } else if (!quoted && Character.isWhitespace(c)) {
+                if (inToken) {
+                    out.add(cur.toString());
+                    cur.setLength(0);
+                    inToken = false;
                 }
-            } else if (start < 0) {
-                start = i;
+            } else {
+                cur.append(c);
+                inToken = true;
             }
         }
-        if (start >= 0) {
-            out.add(s.substring(start));
+        if (inToken) {
+            out.add(cur.toString());
         }
     }
 }

@@ -13,15 +13,16 @@ public final class Crc32 {
     private static final String HEX = "0123456789abcdef";
 
     /** Lowercase 8-hex-digit CRC32 of the file, or null on any failure. */
+    @Unsafe("trusts that ntdll's RtlComputeCrc32 has the signature RtlComputeCrc32Fn declares")
     public static String ofFile(String path) {
-        var ntdll = WinApi.getModuleHandleA(cstr("ntdll.dll"));
-        var fn = ntdll.toLong() == 0 ? NULL : WinApi.getProcAddress(ntdll, cstr("RtlComputeCrc32"));
+        var ntdll = WinApi.getModuleHandleW("ntdll.dll");
+        var fn = ntdll.toLong() == 0 ? NULL : WinApi.getProcAddress(ntdll, "RtlComputeCrc32");
         if (fn.toLong() == 0) {
             return null;
         }
         var crc32 = (RtlComputeCrc32Fn) (Object) fn;
         return memScoped(() -> {
-            var f = WinApi.fopen(cstr(path), cstr("rb"));
+            var f = FileIo.open(path, "rb");
             if (f.toLong() == 0) {
                 return null;
             }

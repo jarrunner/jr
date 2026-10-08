@@ -2,8 +2,6 @@ package jarrunner.jr;
 
 import org.teavm.interop.Address;
 
-import static jarrunner.jr.N.*;
-
 /**
  * (ii) String table. Strings live in blocks of 16 (block = id/16 + 1), each entry a length-prefixed
  * UTF-16 string with NO NUL terminator, so setting one string means rewriting its whole block with
@@ -32,15 +30,15 @@ public final class ReStrings {
             var old = ReEntries.find(module, ResId.of(WinApi.RT_STRING), ResId.of(block), lang);
             if (old != null) {
                 var q = 0;
-                for (var j = 0; j < 16 && q + 2 <= old.size(); j++) {
-                    var len = old.data().add(q).getShort() & 0xFFFF;
+                for (var j = 0; j < 16 && q + 2 <= old.length; j++) {
+                    var len = Le.u16(old, q);
                     q += 2;
-                    if (q + len * 2 > old.size()) {
+                    if (q + len * 2 > old.length) {
                         break;
                     }
                     var chars = new char[len];
                     for (var c = 0; c < len; c++) {
-                        chars[c] = old.data().add(q + c * 2).getChar();
+                        chars[c] = (char) Le.u16(old, q + c * 2);
                     }
                     texts[j] = new String(chars);
                     q += len * 2;
@@ -56,20 +54,14 @@ public final class ReStrings {
                 }
             }
 
-            var outSize = 0;
+            var out = new ReBuf();
             for (var t : texts) {
-                outSize += 2 + t.length() * 2;
-            }
-            var out = alloc(outSize);
-            var p = 0;
-            for (var t : texts) {
-                out.add(p).putShort((short) t.length());
+                out.putShort(t.length());
                 for (var c = 0; c < t.length(); c++) {
-                    out.add(p + 2 + c * 2).putShort((short) t.charAt(c));
+                    out.putShort(t.charAt(c));
                 }
-                p += 2 + t.length() * 2;
             }
-            if (!list.add(ResId.of(WinApi.RT_STRING), ResId.of(block), lang, out, outSize)) {
+            if (!list.add(ResId.of(WinApi.RT_STRING), ResId.of(block), lang, out.bytes())) {
                 throw new ReError("Too many resource changes in one run");
             }
         }

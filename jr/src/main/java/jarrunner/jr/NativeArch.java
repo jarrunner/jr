@@ -9,6 +9,7 @@ import static jarrunner.jr.N.*;
 public final class NativeArch {
     private NativeArch() {}
 
+    @Unsafe("trusts that kernel32's IsWow64Process2 has the signature IsWow64Process2Fn declares")
     public static String foojayName() {
         // Test-only override, not in --help: exercises the ARM64 path on an x64 machine.
         var forced = Cstr.readEnv("JR_TEST_NATIVE_ARCH");
@@ -18,18 +19,19 @@ public final class NativeArch {
         // Looked up at run time rather than imported: IsWow64Process2 exists only on Windows 10 1709+, and a
         // direct import would stop jr loading on anything older. Without it the machine is x64, since every
         // ARM64 Windows has it.
-        var kernel32 = WinApi.getModuleHandleA(cstr("kernel32.dll"));
+        var kernel32 = WinApi.getModuleHandleW("kernel32.dll");
         if (kernel32.toLong() == 0) {
             return "x64";
         }
-        var fnAddr = WinApi.getProcAddress(kernel32, cstr("IsWow64Process2"));
+        var fnAddr = WinApi.getProcAddress(kernel32, "IsWow64Process2");
         if (fnAddr.toLong() == 0) {
             return "x64";
         }
         var isWow64Process2 = (IsWow64Process2Fn) (Object) fnAddr;
-        var machines = alloc(4); // USHORT processMachine at 0, USHORT nativeMachine at 2
-        var ok = isWow64Process2.invoke(WinApi.getCurrentProcess(), machines, machines.add(2)) != 0;
-        var nativeMachine = machines.add(2).getShort() & 0xFFFF;
+        var processMachine = shortVar();
+        var nativeMachineVar = shortVar();
+        var ok = isWow64Process2.invoke(WinApi.getCurrentProcess(), processMachine, nativeMachineVar) != 0;
+        var nativeMachine = shortOf(nativeMachineVar) & 0xFFFF;
         return ok && nativeMachine == WinApi.IMAGE_FILE_MACHINE_ARM64 ? "aarch64" : "x64";
     }
 }

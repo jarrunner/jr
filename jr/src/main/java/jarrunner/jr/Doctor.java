@@ -71,7 +71,7 @@ public final class Doctor {
             sb.append("  check: ").append(changed == null ? "unchanged since verified" : "CHANGED since it was verified; -Xjr:repair deletes it").append('\n');
         }
         var cache = AotCache.buildCacheName(jar);
-        var others = Dirs.matchCount(Paths.dirOf(jar), Paths.baseNameNoExt(jar) + ".*.aot") - (FileIo.exists(cache) ? 1 : 0);
+        var others = Dirs.matchCount(Paths.dirOf(jar), AotCache.baseName(jar) + ".*.aot") - (FileIo.exists(cache) ? 1 : 0);
         sb.append("AOT cache: ").append(cache).append(FileIo.exists(cache) ? " (present)" : " (not created yet)")
                 .append(others > 0 ? "; " + others + " other cache(s) for this jar, made by another Java or jar build" : "").append('\n');
     }

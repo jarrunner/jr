@@ -23,7 +23,7 @@ public final class Dbg {
         if (enabled == 0) {
             return;
         }
-        var f = WinApi.fopen(cstr(path), cstr("a"));
+        var f = FileIo.open(path, "a");
         if (f.toLong() == 0) {
             return;
         }

@@ -19,10 +19,10 @@ public final class Generator {
     final List<String> problems = new ArrayList<>();
     int functions, constants, structCount, callbacks, macros;
 
-    public Generator(ClangParse parser) {
+    public Generator(ClangParse parser, String ctypeAnnotation) {
         this.parser = parser;
         this.dm = DataModel.of(parser.target);
-        var types = new TypeMap(dm);
+        var types = new TypeMap(dm, ctypeAnnotation);
         this.fn = new FunctionGen(types);
         this.cg = new ConstantGen(types);
         this.sg = new StructGen(types);
@@ -37,8 +37,13 @@ public final class Generator {
         var specs = new IdentityHashMap<Map.Entry<String, String>, MacroGen.Spec>();
         symbols.stream().filter(e -> MacroGen.is(e.getKey()))
                 .forEach(e -> attempt(e.getKey(), () -> specs.put(e, MacroGen.parse(specs.size(), e.getKey(), e.getValue()))));
-        var probe = probe(headers, Stream.concat(WideStrings.probeLines(wide).stream(), MacroGen.probeLines(specs.values()).stream()).toList());
+        var text = fn.converters.isEmpty() ? List.<TextParams.Param>of() : symbols.stream().map(Map.Entry::getKey).distinct()
+                .flatMap(n -> table.find(n).stream()).filter(Declaration.Function.class::isInstance)
+                .flatMap(d -> TextParams.of((Declaration.Function) d, fn.types).stream()).toList();
+        var probe = probe(headers, Stream.of(WideStrings.probeLines(wide), MacroGen.probeLines(specs.values()), TextParams.probeLines(text))
+                .flatMap(List::stream).toList());
         var decoded = WideStrings.read(probe, wide);
+        fn.readOnly = TextParams.readOnly(probe, text);
         symbols.forEach(e -> attempt(e.getKey(), () -> {
             var c = e.getKey();
             var param = PARAM.matcher(c);
@@ -67,11 +72,14 @@ public final class Generator {
     }
 
     void emit(Declaration d, String binding, String wide) {
-        var parts = List.of(binding.split(" "));
-        var javaName = parts.getFirst();
+        var all = List.of(binding.split(" "));
+        var javaName = all.getFirst();
+        var parts = all.stream().filter(p -> !p.startsWith("escapes=")).toList();
+        var escaping = all.stream().filter(p -> p.startsWith("escapes=")).flatMap(p -> Arrays.stream(p.substring(8).split(",")))
+                .map(Integer::parseInt).collect(java.util.stream.Collectors.toSet());
         switch (d) {
             case Declaration.Function f -> {
-                api.addAll(fn.emit(f, javaName, parts.subList(1, parts.size())));
+                api.addAll(fn.emit(f, javaName, parts.subList(1, parts.size()), escaping));
                 verifier.function(f);
                 functions++;
             }

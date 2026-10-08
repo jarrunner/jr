@@ -40,20 +40,20 @@ public final class SelfUpdate {
             got = actual != null && AsciiStr.equalsIgnoreCase(actual, sha);
             if (!got) {
                 Log.warn("update: " + url + (ok ? " did not match its sha256" : " could not be downloaded"));
-                WinApi.deleteFileA(cstr(download));
+                WinApi.deleteFileW(download);
             }
         }
         if (!got) return report(hasConsole, true, "Could not download a verified update. Nothing was changed.");
         var old = exe + REPLACED;
-        WinApi.deleteFileA(cstr(old));
-        if (WinApi.moveFileExA(cstr(exe), cstr(old), MOVEFILE_REPLACE_EXISTING) == 0) {
-            WinApi.deleteFileA(cstr(download));
+        WinApi.deleteFileW(old);
+        if (WinApi.moveFileExW(exe, old, MOVEFILE_REPLACE_EXISTING) == 0) {
+            WinApi.deleteFileW(download);
             return report(hasConsole, true, "Could not move the running exe aside (error " + WinApi.getLastError() + "). Nothing was changed.");
         }
-        if (WinApi.moveFileExA(cstr(download), cstr(exe), MOVEFILE_REPLACE_EXISTING) == 0) {
+        if (WinApi.moveFileExW(download, exe, MOVEFILE_REPLACE_EXISTING) == 0) {
             var err = WinApi.getLastError();
-            WinApi.moveFileExA(cstr(old), cstr(exe), MOVEFILE_REPLACE_EXISTING);
-            WinApi.deleteFileA(cstr(download));
+            WinApi.moveFileExW(old, exe, MOVEFILE_REPLACE_EXISTING);
+            WinApi.deleteFileW(download);
             return report(hasConsole, true, "Could not move the update into place (error " + err + "). The old exe was restored.");
         }
         return report(hasConsole, false, "Updated: " + c.appVersion + " -> " + check.release.get("version").str()

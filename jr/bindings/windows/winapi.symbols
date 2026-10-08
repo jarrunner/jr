@@ -3,10 +3,10 @@
 # One C name per line, optionally followed by the Java name. Functions, constants (#define, enum)
 # and struct names all go here; the tool asks clang what each one is. `struct:<tag>` for a struct
 # tag shadowed by an ordinary name. Anything the tool cannot bind is reported NOT BOUND (exit 1).
+# `escapes=N[,M]` after a function's Java name: the C function keeps parameter N (1-based) after it
+# returns, which no header says (PRP-35 phase 4); it becomes @Escapes, and never a String overload.
 # --- functions (C name, Java name) ---
 exit exit
-getenv getenv
-fopen fopen
 fputs fputs
 fflush fflush
 fclose fclose
@@ -15,6 +15,7 @@ fwrite fwrite
 malloc malloc
 free free
 memset memset
+strlen strlen
 time time
 QueryPerformanceCounter queryPerformanceCounter
 QueryPerformanceFrequency queryPerformanceFrequency
@@ -25,17 +26,17 @@ AttachConsole attachConsole
 GetStdHandle getStdHandle
 SetStdHandle setStdHandle
 GetConsoleMode getConsoleMode
-CreateFileA createFileA
-GetFileAttributesA getFileAttributesA
-GetFileAttributesExA getFileAttributesExA
-FindFirstFileA findFirstFileA
-FindNextFileA findNextFileA
+CreateFileW createFileW
+GetFileAttributesW getFileAttributesW
+GetFileAttributesExW getFileAttributesExW
+FindFirstFileW findFirstFileW
+FindNextFileW findNextFileW
 FindClose findClose
-DeleteFileA deleteFileA
-GetModuleFileNameA getModuleFileNameA
-GetCurrentDirectoryA getCurrentDirectoryA
-SetEnvironmentVariableA setEnvironmentVariableA
-MessageBoxA messageBoxA
+DeleteFileW deleteFileW
+GetModuleFileNameW getModuleFileNameW
+GetCurrentDirectoryW getCurrentDirectoryW
+SetEnvironmentVariableW setEnvironmentVariableW
+MessageBoxW messageBoxW
 OpenClipboard openClipboard
 EmptyClipboard emptyClipboard
 SetClipboardData setClipboardData
@@ -44,14 +45,13 @@ GlobalAlloc globalAlloc
 GlobalLock globalLock
 GlobalUnlock globalUnlock
 ReadFile readFile
-LoadLibraryA loadLibraryA
-LoadLibraryExA loadLibraryExA
+LoadLibraryW loadLibraryW
 GetProcAddress getProcAddress
-GetModuleHandleA getModuleHandleA
+GetModuleHandleW getModuleHandleW
 GetCurrentProcess getCurrentProcess
 FreeLibrary freeLibrary
-GetFinalPathNameByHandleA getFinalPathNameByHandleA
-CreateProcessA createProcessA
+GetFinalPathNameByHandleW getFinalPathNameByHandleW
+CreateProcessW createProcessW
 WaitForSingleObject waitForSingleObject
 GetExitCodeProcess getExitCodeProcess
 CloseHandle closeHandle
@@ -75,24 +75,24 @@ BCryptHashData bCryptHashData
 BCryptFinishHash bCryptFinishHash
 BCryptDestroyHash bCryptDestroyHash
 BCryptCloseAlgorithmProvider bCryptCloseAlgorithmProvider
-CreateDirectoryA createDirectoryA
-RemoveDirectoryA removeDirectoryA
-MoveFileExA moveFileExA
-GetTempPathA getTempPathA
-GetSystemDirectoryA getSystemDirectoryA
-SetFileAttributesA setFileAttributesA
+CreateDirectoryW createDirectoryW
+RemoveDirectoryW removeDirectoryW
+MoveFileExW moveFileExW
+GetTempPathW getTempPathW
+GetSystemDirectoryW getSystemDirectoryW
+SetFileAttributesW setFileAttributesW
 InitCommonControlsEx initCommonControlsEx
-CreateWindowExA createWindowExA
+CreateWindowExW createWindowExW
 ExtractIconExW extractIconExW
 GetSystemMenu getSystemMenu
 EnableMenuItem enableMenuItem
 DestroyIcon destroyIcon
 DestroyWindow destroyWindow
 UpdateWindow updateWindow
-SendMessageA sendMessageA
-PeekMessageA peekMessageA
+SendMessageW sendMessageW
+PeekMessageW peekMessageW
 TranslateMessage translateMessage
-DispatchMessageA dispatchMessageA
+DispatchMessageW dispatchMessageW
 # --- resedit.c port (PRP-20 phase 2): resource editing ---
 GetLastError getLastError
 BeginUpdateResourceW beginUpdateResourceW
@@ -111,8 +111,8 @@ WriteFile writeFile
 SetFilePointer setFilePointer
 GetFileSizeEx getFileSizeEx
 SetEndOfFile setEndOfFile
-CopyFileA copyFileA
-GetFullPathNameA getFullPathNameA
+CopyFileW copyFileW
+GetFullPathNameW getFullPathNameW
 # --- resedit.c port (PRP-20 phase 2): Authenticode signing (crypt32.dll, mssign32.dll) ---
 CertOpenStore certOpenStore
 CertFindCertificateInStore certFindCertificateInStore
@@ -213,9 +213,11 @@ VS_VERSION_INFO
 # --- structs ---
 FILETIME
 WIN32_FILE_ATTRIBUTE_DATA
-STARTUPINFOA
+STARTUPINFOW
 PROCESS_INFORMATION
-WIN32_FIND_DATAA
+WIN32_FIND_DATAW
+INITCOMMONCONTROLSEX
+LARGE_INTEGER
 MSG
 VS_FIXEDFILEINFO
 IMAGE_DOS_HEADER
@@ -240,12 +242,12 @@ BCRYPT_SHA256_ALGORITHM
 BCRYPT_OBJECT_LENGTH
 BCRYPT_HASH_LENGTH
 # --- PRP-31: Java home discovery (registry JavaSoft keys, jvm.dll version resource, PE machine type) ---
-RegOpenKeyExA regOpenKeyExA
-RegEnumKeyExA regEnumKeyExA
-RegQueryValueExA regQueryValueExA
+RegOpenKeyExW regOpenKeyExW
+RegEnumKeyExW regEnumKeyExW
+RegQueryValueExW regQueryValueExW
 RegCloseKey regCloseKey
-GetFileVersionInfoSizeA getFileVersionInfoSizeA
-GetFileVersionInfoA getFileVersionInfoA
+GetFileVersionInfoSizeW getFileVersionInfoSizeW
+GetFileVersionInfoW getFileVersionInfoW
 HKEY_LOCAL_MACHINE
 HKEY_CURRENT_USER
 KEY_READ
@@ -256,22 +258,20 @@ IMAGE_FILE_MACHINE_I386
 # --- PRP-31 step 3: capturing what the JVM printed when it failed to start ---
 SetHandleInformation setHandleInformation
 GetConsoleScreenBufferInfo getConsoleScreenBufferInfo
-CreateFileW createFileW
 GetTickCount64 getTickCount64
 HANDLE_FLAG_INHERIT
 CREATE_ALWAYS
 WAIT_TIMEOUT
 CONSOLE_SCREEN_BUFFER_INFO
-macro:JX_ReadConsoleOutputCharacterA readConsoleOutputCharacterA (Address, Address, int, Address, Address)
+macro:JX_ReadConsoleOutputCharacterW readConsoleOutputCharacterW (Address, Address, int, Address, Address)
 COORD
-atexit atexit
+atexit atexit escapes=1
 ExitProcess exitProcess
 # --- PRP-31 step 5: the standard error dialog (a #32770 window and a message loop; no WNDPROC) ---
 ShellExecuteW shellExecuteW
 SetWindowTextW setWindowTextW
 GetWindowTextW getWindowTextW
 GetWindowTextLengthW getWindowTextLengthW
-SetWindowTextA setWindowTextA
 IsDialogMessageW isDialogMessageW
 SetFocus setFocus
 IsChild isChild
@@ -321,3 +321,18 @@ NONCLIENTMETRICSW
 GetSystemMetrics getSystemMetrics
 SM_CXSMICON
 SM_CXICON
+# --- PRP-34: Unicode. The command line, environment, console output and the file CRT through their W
+#     forms; the ACP conversion is for jli.dll alone, whose JLI_Launch takes char** (as java.exe does) ---
+_wfopen wfopen
+GetEnvironmentVariableW getEnvironmentVariableW
+GetCommandLineW getCommandLineW
+CommandLineToArgvW commandLineToArgvW
+LocalFree localFree
+WriteConsoleW writeConsoleW
+WideCharToMultiByte wideCharToMultiByte
+MultiByteToWideChar multiByteToWideChar
+GetACP getACP
+CP_ACP
+CP_UTF8
+MB_ERR_INVALID_CHARS
+GetShortPathNameW getShortPathNameW

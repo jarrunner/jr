@@ -12,19 +12,19 @@ public final class JavaHomeProbe {
     /** Major version from jvm.dll's VS_FIXEDFILEINFO (25.0.1.0 -> 25; Java 8's 8.0.4020.8 -> 8), 0 if unreadable. */
     static int dllMajor(String dll) {
         return memScoped(() -> {
-            var size = WinApi.getFileVersionInfoSizeA(cstr(dll), NULL);
+            var size = WinApi.getFileVersionInfoSizeW(dll, NULL);
             if (size <= 0) {
                 return 0;
             }
             var data = alloc(size);
             var info = ptrVar();
             var len = intVar();
-            if (WinApi.getFileVersionInfoA(cstr(dll), 0, size, data) == 0
-                    || WinApi.verQueryValueW(data, wcstr("\\"), info, len) == 0
-                    || len.getInt() < WinOffsets.VS_FIXEDFILEINFO.SIZE) {
+            if (WinApi.getFileVersionInfoW(dll, 0, size, data) == 0
+                    || WinApi.verQueryValueW(data, "\\", info, len) == 0
+                    || intOf(len) < WinOffsets.VS_FIXEDFILEINFO.SIZE) {
                 return 0;
             }
-            var ms = WinOffsets.VS_FIXEDFILEINFO.dwFileVersionMS(info.getAddress());
+            var ms = WinOffsets.VS_FIXEDFILEINFO.dwFileVersionMS(ptrOf(info));
             var major = ms >>> 16;
             return major == 1 ? ms & 0xFFFF : major;
         });
@@ -33,21 +33,22 @@ public final class JavaHomeProbe {
     /** IMAGE_FILE_MACHINE_* from a PE file's header, 0 if it cannot be read. */
     static int peMachine(String path) {
         return memScoped(() -> {
-            var f = WinApi.fopen(cstr(path), cstr("rb"));
+            var f = FileIo.open(path, "rb");
             if (f.toLong() == 0) {
                 return 0;
             }
-            var buf = alloc(4096);
-            var n = (int) WinApi.fread(buf, 1, 4096, f);
+            var buf = Buf.alloc(4096);
+            var n = (int) WinApi.fread(buf.ptr(), 1, 4096, f);
             WinApi.fclose(f);
-            if (n < 64 || WinOffsets.IMAGE_DOS_HEADER.e_magic(buf) != (short) WinApi.IMAGE_DOS_SIGNATURE) {
+            var head = buf.slice(0, Math.max(n, 0)); // only the bytes actually read
+            if (n < 64 || WinOffsets.IMAGE_DOS_HEADER.e_magic(head) != (short) WinApi.IMAGE_DOS_SIGNATURE) {
                 return 0;
             }
-            var lfanew = WinOffsets.IMAGE_DOS_HEADER.e_lfanew(buf);
-            if (lfanew < 0 || lfanew + 6 > n || buf.add(lfanew).getInt() != WinApi.IMAGE_NT_SIGNATURE) {
+            var lfanew = WinOffsets.IMAGE_DOS_HEADER.e_lfanew(head);
+            if (lfanew < 0 || lfanew + 6 > n || head.getInt(lfanew) != WinApi.IMAGE_NT_SIGNATURE) {
                 return 0;
             }
-            return buf.add(lfanew + 4).getShort() & 0xFFFF;
+            return head.getShort(lfanew + 4) & 0xFFFF;
         });
     }
 

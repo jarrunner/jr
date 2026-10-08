@@ -131,19 +131,19 @@ public final class JavaSources {
         return memScoped(() -> {
             var homes = new ArrayList<String>();
             var hkey = ptrVar();
-            if (WinApi.regOpenKeyExA(WinApi.HKEY_LOCAL_MACHINE, cstr(key), 0, WinApi.KEY_READ | WinApi.KEY_WOW64_64KEY, hkey)
+            if (WinApi.regOpenKeyExW(WinApi.HKEY_LOCAL_MACHINE, key, 0, WinApi.KEY_READ | WinApi.KEY_WOW64_64KEY, hkey)
                     != WinApi.ERROR_SUCCESS) {
                 return homes;
             }
-            var k = hkey.getAddress();
-            var name = alloc(256);
+            var k = ptrOf(hkey);
+            var name = alloc(256 * 2);
             var nameLen = intVar();
             for (var i = 0; ; i++) {
-                nameLen.putInt(256);
-                if (WinApi.regEnumKeyExA(k, i, name, nameLen, NULL, NULL, NULL, NULL) != WinApi.ERROR_SUCCESS) {
+                setInt(nameLen, 256);
+                if (WinApi.regEnumKeyExW(k, i, name, nameLen, NULL, NULL, NULL, NULL) != WinApi.ERROR_SUCCESS) {
                     break;
                 }
-                var home = registryValue(k, string(name, nameLen.getInt()), "JavaHome");
+                var home = registryValue(k, wstring(name, intOf(nameLen)), "JavaHome");
                 if (home != null) {
                     homes.add(home);
                 }
@@ -153,17 +153,17 @@ public final class JavaSources {
         });
     }
 
-    private static String registryValue(Address parent, String sub, String value) {
+    static String registryValue(Address parent, String sub, String value) {
         var hkey = ptrVar();
-        if (WinApi.regOpenKeyExA(parent, cstr(sub), 0, WinApi.KEY_READ | WinApi.KEY_WOW64_64KEY, hkey) != WinApi.ERROR_SUCCESS) {
+        if (WinApi.regOpenKeyExW(parent, sub, 0, WinApi.KEY_READ | WinApi.KEY_WOW64_64KEY, hkey) != WinApi.ERROR_SUCCESS) {
             return null;
         }
-        var k = hkey.getAddress();
-        var buf = alloc(1024);
+        var k = ptrOf(hkey);
+        var buf = alloc(4096 + 2);
         var len = intVar();
-        len.putInt(1023);
-        var ok = WinApi.regQueryValueExA(k, cstr(value), NULL, NULL, buf, len) == WinApi.ERROR_SUCCESS;
+        setInt(len, 4096); // bytes
+        var ok = WinApi.regQueryValueExW(k, value, NULL, NULL, buf, len) == WinApi.ERROR_SUCCESS;
         WinApi.regCloseKey(k);
-        return ok ? string(buf, len.getInt()) : null;
+        return ok ? wstring(buf, intOf(len) / 2) : null;
     }
 }

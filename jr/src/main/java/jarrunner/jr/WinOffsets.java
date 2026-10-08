@@ -9,19 +9,23 @@ public final class WinOffsets {
     private WinOffsets() {}
 
     /** {@code struct _FILETIME} - minwindef.h:222, 8 bytes */
-    public static final class FILETIME {
+    @CType("struct _FILETIME") public static final class FILETIME {
         private FILETIME() {}
         public static final int SIZE = 8;
         /** {@code DWORD dwLowDateTime} */ public static final int dwLowDateTime = 0;
         /** {@code DWORD dwHighDateTime} */ public static final int dwHighDateTime = 4;
-        public static int dwLowDateTime(Address s) { return s.add(dwLowDateTime).getInt(); }
-        public static void dwLowDateTime(Address s, int v) { s.add(dwLowDateTime).putInt(v); }
-        public static int dwHighDateTime(Address s) { return s.add(dwHighDateTime).getInt(); }
-        public static void dwHighDateTime(Address s, int v) { s.add(dwHighDateTime).putInt(v); }
+        public static int dwLowDateTime(@CType("struct _FILETIME") Address s) { return s.add(dwLowDateTime).getInt(); }
+        public static void dwLowDateTime(@CType("struct _FILETIME") Address s, int v) { s.add(dwLowDateTime).putInt(v); }
+        public static int dwLowDateTime(Buf s) { return s.getInt(dwLowDateTime); }
+        public static void dwLowDateTime(Buf s, int v) { s.putInt(dwLowDateTime, v); }
+        public static int dwHighDateTime(@CType("struct _FILETIME") Address s) { return s.add(dwHighDateTime).getInt(); }
+        public static void dwHighDateTime(@CType("struct _FILETIME") Address s, int v) { s.add(dwHighDateTime).putInt(v); }
+        public static int dwHighDateTime(Buf s) { return s.getInt(dwHighDateTime); }
+        public static void dwHighDateTime(Buf s, int v) { s.putInt(dwHighDateTime, v); }
     }
 
     /** {@code struct _WIN32_FILE_ATTRIBUTE_DATA} - fileapi.h:154, 36 bytes */
-    public static final class WIN32_FILE_ATTRIBUTE_DATA {
+    @CType("struct _WIN32_FILE_ATTRIBUTE_DATA") public static final class WIN32_FILE_ATTRIBUTE_DATA {
         private WIN32_FILE_ATTRIBUTE_DATA() {}
         public static final int SIZE = 36;
         /** {@code DWORD dwFileAttributes} */ public static final int dwFileAttributes = 0;
@@ -30,22 +34,34 @@ public final class WinOffsets {
         /** {@code FILETIME ftLastWriteTime} */ public static final int ftLastWriteTime = 20;
         /** {@code DWORD nFileSizeHigh} */ public static final int nFileSizeHigh = 28;
         /** {@code DWORD nFileSizeLow} */ public static final int nFileSizeLow = 32;
-        public static int dwFileAttributes(Address s) { return s.add(dwFileAttributes).getInt(); }
-        public static void dwFileAttributes(Address s, int v) { s.add(dwFileAttributes).putInt(v); }
-        public static int nFileSizeHigh(Address s) { return s.add(nFileSizeHigh).getInt(); }
-        public static void nFileSizeHigh(Address s, int v) { s.add(nFileSizeHigh).putInt(v); }
-        public static int nFileSizeLow(Address s) { return s.add(nFileSizeLow).getInt(); }
-        public static void nFileSizeLow(Address s, int v) { s.add(nFileSizeLow).putInt(v); }
+        public static int dwFileAttributes(@CType("struct _WIN32_FILE_ATTRIBUTE_DATA") Address s) { return s.add(dwFileAttributes).getInt(); }
+        public static void dwFileAttributes(@CType("struct _WIN32_FILE_ATTRIBUTE_DATA") Address s, int v) { s.add(dwFileAttributes).putInt(v); }
+        public static int dwFileAttributes(Buf s) { return s.getInt(dwFileAttributes); }
+        public static void dwFileAttributes(Buf s, int v) { s.putInt(dwFileAttributes, v); }
+        public static @CType("struct _FILETIME") Address ftCreationTime(@Returned @CType("struct _WIN32_FILE_ATTRIBUTE_DATA") Address s) { return s.add(ftCreationTime); }
+        public static Buf ftCreationTime(@Returned Buf s) { return s.from(ftCreationTime); }
+        public static @CType("struct _FILETIME") Address ftLastAccessTime(@Returned @CType("struct _WIN32_FILE_ATTRIBUTE_DATA") Address s) { return s.add(ftLastAccessTime); }
+        public static Buf ftLastAccessTime(@Returned Buf s) { return s.from(ftLastAccessTime); }
+        public static @CType("struct _FILETIME") Address ftLastWriteTime(@Returned @CType("struct _WIN32_FILE_ATTRIBUTE_DATA") Address s) { return s.add(ftLastWriteTime); }
+        public static Buf ftLastWriteTime(@Returned Buf s) { return s.from(ftLastWriteTime); }
+        public static int nFileSizeHigh(@CType("struct _WIN32_FILE_ATTRIBUTE_DATA") Address s) { return s.add(nFileSizeHigh).getInt(); }
+        public static void nFileSizeHigh(@CType("struct _WIN32_FILE_ATTRIBUTE_DATA") Address s, int v) { s.add(nFileSizeHigh).putInt(v); }
+        public static int nFileSizeHigh(Buf s) { return s.getInt(nFileSizeHigh); }
+        public static void nFileSizeHigh(Buf s, int v) { s.putInt(nFileSizeHigh, v); }
+        public static int nFileSizeLow(@CType("struct _WIN32_FILE_ATTRIBUTE_DATA") Address s) { return s.add(nFileSizeLow).getInt(); }
+        public static void nFileSizeLow(@CType("struct _WIN32_FILE_ATTRIBUTE_DATA") Address s, int v) { s.add(nFileSizeLow).putInt(v); }
+        public static int nFileSizeLow(Buf s) { return s.getInt(nFileSizeLow); }
+        public static void nFileSizeLow(Buf s, int v) { s.putInt(nFileSizeLow, v); }
     }
 
-    /** {@code struct _STARTUPINFOA} - processthreadsapi.h:51, 104 bytes */
-    public static final class STARTUPINFOA {
-        private STARTUPINFOA() {}
+    /** {@code struct _STARTUPINFOW} - processthreadsapi.h:72, 104 bytes */
+    @CType("struct _STARTUPINFOW") public static final class STARTUPINFOW {
+        private STARTUPINFOW() {}
         public static final int SIZE = 104;
         /** {@code DWORD cb} */ public static final int cb = 0;
-        /** {@code LPSTR lpReserved} */ public static final int lpReserved = 8;
-        /** {@code LPSTR lpDesktop} */ public static final int lpDesktop = 16;
-        /** {@code LPSTR lpTitle} */ public static final int lpTitle = 24;
+        /** {@code LPWSTR lpReserved} */ public static final int lpReserved = 8;
+        /** {@code LPWSTR lpDesktop} */ public static final int lpDesktop = 16;
+        /** {@code LPWSTR lpTitle} */ public static final int lpTitle = 24;
         /** {@code DWORD dwX} */ public static final int dwX = 32;
         /** {@code DWORD dwY} */ public static final int dwY = 36;
         /** {@code DWORD dwXSize} */ public static final int dwXSize = 40;
@@ -60,66 +76,110 @@ public final class WinOffsets {
         /** {@code HANDLE hStdInput} */ public static final int hStdInput = 80;
         /** {@code HANDLE hStdOutput} */ public static final int hStdOutput = 88;
         /** {@code HANDLE hStdError} */ public static final int hStdError = 96;
-        public static int cb(Address s) { return s.add(cb).getInt(); }
-        public static void cb(Address s, int v) { s.add(cb).putInt(v); }
-        public static Address lpReserved(Address s) { return s.add(lpReserved).getAddress(); }
-        public static void lpReserved(Address s, Address v) { s.add(lpReserved).putAddress(v); }
-        public static Address lpDesktop(Address s) { return s.add(lpDesktop).getAddress(); }
-        public static void lpDesktop(Address s, Address v) { s.add(lpDesktop).putAddress(v); }
-        public static Address lpTitle(Address s) { return s.add(lpTitle).getAddress(); }
-        public static void lpTitle(Address s, Address v) { s.add(lpTitle).putAddress(v); }
-        public static int dwX(Address s) { return s.add(dwX).getInt(); }
-        public static void dwX(Address s, int v) { s.add(dwX).putInt(v); }
-        public static int dwY(Address s) { return s.add(dwY).getInt(); }
-        public static void dwY(Address s, int v) { s.add(dwY).putInt(v); }
-        public static int dwXSize(Address s) { return s.add(dwXSize).getInt(); }
-        public static void dwXSize(Address s, int v) { s.add(dwXSize).putInt(v); }
-        public static int dwYSize(Address s) { return s.add(dwYSize).getInt(); }
-        public static void dwYSize(Address s, int v) { s.add(dwYSize).putInt(v); }
-        public static int dwXCountChars(Address s) { return s.add(dwXCountChars).getInt(); }
-        public static void dwXCountChars(Address s, int v) { s.add(dwXCountChars).putInt(v); }
-        public static int dwYCountChars(Address s) { return s.add(dwYCountChars).getInt(); }
-        public static void dwYCountChars(Address s, int v) { s.add(dwYCountChars).putInt(v); }
-        public static int dwFillAttribute(Address s) { return s.add(dwFillAttribute).getInt(); }
-        public static void dwFillAttribute(Address s, int v) { s.add(dwFillAttribute).putInt(v); }
-        public static int dwFlags(Address s) { return s.add(dwFlags).getInt(); }
-        public static void dwFlags(Address s, int v) { s.add(dwFlags).putInt(v); }
-        public static short wShowWindow(Address s) { return s.add(wShowWindow).getShort(); }
-        public static void wShowWindow(Address s, short v) { s.add(wShowWindow).putShort(v); }
-        public static short cbReserved2(Address s) { return s.add(cbReserved2).getShort(); }
-        public static void cbReserved2(Address s, short v) { s.add(cbReserved2).putShort(v); }
-        public static Address lpReserved2(Address s) { return s.add(lpReserved2).getAddress(); }
-        public static void lpReserved2(Address s, Address v) { s.add(lpReserved2).putAddress(v); }
-        public static Address hStdInput(Address s) { return s.add(hStdInput).getAddress(); }
-        public static void hStdInput(Address s, Address v) { s.add(hStdInput).putAddress(v); }
-        public static Address hStdOutput(Address s) { return s.add(hStdOutput).getAddress(); }
-        public static void hStdOutput(Address s, Address v) { s.add(hStdOutput).putAddress(v); }
-        public static Address hStdError(Address s) { return s.add(hStdError).getAddress(); }
-        public static void hStdError(Address s, Address v) { s.add(hStdError).putAddress(v); }
+        public static int cb(@CType("struct _STARTUPINFOW") Address s) { return s.add(cb).getInt(); }
+        public static void cb(@CType("struct _STARTUPINFOW") Address s, int v) { s.add(cb).putInt(v); }
+        public static int cb(Buf s) { return s.getInt(cb); }
+        public static void cb(Buf s, int v) { s.putInt(cb, v); }
+        public static @CType("wchar_t") Address lpReserved(@CType("struct _STARTUPINFOW") Address s) { return s.add(lpReserved).getAddress(); }
+        public static void lpReserved(@CType("struct _STARTUPINFOW") Address s, @CType("wchar_t") Address v) { s.add(lpReserved).putAddress(v); }
+        public static @CType("wchar_t") Address lpReserved(Buf s) { return s.getAddress(lpReserved); }
+        public static void lpReserved(Buf s, @CType("wchar_t") Address v) { s.putAddress(lpReserved, v); }
+        public static @CType("wchar_t") Address lpDesktop(@CType("struct _STARTUPINFOW") Address s) { return s.add(lpDesktop).getAddress(); }
+        public static void lpDesktop(@CType("struct _STARTUPINFOW") Address s, @CType("wchar_t") Address v) { s.add(lpDesktop).putAddress(v); }
+        public static @CType("wchar_t") Address lpDesktop(Buf s) { return s.getAddress(lpDesktop); }
+        public static void lpDesktop(Buf s, @CType("wchar_t") Address v) { s.putAddress(lpDesktop, v); }
+        public static @CType("wchar_t") Address lpTitle(@CType("struct _STARTUPINFOW") Address s) { return s.add(lpTitle).getAddress(); }
+        public static void lpTitle(@CType("struct _STARTUPINFOW") Address s, @CType("wchar_t") Address v) { s.add(lpTitle).putAddress(v); }
+        public static @CType("wchar_t") Address lpTitle(Buf s) { return s.getAddress(lpTitle); }
+        public static void lpTitle(Buf s, @CType("wchar_t") Address v) { s.putAddress(lpTitle, v); }
+        public static int dwX(@CType("struct _STARTUPINFOW") Address s) { return s.add(dwX).getInt(); }
+        public static void dwX(@CType("struct _STARTUPINFOW") Address s, int v) { s.add(dwX).putInt(v); }
+        public static int dwX(Buf s) { return s.getInt(dwX); }
+        public static void dwX(Buf s, int v) { s.putInt(dwX, v); }
+        public static int dwY(@CType("struct _STARTUPINFOW") Address s) { return s.add(dwY).getInt(); }
+        public static void dwY(@CType("struct _STARTUPINFOW") Address s, int v) { s.add(dwY).putInt(v); }
+        public static int dwY(Buf s) { return s.getInt(dwY); }
+        public static void dwY(Buf s, int v) { s.putInt(dwY, v); }
+        public static int dwXSize(@CType("struct _STARTUPINFOW") Address s) { return s.add(dwXSize).getInt(); }
+        public static void dwXSize(@CType("struct _STARTUPINFOW") Address s, int v) { s.add(dwXSize).putInt(v); }
+        public static int dwXSize(Buf s) { return s.getInt(dwXSize); }
+        public static void dwXSize(Buf s, int v) { s.putInt(dwXSize, v); }
+        public static int dwYSize(@CType("struct _STARTUPINFOW") Address s) { return s.add(dwYSize).getInt(); }
+        public static void dwYSize(@CType("struct _STARTUPINFOW") Address s, int v) { s.add(dwYSize).putInt(v); }
+        public static int dwYSize(Buf s) { return s.getInt(dwYSize); }
+        public static void dwYSize(Buf s, int v) { s.putInt(dwYSize, v); }
+        public static int dwXCountChars(@CType("struct _STARTUPINFOW") Address s) { return s.add(dwXCountChars).getInt(); }
+        public static void dwXCountChars(@CType("struct _STARTUPINFOW") Address s, int v) { s.add(dwXCountChars).putInt(v); }
+        public static int dwXCountChars(Buf s) { return s.getInt(dwXCountChars); }
+        public static void dwXCountChars(Buf s, int v) { s.putInt(dwXCountChars, v); }
+        public static int dwYCountChars(@CType("struct _STARTUPINFOW") Address s) { return s.add(dwYCountChars).getInt(); }
+        public static void dwYCountChars(@CType("struct _STARTUPINFOW") Address s, int v) { s.add(dwYCountChars).putInt(v); }
+        public static int dwYCountChars(Buf s) { return s.getInt(dwYCountChars); }
+        public static void dwYCountChars(Buf s, int v) { s.putInt(dwYCountChars, v); }
+        public static int dwFillAttribute(@CType("struct _STARTUPINFOW") Address s) { return s.add(dwFillAttribute).getInt(); }
+        public static void dwFillAttribute(@CType("struct _STARTUPINFOW") Address s, int v) { s.add(dwFillAttribute).putInt(v); }
+        public static int dwFillAttribute(Buf s) { return s.getInt(dwFillAttribute); }
+        public static void dwFillAttribute(Buf s, int v) { s.putInt(dwFillAttribute, v); }
+        public static int dwFlags(@CType("struct _STARTUPINFOW") Address s) { return s.add(dwFlags).getInt(); }
+        public static void dwFlags(@CType("struct _STARTUPINFOW") Address s, int v) { s.add(dwFlags).putInt(v); }
+        public static int dwFlags(Buf s) { return s.getInt(dwFlags); }
+        public static void dwFlags(Buf s, int v) { s.putInt(dwFlags, v); }
+        public static short wShowWindow(@CType("struct _STARTUPINFOW") Address s) { return s.add(wShowWindow).getShort(); }
+        public static void wShowWindow(@CType("struct _STARTUPINFOW") Address s, short v) { s.add(wShowWindow).putShort(v); }
+        public static short wShowWindow(Buf s) { return s.getShort(wShowWindow); }
+        public static void wShowWindow(Buf s, short v) { s.putShort(wShowWindow, v); }
+        public static short cbReserved2(@CType("struct _STARTUPINFOW") Address s) { return s.add(cbReserved2).getShort(); }
+        public static void cbReserved2(@CType("struct _STARTUPINFOW") Address s, short v) { s.add(cbReserved2).putShort(v); }
+        public static short cbReserved2(Buf s) { return s.getShort(cbReserved2); }
+        public static void cbReserved2(Buf s, short v) { s.putShort(cbReserved2, v); }
+        public static Address lpReserved2(@CType("struct _STARTUPINFOW") Address s) { return s.add(lpReserved2).getAddress(); }
+        public static void lpReserved2(@CType("struct _STARTUPINFOW") Address s, Address v) { s.add(lpReserved2).putAddress(v); }
+        public static Address lpReserved2(Buf s) { return s.getAddress(lpReserved2); }
+        public static void lpReserved2(Buf s, Address v) { s.putAddress(lpReserved2, v); }
+        public static Address hStdInput(@CType("struct _STARTUPINFOW") Address s) { return s.add(hStdInput).getAddress(); }
+        public static void hStdInput(@CType("struct _STARTUPINFOW") Address s, Address v) { s.add(hStdInput).putAddress(v); }
+        public static Address hStdInput(Buf s) { return s.getAddress(hStdInput); }
+        public static void hStdInput(Buf s, Address v) { s.putAddress(hStdInput, v); }
+        public static Address hStdOutput(@CType("struct _STARTUPINFOW") Address s) { return s.add(hStdOutput).getAddress(); }
+        public static void hStdOutput(@CType("struct _STARTUPINFOW") Address s, Address v) { s.add(hStdOutput).putAddress(v); }
+        public static Address hStdOutput(Buf s) { return s.getAddress(hStdOutput); }
+        public static void hStdOutput(Buf s, Address v) { s.putAddress(hStdOutput, v); }
+        public static Address hStdError(@CType("struct _STARTUPINFOW") Address s) { return s.add(hStdError).getAddress(); }
+        public static void hStdError(@CType("struct _STARTUPINFOW") Address s, Address v) { s.add(hStdError).putAddress(v); }
+        public static Address hStdError(Buf s) { return s.getAddress(hStdError); }
+        public static void hStdError(Buf s, Address v) { s.putAddress(hStdError, v); }
     }
 
     /** {@code struct _PROCESS_INFORMATION} - processthreadsapi.h:96, 24 bytes */
-    public static final class PROCESS_INFORMATION {
+    @CType("struct _PROCESS_INFORMATION") public static final class PROCESS_INFORMATION {
         private PROCESS_INFORMATION() {}
         public static final int SIZE = 24;
         /** {@code HANDLE hProcess} */ public static final int hProcess = 0;
         /** {@code HANDLE hThread} */ public static final int hThread = 8;
         /** {@code DWORD dwProcessId} */ public static final int dwProcessId = 16;
         /** {@code DWORD dwThreadId} */ public static final int dwThreadId = 20;
-        public static Address hProcess(Address s) { return s.add(hProcess).getAddress(); }
-        public static void hProcess(Address s, Address v) { s.add(hProcess).putAddress(v); }
-        public static Address hThread(Address s) { return s.add(hThread).getAddress(); }
-        public static void hThread(Address s, Address v) { s.add(hThread).putAddress(v); }
-        public static int dwProcessId(Address s) { return s.add(dwProcessId).getInt(); }
-        public static void dwProcessId(Address s, int v) { s.add(dwProcessId).putInt(v); }
-        public static int dwThreadId(Address s) { return s.add(dwThreadId).getInt(); }
-        public static void dwThreadId(Address s, int v) { s.add(dwThreadId).putInt(v); }
+        public static Address hProcess(@CType("struct _PROCESS_INFORMATION") Address s) { return s.add(hProcess).getAddress(); }
+        public static void hProcess(@CType("struct _PROCESS_INFORMATION") Address s, Address v) { s.add(hProcess).putAddress(v); }
+        public static Address hProcess(Buf s) { return s.getAddress(hProcess); }
+        public static void hProcess(Buf s, Address v) { s.putAddress(hProcess, v); }
+        public static Address hThread(@CType("struct _PROCESS_INFORMATION") Address s) { return s.add(hThread).getAddress(); }
+        public static void hThread(@CType("struct _PROCESS_INFORMATION") Address s, Address v) { s.add(hThread).putAddress(v); }
+        public static Address hThread(Buf s) { return s.getAddress(hThread); }
+        public static void hThread(Buf s, Address v) { s.putAddress(hThread, v); }
+        public static int dwProcessId(@CType("struct _PROCESS_INFORMATION") Address s) { return s.add(dwProcessId).getInt(); }
+        public static void dwProcessId(@CType("struct _PROCESS_INFORMATION") Address s, int v) { s.add(dwProcessId).putInt(v); }
+        public static int dwProcessId(Buf s) { return s.getInt(dwProcessId); }
+        public static void dwProcessId(Buf s, int v) { s.putInt(dwProcessId, v); }
+        public static int dwThreadId(@CType("struct _PROCESS_INFORMATION") Address s) { return s.add(dwThreadId).getInt(); }
+        public static void dwThreadId(@CType("struct _PROCESS_INFORMATION") Address s, int v) { s.add(dwThreadId).putInt(v); }
+        public static int dwThreadId(Buf s) { return s.getInt(dwThreadId); }
+        public static void dwThreadId(Buf s, int v) { s.putInt(dwThreadId, v); }
     }
 
-    /** {@code struct _WIN32_FIND_DATAA} - minwinbase.h:61, 320 bytes */
-    public static final class WIN32_FIND_DATAA {
-        private WIN32_FIND_DATAA() {}
-        public static final int SIZE = 320;
+    /** {@code struct _WIN32_FIND_DATAW} - minwinbase.h:79, 592 bytes */
+    @CType("struct _WIN32_FIND_DATAW") public static final class WIN32_FIND_DATAW {
+        private WIN32_FIND_DATAW() {}
+        public static final int SIZE = 592;
         /** {@code DWORD dwFileAttributes} */ public static final int dwFileAttributes = 0;
         /** {@code FILETIME ftCreationTime} */ public static final int ftCreationTime = 4;
         /** {@code FILETIME ftLastAccessTime} */ public static final int ftLastAccessTime = 12;
@@ -128,22 +188,82 @@ public final class WinOffsets {
         /** {@code DWORD nFileSizeLow} */ public static final int nFileSizeLow = 32;
         /** {@code DWORD dwReserved0} */ public static final int dwReserved0 = 36;
         /** {@code DWORD dwReserved1} */ public static final int dwReserved1 = 40;
-        /** {@code CHAR[260] cFileName} */ public static final int cFileName = 44;
-        /** {@code CHAR[14] cAlternateFileName} */ public static final int cAlternateFileName = 304;
-        public static int dwFileAttributes(Address s) { return s.add(dwFileAttributes).getInt(); }
-        public static void dwFileAttributes(Address s, int v) { s.add(dwFileAttributes).putInt(v); }
-        public static int nFileSizeHigh(Address s) { return s.add(nFileSizeHigh).getInt(); }
-        public static void nFileSizeHigh(Address s, int v) { s.add(nFileSizeHigh).putInt(v); }
-        public static int nFileSizeLow(Address s) { return s.add(nFileSizeLow).getInt(); }
-        public static void nFileSizeLow(Address s, int v) { s.add(nFileSizeLow).putInt(v); }
-        public static int dwReserved0(Address s) { return s.add(dwReserved0).getInt(); }
-        public static void dwReserved0(Address s, int v) { s.add(dwReserved0).putInt(v); }
-        public static int dwReserved1(Address s) { return s.add(dwReserved1).getInt(); }
-        public static void dwReserved1(Address s, int v) { s.add(dwReserved1).putInt(v); }
+        /** {@code WCHAR[260] cFileName} */ public static final int cFileName = 44;
+        /** {@code WCHAR[14] cAlternateFileName} */ public static final int cAlternateFileName = 564;
+        public static int dwFileAttributes(@CType("struct _WIN32_FIND_DATAW") Address s) { return s.add(dwFileAttributes).getInt(); }
+        public static void dwFileAttributes(@CType("struct _WIN32_FIND_DATAW") Address s, int v) { s.add(dwFileAttributes).putInt(v); }
+        public static int dwFileAttributes(Buf s) { return s.getInt(dwFileAttributes); }
+        public static void dwFileAttributes(Buf s, int v) { s.putInt(dwFileAttributes, v); }
+        public static @CType("struct _FILETIME") Address ftCreationTime(@Returned @CType("struct _WIN32_FIND_DATAW") Address s) { return s.add(ftCreationTime); }
+        public static Buf ftCreationTime(@Returned Buf s) { return s.from(ftCreationTime); }
+        public static @CType("struct _FILETIME") Address ftLastAccessTime(@Returned @CType("struct _WIN32_FIND_DATAW") Address s) { return s.add(ftLastAccessTime); }
+        public static Buf ftLastAccessTime(@Returned Buf s) { return s.from(ftLastAccessTime); }
+        public static @CType("struct _FILETIME") Address ftLastWriteTime(@Returned @CType("struct _WIN32_FIND_DATAW") Address s) { return s.add(ftLastWriteTime); }
+        public static Buf ftLastWriteTime(@Returned Buf s) { return s.from(ftLastWriteTime); }
+        public static int nFileSizeHigh(@CType("struct _WIN32_FIND_DATAW") Address s) { return s.add(nFileSizeHigh).getInt(); }
+        public static void nFileSizeHigh(@CType("struct _WIN32_FIND_DATAW") Address s, int v) { s.add(nFileSizeHigh).putInt(v); }
+        public static int nFileSizeHigh(Buf s) { return s.getInt(nFileSizeHigh); }
+        public static void nFileSizeHigh(Buf s, int v) { s.putInt(nFileSizeHigh, v); }
+        public static int nFileSizeLow(@CType("struct _WIN32_FIND_DATAW") Address s) { return s.add(nFileSizeLow).getInt(); }
+        public static void nFileSizeLow(@CType("struct _WIN32_FIND_DATAW") Address s, int v) { s.add(nFileSizeLow).putInt(v); }
+        public static int nFileSizeLow(Buf s) { return s.getInt(nFileSizeLow); }
+        public static void nFileSizeLow(Buf s, int v) { s.putInt(nFileSizeLow, v); }
+        public static int dwReserved0(@CType("struct _WIN32_FIND_DATAW") Address s) { return s.add(dwReserved0).getInt(); }
+        public static void dwReserved0(@CType("struct _WIN32_FIND_DATAW") Address s, int v) { s.add(dwReserved0).putInt(v); }
+        public static int dwReserved0(Buf s) { return s.getInt(dwReserved0); }
+        public static void dwReserved0(Buf s, int v) { s.putInt(dwReserved0, v); }
+        public static int dwReserved1(@CType("struct _WIN32_FIND_DATAW") Address s) { return s.add(dwReserved1).getInt(); }
+        public static void dwReserved1(@CType("struct _WIN32_FIND_DATAW") Address s, int v) { s.add(dwReserved1).putInt(v); }
+        public static int dwReserved1(Buf s) { return s.getInt(dwReserved1); }
+        public static void dwReserved1(Buf s, int v) { s.putInt(dwReserved1, v); }
+        public static Address cFileName(@Returned @CType("struct _WIN32_FIND_DATAW") Address s) { return s.add(cFileName); }
+        public static Buf cFileName(@Returned Buf s) { return s.from(cFileName); }
+        public static Address cAlternateFileName(@Returned @CType("struct _WIN32_FIND_DATAW") Address s) { return s.add(cAlternateFileName); }
+        public static Buf cAlternateFileName(@Returned Buf s) { return s.from(cAlternateFileName); }
+    }
+
+    /** {@code struct tagINITCOMMONCONTROLSEX} - commctrl.h:51, 8 bytes */
+    @CType("struct tagINITCOMMONCONTROLSEX") public static final class INITCOMMONCONTROLSEX {
+        private INITCOMMONCONTROLSEX() {}
+        public static final int SIZE = 8;
+        /** {@code DWORD dwSize} */ public static final int dwSize = 0;
+        /** {@code DWORD dwICC} */ public static final int dwICC = 4;
+        public static int dwSize(@CType("struct tagINITCOMMONCONTROLSEX") Address s) { return s.add(dwSize).getInt(); }
+        public static void dwSize(@CType("struct tagINITCOMMONCONTROLSEX") Address s, int v) { s.add(dwSize).putInt(v); }
+        public static int dwSize(Buf s) { return s.getInt(dwSize); }
+        public static void dwSize(Buf s, int v) { s.putInt(dwSize, v); }
+        public static int dwICC(@CType("struct tagINITCOMMONCONTROLSEX") Address s) { return s.add(dwICC).getInt(); }
+        public static void dwICC(@CType("struct tagINITCOMMONCONTROLSEX") Address s, int v) { s.add(dwICC).putInt(v); }
+        public static int dwICC(Buf s) { return s.getInt(dwICC); }
+        public static void dwICC(Buf s, int v) { s.putInt(dwICC, v); }
+    }
+
+    /** {@code union _LARGE_INTEGER} - winnt.h:542, 8 bytes */
+    @CType("union _LARGE_INTEGER") public static final class LARGE_INTEGER {
+        private LARGE_INTEGER() {}
+        public static final int SIZE = 8;
+        /** {@code DWORD LowPart} */ public static final int LowPart = 0;
+        /** {@code LONG HighPart} */ public static final int HighPart = 4;
+        /** {@code struct  u} */ public static final int u = 0;
+        /** {@code LONGLONG QuadPart} */ public static final int QuadPart = 0;
+        public static int LowPart(@CType("union _LARGE_INTEGER") Address s) { return s.add(LowPart).getInt(); }
+        public static void LowPart(@CType("union _LARGE_INTEGER") Address s, int v) { s.add(LowPart).putInt(v); }
+        public static int LowPart(Buf s) { return s.getInt(LowPart); }
+        public static void LowPart(Buf s, int v) { s.putInt(LowPart, v); }
+        public static int HighPart(@CType("union _LARGE_INTEGER") Address s) { return s.add(HighPart).getInt(); }
+        public static void HighPart(@CType("union _LARGE_INTEGER") Address s, int v) { s.add(HighPart).putInt(v); }
+        public static int HighPart(Buf s) { return s.getInt(HighPart); }
+        public static void HighPart(Buf s, int v) { s.putInt(HighPart, v); }
+        public static Address u(@Returned @CType("union _LARGE_INTEGER") Address s) { return s.add(u); }
+        public static Buf u(@Returned Buf s) { return s.from(u); }
+        public static long QuadPart(@CType("union _LARGE_INTEGER") Address s) { return s.add(QuadPart).getLong(); }
+        public static void QuadPart(@CType("union _LARGE_INTEGER") Address s, long v) { s.add(QuadPart).putLong(v); }
+        public static long QuadPart(Buf s) { return s.getLong(QuadPart); }
+        public static void QuadPart(Buf s, long v) { s.putLong(QuadPart, v); }
     }
 
     /** {@code struct tagMSG} - winuser.h:955, 48 bytes */
-    public static final class MSG {
+    @CType("struct tagMSG") public static final class MSG {
         private MSG() {}
         public static final int SIZE = 48;
         /** {@code HWND hwnd} */ public static final int hwnd = 0;
@@ -152,20 +272,32 @@ public final class WinOffsets {
         /** {@code LPARAM lParam} */ public static final int lParam = 24;
         /** {@code DWORD time} */ public static final int time = 32;
         /** {@code POINT pt} */ public static final int pt = 36;
-        public static Address hwnd(Address s) { return s.add(hwnd).getAddress(); }
-        public static void hwnd(Address s, Address v) { s.add(hwnd).putAddress(v); }
-        public static int message(Address s) { return s.add(message).getInt(); }
-        public static void message(Address s, int v) { s.add(message).putInt(v); }
-        public static long wParam(Address s) { return s.add(wParam).getLong(); }
-        public static void wParam(Address s, long v) { s.add(wParam).putLong(v); }
-        public static long lParam(Address s) { return s.add(lParam).getLong(); }
-        public static void lParam(Address s, long v) { s.add(lParam).putLong(v); }
-        public static int time(Address s) { return s.add(time).getInt(); }
-        public static void time(Address s, int v) { s.add(time).putInt(v); }
+        public static @CType("struct HWND__") Address hwnd(@CType("struct tagMSG") Address s) { return s.add(hwnd).getAddress(); }
+        public static void hwnd(@CType("struct tagMSG") Address s, @CType("struct HWND__") Address v) { s.add(hwnd).putAddress(v); }
+        public static @CType("struct HWND__") Address hwnd(Buf s) { return s.getAddress(hwnd); }
+        public static void hwnd(Buf s, @CType("struct HWND__") Address v) { s.putAddress(hwnd, v); }
+        public static int message(@CType("struct tagMSG") Address s) { return s.add(message).getInt(); }
+        public static void message(@CType("struct tagMSG") Address s, int v) { s.add(message).putInt(v); }
+        public static int message(Buf s) { return s.getInt(message); }
+        public static void message(Buf s, int v) { s.putInt(message, v); }
+        public static long wParam(@CType("struct tagMSG") Address s) { return s.add(wParam).getLong(); }
+        public static void wParam(@CType("struct tagMSG") Address s, long v) { s.add(wParam).putLong(v); }
+        public static long wParam(Buf s) { return s.getLong(wParam); }
+        public static void wParam(Buf s, long v) { s.putLong(wParam, v); }
+        public static long lParam(@CType("struct tagMSG") Address s) { return s.add(lParam).getLong(); }
+        public static void lParam(@CType("struct tagMSG") Address s, long v) { s.add(lParam).putLong(v); }
+        public static long lParam(Buf s) { return s.getLong(lParam); }
+        public static void lParam(Buf s, long v) { s.putLong(lParam, v); }
+        public static int time(@CType("struct tagMSG") Address s) { return s.add(time).getInt(); }
+        public static void time(@CType("struct tagMSG") Address s, int v) { s.add(time).putInt(v); }
+        public static int time(Buf s) { return s.getInt(time); }
+        public static void time(Buf s, int v) { s.putInt(time, v); }
+        public static @CType("struct tagPOINT") Address pt(@Returned @CType("struct tagMSG") Address s) { return s.add(pt); }
+        public static Buf pt(@Returned Buf s) { return s.from(pt); }
     }
 
     /** {@code struct tagVS_FIXEDFILEINFO} - winver.h:118, 52 bytes */
-    public static final class VS_FIXEDFILEINFO {
+    @CType("struct tagVS_FIXEDFILEINFO") public static final class VS_FIXEDFILEINFO {
         private VS_FIXEDFILEINFO() {}
         public static final int SIZE = 52;
         /** {@code DWORD dwSignature} */ public static final int dwSignature = 0;
@@ -181,36 +313,62 @@ public final class WinOffsets {
         /** {@code DWORD dwFileSubtype} */ public static final int dwFileSubtype = 40;
         /** {@code DWORD dwFileDateMS} */ public static final int dwFileDateMS = 44;
         /** {@code DWORD dwFileDateLS} */ public static final int dwFileDateLS = 48;
-        public static int dwSignature(Address s) { return s.add(dwSignature).getInt(); }
-        public static void dwSignature(Address s, int v) { s.add(dwSignature).putInt(v); }
-        public static int dwStrucVersion(Address s) { return s.add(dwStrucVersion).getInt(); }
-        public static void dwStrucVersion(Address s, int v) { s.add(dwStrucVersion).putInt(v); }
-        public static int dwFileVersionMS(Address s) { return s.add(dwFileVersionMS).getInt(); }
-        public static void dwFileVersionMS(Address s, int v) { s.add(dwFileVersionMS).putInt(v); }
-        public static int dwFileVersionLS(Address s) { return s.add(dwFileVersionLS).getInt(); }
-        public static void dwFileVersionLS(Address s, int v) { s.add(dwFileVersionLS).putInt(v); }
-        public static int dwProductVersionMS(Address s) { return s.add(dwProductVersionMS).getInt(); }
-        public static void dwProductVersionMS(Address s, int v) { s.add(dwProductVersionMS).putInt(v); }
-        public static int dwProductVersionLS(Address s) { return s.add(dwProductVersionLS).getInt(); }
-        public static void dwProductVersionLS(Address s, int v) { s.add(dwProductVersionLS).putInt(v); }
-        public static int dwFileFlagsMask(Address s) { return s.add(dwFileFlagsMask).getInt(); }
-        public static void dwFileFlagsMask(Address s, int v) { s.add(dwFileFlagsMask).putInt(v); }
-        public static int dwFileFlags(Address s) { return s.add(dwFileFlags).getInt(); }
-        public static void dwFileFlags(Address s, int v) { s.add(dwFileFlags).putInt(v); }
-        public static int dwFileOS(Address s) { return s.add(dwFileOS).getInt(); }
-        public static void dwFileOS(Address s, int v) { s.add(dwFileOS).putInt(v); }
-        public static int dwFileType(Address s) { return s.add(dwFileType).getInt(); }
-        public static void dwFileType(Address s, int v) { s.add(dwFileType).putInt(v); }
-        public static int dwFileSubtype(Address s) { return s.add(dwFileSubtype).getInt(); }
-        public static void dwFileSubtype(Address s, int v) { s.add(dwFileSubtype).putInt(v); }
-        public static int dwFileDateMS(Address s) { return s.add(dwFileDateMS).getInt(); }
-        public static void dwFileDateMS(Address s, int v) { s.add(dwFileDateMS).putInt(v); }
-        public static int dwFileDateLS(Address s) { return s.add(dwFileDateLS).getInt(); }
-        public static void dwFileDateLS(Address s, int v) { s.add(dwFileDateLS).putInt(v); }
+        public static int dwSignature(@CType("struct tagVS_FIXEDFILEINFO") Address s) { return s.add(dwSignature).getInt(); }
+        public static void dwSignature(@CType("struct tagVS_FIXEDFILEINFO") Address s, int v) { s.add(dwSignature).putInt(v); }
+        public static int dwSignature(Buf s) { return s.getInt(dwSignature); }
+        public static void dwSignature(Buf s, int v) { s.putInt(dwSignature, v); }
+        public static int dwStrucVersion(@CType("struct tagVS_FIXEDFILEINFO") Address s) { return s.add(dwStrucVersion).getInt(); }
+        public static void dwStrucVersion(@CType("struct tagVS_FIXEDFILEINFO") Address s, int v) { s.add(dwStrucVersion).putInt(v); }
+        public static int dwStrucVersion(Buf s) { return s.getInt(dwStrucVersion); }
+        public static void dwStrucVersion(Buf s, int v) { s.putInt(dwStrucVersion, v); }
+        public static int dwFileVersionMS(@CType("struct tagVS_FIXEDFILEINFO") Address s) { return s.add(dwFileVersionMS).getInt(); }
+        public static void dwFileVersionMS(@CType("struct tagVS_FIXEDFILEINFO") Address s, int v) { s.add(dwFileVersionMS).putInt(v); }
+        public static int dwFileVersionMS(Buf s) { return s.getInt(dwFileVersionMS); }
+        public static void dwFileVersionMS(Buf s, int v) { s.putInt(dwFileVersionMS, v); }
+        public static int dwFileVersionLS(@CType("struct tagVS_FIXEDFILEINFO") Address s) { return s.add(dwFileVersionLS).getInt(); }
+        public static void dwFileVersionLS(@CType("struct tagVS_FIXEDFILEINFO") Address s, int v) { s.add(dwFileVersionLS).putInt(v); }
+        public static int dwFileVersionLS(Buf s) { return s.getInt(dwFileVersionLS); }
+        public static void dwFileVersionLS(Buf s, int v) { s.putInt(dwFileVersionLS, v); }
+        public static int dwProductVersionMS(@CType("struct tagVS_FIXEDFILEINFO") Address s) { return s.add(dwProductVersionMS).getInt(); }
+        public static void dwProductVersionMS(@CType("struct tagVS_FIXEDFILEINFO") Address s, int v) { s.add(dwProductVersionMS).putInt(v); }
+        public static int dwProductVersionMS(Buf s) { return s.getInt(dwProductVersionMS); }
+        public static void dwProductVersionMS(Buf s, int v) { s.putInt(dwProductVersionMS, v); }
+        public static int dwProductVersionLS(@CType("struct tagVS_FIXEDFILEINFO") Address s) { return s.add(dwProductVersionLS).getInt(); }
+        public static void dwProductVersionLS(@CType("struct tagVS_FIXEDFILEINFO") Address s, int v) { s.add(dwProductVersionLS).putInt(v); }
+        public static int dwProductVersionLS(Buf s) { return s.getInt(dwProductVersionLS); }
+        public static void dwProductVersionLS(Buf s, int v) { s.putInt(dwProductVersionLS, v); }
+        public static int dwFileFlagsMask(@CType("struct tagVS_FIXEDFILEINFO") Address s) { return s.add(dwFileFlagsMask).getInt(); }
+        public static void dwFileFlagsMask(@CType("struct tagVS_FIXEDFILEINFO") Address s, int v) { s.add(dwFileFlagsMask).putInt(v); }
+        public static int dwFileFlagsMask(Buf s) { return s.getInt(dwFileFlagsMask); }
+        public static void dwFileFlagsMask(Buf s, int v) { s.putInt(dwFileFlagsMask, v); }
+        public static int dwFileFlags(@CType("struct tagVS_FIXEDFILEINFO") Address s) { return s.add(dwFileFlags).getInt(); }
+        public static void dwFileFlags(@CType("struct tagVS_FIXEDFILEINFO") Address s, int v) { s.add(dwFileFlags).putInt(v); }
+        public static int dwFileFlags(Buf s) { return s.getInt(dwFileFlags); }
+        public static void dwFileFlags(Buf s, int v) { s.putInt(dwFileFlags, v); }
+        public static int dwFileOS(@CType("struct tagVS_FIXEDFILEINFO") Address s) { return s.add(dwFileOS).getInt(); }
+        public static void dwFileOS(@CType("struct tagVS_FIXEDFILEINFO") Address s, int v) { s.add(dwFileOS).putInt(v); }
+        public static int dwFileOS(Buf s) { return s.getInt(dwFileOS); }
+        public static void dwFileOS(Buf s, int v) { s.putInt(dwFileOS, v); }
+        public static int dwFileType(@CType("struct tagVS_FIXEDFILEINFO") Address s) { return s.add(dwFileType).getInt(); }
+        public static void dwFileType(@CType("struct tagVS_FIXEDFILEINFO") Address s, int v) { s.add(dwFileType).putInt(v); }
+        public static int dwFileType(Buf s) { return s.getInt(dwFileType); }
+        public static void dwFileType(Buf s, int v) { s.putInt(dwFileType, v); }
+        public static int dwFileSubtype(@CType("struct tagVS_FIXEDFILEINFO") Address s) { return s.add(dwFileSubtype).getInt(); }
+        public static void dwFileSubtype(@CType("struct tagVS_FIXEDFILEINFO") Address s, int v) { s.add(dwFileSubtype).putInt(v); }
+        public static int dwFileSubtype(Buf s) { return s.getInt(dwFileSubtype); }
+        public static void dwFileSubtype(Buf s, int v) { s.putInt(dwFileSubtype, v); }
+        public static int dwFileDateMS(@CType("struct tagVS_FIXEDFILEINFO") Address s) { return s.add(dwFileDateMS).getInt(); }
+        public static void dwFileDateMS(@CType("struct tagVS_FIXEDFILEINFO") Address s, int v) { s.add(dwFileDateMS).putInt(v); }
+        public static int dwFileDateMS(Buf s) { return s.getInt(dwFileDateMS); }
+        public static void dwFileDateMS(Buf s, int v) { s.putInt(dwFileDateMS, v); }
+        public static int dwFileDateLS(@CType("struct tagVS_FIXEDFILEINFO") Address s) { return s.add(dwFileDateLS).getInt(); }
+        public static void dwFileDateLS(@CType("struct tagVS_FIXEDFILEINFO") Address s, int v) { s.add(dwFileDateLS).putInt(v); }
+        public static int dwFileDateLS(Buf s) { return s.getInt(dwFileDateLS); }
+        public static void dwFileDateLS(Buf s, int v) { s.putInt(dwFileDateLS, v); }
     }
 
     /** {@code struct _IMAGE_DOS_HEADER} - winnt.h:7436, 64 bytes */
-    public static final class IMAGE_DOS_HEADER {
+    @CType("struct _IMAGE_DOS_HEADER") public static final class IMAGE_DOS_HEADER {
         private IMAGE_DOS_HEADER() {}
         public static final int SIZE = 64;
         /** {@code WORD e_magic} */ public static final int e_magic = 0;
@@ -232,44 +390,82 @@ public final class WinOffsets {
         /** {@code WORD e_oeminfo} */ public static final int e_oeminfo = 38;
         /** {@code WORD[10] e_res2} */ public static final int e_res2 = 40;
         /** {@code LONG e_lfanew} */ public static final int e_lfanew = 60;
-        public static short e_magic(Address s) { return s.add(e_magic).getShort(); }
-        public static void e_magic(Address s, short v) { s.add(e_magic).putShort(v); }
-        public static short e_cblp(Address s) { return s.add(e_cblp).getShort(); }
-        public static void e_cblp(Address s, short v) { s.add(e_cblp).putShort(v); }
-        public static short e_cp(Address s) { return s.add(e_cp).getShort(); }
-        public static void e_cp(Address s, short v) { s.add(e_cp).putShort(v); }
-        public static short e_crlc(Address s) { return s.add(e_crlc).getShort(); }
-        public static void e_crlc(Address s, short v) { s.add(e_crlc).putShort(v); }
-        public static short e_cparhdr(Address s) { return s.add(e_cparhdr).getShort(); }
-        public static void e_cparhdr(Address s, short v) { s.add(e_cparhdr).putShort(v); }
-        public static short e_minalloc(Address s) { return s.add(e_minalloc).getShort(); }
-        public static void e_minalloc(Address s, short v) { s.add(e_minalloc).putShort(v); }
-        public static short e_maxalloc(Address s) { return s.add(e_maxalloc).getShort(); }
-        public static void e_maxalloc(Address s, short v) { s.add(e_maxalloc).putShort(v); }
-        public static short e_ss(Address s) { return s.add(e_ss).getShort(); }
-        public static void e_ss(Address s, short v) { s.add(e_ss).putShort(v); }
-        public static short e_sp(Address s) { return s.add(e_sp).getShort(); }
-        public static void e_sp(Address s, short v) { s.add(e_sp).putShort(v); }
-        public static short e_csum(Address s) { return s.add(e_csum).getShort(); }
-        public static void e_csum(Address s, short v) { s.add(e_csum).putShort(v); }
-        public static short e_ip(Address s) { return s.add(e_ip).getShort(); }
-        public static void e_ip(Address s, short v) { s.add(e_ip).putShort(v); }
-        public static short e_cs(Address s) { return s.add(e_cs).getShort(); }
-        public static void e_cs(Address s, short v) { s.add(e_cs).putShort(v); }
-        public static short e_lfarlc(Address s) { return s.add(e_lfarlc).getShort(); }
-        public static void e_lfarlc(Address s, short v) { s.add(e_lfarlc).putShort(v); }
-        public static short e_ovno(Address s) { return s.add(e_ovno).getShort(); }
-        public static void e_ovno(Address s, short v) { s.add(e_ovno).putShort(v); }
-        public static short e_oemid(Address s) { return s.add(e_oemid).getShort(); }
-        public static void e_oemid(Address s, short v) { s.add(e_oemid).putShort(v); }
-        public static short e_oeminfo(Address s) { return s.add(e_oeminfo).getShort(); }
-        public static void e_oeminfo(Address s, short v) { s.add(e_oeminfo).putShort(v); }
-        public static int e_lfanew(Address s) { return s.add(e_lfanew).getInt(); }
-        public static void e_lfanew(Address s, int v) { s.add(e_lfanew).putInt(v); }
+        public static short e_magic(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_magic).getShort(); }
+        public static void e_magic(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_magic).putShort(v); }
+        public static short e_magic(Buf s) { return s.getShort(e_magic); }
+        public static void e_magic(Buf s, short v) { s.putShort(e_magic, v); }
+        public static short e_cblp(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_cblp).getShort(); }
+        public static void e_cblp(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_cblp).putShort(v); }
+        public static short e_cblp(Buf s) { return s.getShort(e_cblp); }
+        public static void e_cblp(Buf s, short v) { s.putShort(e_cblp, v); }
+        public static short e_cp(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_cp).getShort(); }
+        public static void e_cp(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_cp).putShort(v); }
+        public static short e_cp(Buf s) { return s.getShort(e_cp); }
+        public static void e_cp(Buf s, short v) { s.putShort(e_cp, v); }
+        public static short e_crlc(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_crlc).getShort(); }
+        public static void e_crlc(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_crlc).putShort(v); }
+        public static short e_crlc(Buf s) { return s.getShort(e_crlc); }
+        public static void e_crlc(Buf s, short v) { s.putShort(e_crlc, v); }
+        public static short e_cparhdr(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_cparhdr).getShort(); }
+        public static void e_cparhdr(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_cparhdr).putShort(v); }
+        public static short e_cparhdr(Buf s) { return s.getShort(e_cparhdr); }
+        public static void e_cparhdr(Buf s, short v) { s.putShort(e_cparhdr, v); }
+        public static short e_minalloc(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_minalloc).getShort(); }
+        public static void e_minalloc(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_minalloc).putShort(v); }
+        public static short e_minalloc(Buf s) { return s.getShort(e_minalloc); }
+        public static void e_minalloc(Buf s, short v) { s.putShort(e_minalloc, v); }
+        public static short e_maxalloc(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_maxalloc).getShort(); }
+        public static void e_maxalloc(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_maxalloc).putShort(v); }
+        public static short e_maxalloc(Buf s) { return s.getShort(e_maxalloc); }
+        public static void e_maxalloc(Buf s, short v) { s.putShort(e_maxalloc, v); }
+        public static short e_ss(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_ss).getShort(); }
+        public static void e_ss(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_ss).putShort(v); }
+        public static short e_ss(Buf s) { return s.getShort(e_ss); }
+        public static void e_ss(Buf s, short v) { s.putShort(e_ss, v); }
+        public static short e_sp(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_sp).getShort(); }
+        public static void e_sp(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_sp).putShort(v); }
+        public static short e_sp(Buf s) { return s.getShort(e_sp); }
+        public static void e_sp(Buf s, short v) { s.putShort(e_sp, v); }
+        public static short e_csum(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_csum).getShort(); }
+        public static void e_csum(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_csum).putShort(v); }
+        public static short e_csum(Buf s) { return s.getShort(e_csum); }
+        public static void e_csum(Buf s, short v) { s.putShort(e_csum, v); }
+        public static short e_ip(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_ip).getShort(); }
+        public static void e_ip(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_ip).putShort(v); }
+        public static short e_ip(Buf s) { return s.getShort(e_ip); }
+        public static void e_ip(Buf s, short v) { s.putShort(e_ip, v); }
+        public static short e_cs(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_cs).getShort(); }
+        public static void e_cs(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_cs).putShort(v); }
+        public static short e_cs(Buf s) { return s.getShort(e_cs); }
+        public static void e_cs(Buf s, short v) { s.putShort(e_cs, v); }
+        public static short e_lfarlc(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_lfarlc).getShort(); }
+        public static void e_lfarlc(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_lfarlc).putShort(v); }
+        public static short e_lfarlc(Buf s) { return s.getShort(e_lfarlc); }
+        public static void e_lfarlc(Buf s, short v) { s.putShort(e_lfarlc, v); }
+        public static short e_ovno(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_ovno).getShort(); }
+        public static void e_ovno(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_ovno).putShort(v); }
+        public static short e_ovno(Buf s) { return s.getShort(e_ovno); }
+        public static void e_ovno(Buf s, short v) { s.putShort(e_ovno, v); }
+        public static Address e_res(@Returned @CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_res); }
+        public static Buf e_res(@Returned Buf s) { return s.from(e_res); }
+        public static short e_oemid(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_oemid).getShort(); }
+        public static void e_oemid(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_oemid).putShort(v); }
+        public static short e_oemid(Buf s) { return s.getShort(e_oemid); }
+        public static void e_oemid(Buf s, short v) { s.putShort(e_oemid, v); }
+        public static short e_oeminfo(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_oeminfo).getShort(); }
+        public static void e_oeminfo(@CType("struct _IMAGE_DOS_HEADER") Address s, short v) { s.add(e_oeminfo).putShort(v); }
+        public static short e_oeminfo(Buf s) { return s.getShort(e_oeminfo); }
+        public static void e_oeminfo(Buf s, short v) { s.putShort(e_oeminfo, v); }
+        public static Address e_res2(@Returned @CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_res2); }
+        public static Buf e_res2(@Returned Buf s) { return s.from(e_res2); }
+        public static int e_lfanew(@CType("struct _IMAGE_DOS_HEADER") Address s) { return s.add(e_lfanew).getInt(); }
+        public static void e_lfanew(@CType("struct _IMAGE_DOS_HEADER") Address s, int v) { s.add(e_lfanew).putInt(v); }
+        public static int e_lfanew(Buf s) { return s.getInt(e_lfanew); }
+        public static void e_lfanew(Buf s, int v) { s.putInt(e_lfanew, v); }
     }
 
     /** {@code struct _IMAGE_FILE_HEADER} - winnt.h:7547, 20 bytes */
-    public static final class IMAGE_FILE_HEADER {
+    @CType("struct _IMAGE_FILE_HEADER") public static final class IMAGE_FILE_HEADER {
         private IMAGE_FILE_HEADER() {}
         public static final int SIZE = 20;
         /** {@code WORD Machine} */ public static final int Machine = 0;
@@ -279,24 +475,38 @@ public final class WinOffsets {
         /** {@code DWORD NumberOfSymbols} */ public static final int NumberOfSymbols = 12;
         /** {@code WORD SizeOfOptionalHeader} */ public static final int SizeOfOptionalHeader = 16;
         /** {@code WORD Characteristics} */ public static final int Characteristics = 18;
-        public static short Machine(Address s) { return s.add(Machine).getShort(); }
-        public static void Machine(Address s, short v) { s.add(Machine).putShort(v); }
-        public static short NumberOfSections(Address s) { return s.add(NumberOfSections).getShort(); }
-        public static void NumberOfSections(Address s, short v) { s.add(NumberOfSections).putShort(v); }
-        public static int TimeDateStamp(Address s) { return s.add(TimeDateStamp).getInt(); }
-        public static void TimeDateStamp(Address s, int v) { s.add(TimeDateStamp).putInt(v); }
-        public static int PointerToSymbolTable(Address s) { return s.add(PointerToSymbolTable).getInt(); }
-        public static void PointerToSymbolTable(Address s, int v) { s.add(PointerToSymbolTable).putInt(v); }
-        public static int NumberOfSymbols(Address s) { return s.add(NumberOfSymbols).getInt(); }
-        public static void NumberOfSymbols(Address s, int v) { s.add(NumberOfSymbols).putInt(v); }
-        public static short SizeOfOptionalHeader(Address s) { return s.add(SizeOfOptionalHeader).getShort(); }
-        public static void SizeOfOptionalHeader(Address s, short v) { s.add(SizeOfOptionalHeader).putShort(v); }
-        public static short Characteristics(Address s) { return s.add(Characteristics).getShort(); }
-        public static void Characteristics(Address s, short v) { s.add(Characteristics).putShort(v); }
+        public static short Machine(@CType("struct _IMAGE_FILE_HEADER") Address s) { return s.add(Machine).getShort(); }
+        public static void Machine(@CType("struct _IMAGE_FILE_HEADER") Address s, short v) { s.add(Machine).putShort(v); }
+        public static short Machine(Buf s) { return s.getShort(Machine); }
+        public static void Machine(Buf s, short v) { s.putShort(Machine, v); }
+        public static short NumberOfSections(@CType("struct _IMAGE_FILE_HEADER") Address s) { return s.add(NumberOfSections).getShort(); }
+        public static void NumberOfSections(@CType("struct _IMAGE_FILE_HEADER") Address s, short v) { s.add(NumberOfSections).putShort(v); }
+        public static short NumberOfSections(Buf s) { return s.getShort(NumberOfSections); }
+        public static void NumberOfSections(Buf s, short v) { s.putShort(NumberOfSections, v); }
+        public static int TimeDateStamp(@CType("struct _IMAGE_FILE_HEADER") Address s) { return s.add(TimeDateStamp).getInt(); }
+        public static void TimeDateStamp(@CType("struct _IMAGE_FILE_HEADER") Address s, int v) { s.add(TimeDateStamp).putInt(v); }
+        public static int TimeDateStamp(Buf s) { return s.getInt(TimeDateStamp); }
+        public static void TimeDateStamp(Buf s, int v) { s.putInt(TimeDateStamp, v); }
+        public static int PointerToSymbolTable(@CType("struct _IMAGE_FILE_HEADER") Address s) { return s.add(PointerToSymbolTable).getInt(); }
+        public static void PointerToSymbolTable(@CType("struct _IMAGE_FILE_HEADER") Address s, int v) { s.add(PointerToSymbolTable).putInt(v); }
+        public static int PointerToSymbolTable(Buf s) { return s.getInt(PointerToSymbolTable); }
+        public static void PointerToSymbolTable(Buf s, int v) { s.putInt(PointerToSymbolTable, v); }
+        public static int NumberOfSymbols(@CType("struct _IMAGE_FILE_HEADER") Address s) { return s.add(NumberOfSymbols).getInt(); }
+        public static void NumberOfSymbols(@CType("struct _IMAGE_FILE_HEADER") Address s, int v) { s.add(NumberOfSymbols).putInt(v); }
+        public static int NumberOfSymbols(Buf s) { return s.getInt(NumberOfSymbols); }
+        public static void NumberOfSymbols(Buf s, int v) { s.putInt(NumberOfSymbols, v); }
+        public static short SizeOfOptionalHeader(@CType("struct _IMAGE_FILE_HEADER") Address s) { return s.add(SizeOfOptionalHeader).getShort(); }
+        public static void SizeOfOptionalHeader(@CType("struct _IMAGE_FILE_HEADER") Address s, short v) { s.add(SizeOfOptionalHeader).putShort(v); }
+        public static short SizeOfOptionalHeader(Buf s) { return s.getShort(SizeOfOptionalHeader); }
+        public static void SizeOfOptionalHeader(Buf s, short v) { s.putShort(SizeOfOptionalHeader, v); }
+        public static short Characteristics(@CType("struct _IMAGE_FILE_HEADER") Address s) { return s.add(Characteristics).getShort(); }
+        public static void Characteristics(@CType("struct _IMAGE_FILE_HEADER") Address s, short v) { s.add(Characteristics).putShort(v); }
+        public static short Characteristics(Buf s) { return s.getShort(Characteristics); }
+        public static void Characteristics(Buf s, short v) { s.putShort(Characteristics, v); }
     }
 
     /** {@code struct _IMAGE_OPTIONAL_HEADER} - winnt.h:7615, 224 bytes */
-    public static final class IMAGE_OPTIONAL_HEADER32 {
+    @CType("struct _IMAGE_OPTIONAL_HEADER") public static final class IMAGE_OPTIONAL_HEADER32 {
         private IMAGE_OPTIONAL_HEADER32() {}
         public static final int SIZE = 224;
         /** {@code WORD Magic} */ public static final int Magic = 0;
@@ -330,70 +540,132 @@ public final class WinOffsets {
         /** {@code DWORD LoaderFlags} */ public static final int LoaderFlags = 88;
         /** {@code DWORD NumberOfRvaAndSizes} */ public static final int NumberOfRvaAndSizes = 92;
         /** {@code IMAGE_DATA_DIRECTORY[16] DataDirectory} */ public static final int DataDirectory = 96;
-        public static short Magic(Address s) { return s.add(Magic).getShort(); }
-        public static void Magic(Address s, short v) { s.add(Magic).putShort(v); }
-        public static byte MajorLinkerVersion(Address s) { return s.add(MajorLinkerVersion).getByte(); }
-        public static void MajorLinkerVersion(Address s, byte v) { s.add(MajorLinkerVersion).putByte(v); }
-        public static byte MinorLinkerVersion(Address s) { return s.add(MinorLinkerVersion).getByte(); }
-        public static void MinorLinkerVersion(Address s, byte v) { s.add(MinorLinkerVersion).putByte(v); }
-        public static int SizeOfCode(Address s) { return s.add(SizeOfCode).getInt(); }
-        public static void SizeOfCode(Address s, int v) { s.add(SizeOfCode).putInt(v); }
-        public static int SizeOfInitializedData(Address s) { return s.add(SizeOfInitializedData).getInt(); }
-        public static void SizeOfInitializedData(Address s, int v) { s.add(SizeOfInitializedData).putInt(v); }
-        public static int SizeOfUninitializedData(Address s) { return s.add(SizeOfUninitializedData).getInt(); }
-        public static void SizeOfUninitializedData(Address s, int v) { s.add(SizeOfUninitializedData).putInt(v); }
-        public static int AddressOfEntryPoint(Address s) { return s.add(AddressOfEntryPoint).getInt(); }
-        public static void AddressOfEntryPoint(Address s, int v) { s.add(AddressOfEntryPoint).putInt(v); }
-        public static int BaseOfCode(Address s) { return s.add(BaseOfCode).getInt(); }
-        public static void BaseOfCode(Address s, int v) { s.add(BaseOfCode).putInt(v); }
-        public static int BaseOfData(Address s) { return s.add(BaseOfData).getInt(); }
-        public static void BaseOfData(Address s, int v) { s.add(BaseOfData).putInt(v); }
-        public static int ImageBase(Address s) { return s.add(ImageBase).getInt(); }
-        public static void ImageBase(Address s, int v) { s.add(ImageBase).putInt(v); }
-        public static int SectionAlignment(Address s) { return s.add(SectionAlignment).getInt(); }
-        public static void SectionAlignment(Address s, int v) { s.add(SectionAlignment).putInt(v); }
-        public static int FileAlignment(Address s) { return s.add(FileAlignment).getInt(); }
-        public static void FileAlignment(Address s, int v) { s.add(FileAlignment).putInt(v); }
-        public static short MajorOperatingSystemVersion(Address s) { return s.add(MajorOperatingSystemVersion).getShort(); }
-        public static void MajorOperatingSystemVersion(Address s, short v) { s.add(MajorOperatingSystemVersion).putShort(v); }
-        public static short MinorOperatingSystemVersion(Address s) { return s.add(MinorOperatingSystemVersion).getShort(); }
-        public static void MinorOperatingSystemVersion(Address s, short v) { s.add(MinorOperatingSystemVersion).putShort(v); }
-        public static short MajorImageVersion(Address s) { return s.add(MajorImageVersion).getShort(); }
-        public static void MajorImageVersion(Address s, short v) { s.add(MajorImageVersion).putShort(v); }
-        public static short MinorImageVersion(Address s) { return s.add(MinorImageVersion).getShort(); }
-        public static void MinorImageVersion(Address s, short v) { s.add(MinorImageVersion).putShort(v); }
-        public static short MajorSubsystemVersion(Address s) { return s.add(MajorSubsystemVersion).getShort(); }
-        public static void MajorSubsystemVersion(Address s, short v) { s.add(MajorSubsystemVersion).putShort(v); }
-        public static short MinorSubsystemVersion(Address s) { return s.add(MinorSubsystemVersion).getShort(); }
-        public static void MinorSubsystemVersion(Address s, short v) { s.add(MinorSubsystemVersion).putShort(v); }
-        public static int Win32VersionValue(Address s) { return s.add(Win32VersionValue).getInt(); }
-        public static void Win32VersionValue(Address s, int v) { s.add(Win32VersionValue).putInt(v); }
-        public static int SizeOfImage(Address s) { return s.add(SizeOfImage).getInt(); }
-        public static void SizeOfImage(Address s, int v) { s.add(SizeOfImage).putInt(v); }
-        public static int SizeOfHeaders(Address s) { return s.add(SizeOfHeaders).getInt(); }
-        public static void SizeOfHeaders(Address s, int v) { s.add(SizeOfHeaders).putInt(v); }
-        public static int CheckSum(Address s) { return s.add(CheckSum).getInt(); }
-        public static void CheckSum(Address s, int v) { s.add(CheckSum).putInt(v); }
-        public static short Subsystem(Address s) { return s.add(Subsystem).getShort(); }
-        public static void Subsystem(Address s, short v) { s.add(Subsystem).putShort(v); }
-        public static short DllCharacteristics(Address s) { return s.add(DllCharacteristics).getShort(); }
-        public static void DllCharacteristics(Address s, short v) { s.add(DllCharacteristics).putShort(v); }
-        public static int SizeOfStackReserve(Address s) { return s.add(SizeOfStackReserve).getInt(); }
-        public static void SizeOfStackReserve(Address s, int v) { s.add(SizeOfStackReserve).putInt(v); }
-        public static int SizeOfStackCommit(Address s) { return s.add(SizeOfStackCommit).getInt(); }
-        public static void SizeOfStackCommit(Address s, int v) { s.add(SizeOfStackCommit).putInt(v); }
-        public static int SizeOfHeapReserve(Address s) { return s.add(SizeOfHeapReserve).getInt(); }
-        public static void SizeOfHeapReserve(Address s, int v) { s.add(SizeOfHeapReserve).putInt(v); }
-        public static int SizeOfHeapCommit(Address s) { return s.add(SizeOfHeapCommit).getInt(); }
-        public static void SizeOfHeapCommit(Address s, int v) { s.add(SizeOfHeapCommit).putInt(v); }
-        public static int LoaderFlags(Address s) { return s.add(LoaderFlags).getInt(); }
-        public static void LoaderFlags(Address s, int v) { s.add(LoaderFlags).putInt(v); }
-        public static int NumberOfRvaAndSizes(Address s) { return s.add(NumberOfRvaAndSizes).getInt(); }
-        public static void NumberOfRvaAndSizes(Address s, int v) { s.add(NumberOfRvaAndSizes).putInt(v); }
+        public static short Magic(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(Magic).getShort(); }
+        public static void Magic(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, short v) { s.add(Magic).putShort(v); }
+        public static short Magic(Buf s) { return s.getShort(Magic); }
+        public static void Magic(Buf s, short v) { s.putShort(Magic, v); }
+        public static byte MajorLinkerVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(MajorLinkerVersion).getByte(); }
+        public static void MajorLinkerVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, byte v) { s.add(MajorLinkerVersion).putByte(v); }
+        public static byte MajorLinkerVersion(Buf s) { return s.getByte(MajorLinkerVersion); }
+        public static void MajorLinkerVersion(Buf s, byte v) { s.putByte(MajorLinkerVersion, v); }
+        public static byte MinorLinkerVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(MinorLinkerVersion).getByte(); }
+        public static void MinorLinkerVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, byte v) { s.add(MinorLinkerVersion).putByte(v); }
+        public static byte MinorLinkerVersion(Buf s) { return s.getByte(MinorLinkerVersion); }
+        public static void MinorLinkerVersion(Buf s, byte v) { s.putByte(MinorLinkerVersion, v); }
+        public static int SizeOfCode(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(SizeOfCode).getInt(); }
+        public static void SizeOfCode(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(SizeOfCode).putInt(v); }
+        public static int SizeOfCode(Buf s) { return s.getInt(SizeOfCode); }
+        public static void SizeOfCode(Buf s, int v) { s.putInt(SizeOfCode, v); }
+        public static int SizeOfInitializedData(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(SizeOfInitializedData).getInt(); }
+        public static void SizeOfInitializedData(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(SizeOfInitializedData).putInt(v); }
+        public static int SizeOfInitializedData(Buf s) { return s.getInt(SizeOfInitializedData); }
+        public static void SizeOfInitializedData(Buf s, int v) { s.putInt(SizeOfInitializedData, v); }
+        public static int SizeOfUninitializedData(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(SizeOfUninitializedData).getInt(); }
+        public static void SizeOfUninitializedData(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(SizeOfUninitializedData).putInt(v); }
+        public static int SizeOfUninitializedData(Buf s) { return s.getInt(SizeOfUninitializedData); }
+        public static void SizeOfUninitializedData(Buf s, int v) { s.putInt(SizeOfUninitializedData, v); }
+        public static int AddressOfEntryPoint(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(AddressOfEntryPoint).getInt(); }
+        public static void AddressOfEntryPoint(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(AddressOfEntryPoint).putInt(v); }
+        public static int AddressOfEntryPoint(Buf s) { return s.getInt(AddressOfEntryPoint); }
+        public static void AddressOfEntryPoint(Buf s, int v) { s.putInt(AddressOfEntryPoint, v); }
+        public static int BaseOfCode(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(BaseOfCode).getInt(); }
+        public static void BaseOfCode(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(BaseOfCode).putInt(v); }
+        public static int BaseOfCode(Buf s) { return s.getInt(BaseOfCode); }
+        public static void BaseOfCode(Buf s, int v) { s.putInt(BaseOfCode, v); }
+        public static int BaseOfData(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(BaseOfData).getInt(); }
+        public static void BaseOfData(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(BaseOfData).putInt(v); }
+        public static int BaseOfData(Buf s) { return s.getInt(BaseOfData); }
+        public static void BaseOfData(Buf s, int v) { s.putInt(BaseOfData, v); }
+        public static int ImageBase(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(ImageBase).getInt(); }
+        public static void ImageBase(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(ImageBase).putInt(v); }
+        public static int ImageBase(Buf s) { return s.getInt(ImageBase); }
+        public static void ImageBase(Buf s, int v) { s.putInt(ImageBase, v); }
+        public static int SectionAlignment(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(SectionAlignment).getInt(); }
+        public static void SectionAlignment(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(SectionAlignment).putInt(v); }
+        public static int SectionAlignment(Buf s) { return s.getInt(SectionAlignment); }
+        public static void SectionAlignment(Buf s, int v) { s.putInt(SectionAlignment, v); }
+        public static int FileAlignment(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(FileAlignment).getInt(); }
+        public static void FileAlignment(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(FileAlignment).putInt(v); }
+        public static int FileAlignment(Buf s) { return s.getInt(FileAlignment); }
+        public static void FileAlignment(Buf s, int v) { s.putInt(FileAlignment, v); }
+        public static short MajorOperatingSystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(MajorOperatingSystemVersion).getShort(); }
+        public static void MajorOperatingSystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, short v) { s.add(MajorOperatingSystemVersion).putShort(v); }
+        public static short MajorOperatingSystemVersion(Buf s) { return s.getShort(MajorOperatingSystemVersion); }
+        public static void MajorOperatingSystemVersion(Buf s, short v) { s.putShort(MajorOperatingSystemVersion, v); }
+        public static short MinorOperatingSystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(MinorOperatingSystemVersion).getShort(); }
+        public static void MinorOperatingSystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, short v) { s.add(MinorOperatingSystemVersion).putShort(v); }
+        public static short MinorOperatingSystemVersion(Buf s) { return s.getShort(MinorOperatingSystemVersion); }
+        public static void MinorOperatingSystemVersion(Buf s, short v) { s.putShort(MinorOperatingSystemVersion, v); }
+        public static short MajorImageVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(MajorImageVersion).getShort(); }
+        public static void MajorImageVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, short v) { s.add(MajorImageVersion).putShort(v); }
+        public static short MajorImageVersion(Buf s) { return s.getShort(MajorImageVersion); }
+        public static void MajorImageVersion(Buf s, short v) { s.putShort(MajorImageVersion, v); }
+        public static short MinorImageVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(MinorImageVersion).getShort(); }
+        public static void MinorImageVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, short v) { s.add(MinorImageVersion).putShort(v); }
+        public static short MinorImageVersion(Buf s) { return s.getShort(MinorImageVersion); }
+        public static void MinorImageVersion(Buf s, short v) { s.putShort(MinorImageVersion, v); }
+        public static short MajorSubsystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(MajorSubsystemVersion).getShort(); }
+        public static void MajorSubsystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, short v) { s.add(MajorSubsystemVersion).putShort(v); }
+        public static short MajorSubsystemVersion(Buf s) { return s.getShort(MajorSubsystemVersion); }
+        public static void MajorSubsystemVersion(Buf s, short v) { s.putShort(MajorSubsystemVersion, v); }
+        public static short MinorSubsystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(MinorSubsystemVersion).getShort(); }
+        public static void MinorSubsystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, short v) { s.add(MinorSubsystemVersion).putShort(v); }
+        public static short MinorSubsystemVersion(Buf s) { return s.getShort(MinorSubsystemVersion); }
+        public static void MinorSubsystemVersion(Buf s, short v) { s.putShort(MinorSubsystemVersion, v); }
+        public static int Win32VersionValue(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(Win32VersionValue).getInt(); }
+        public static void Win32VersionValue(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(Win32VersionValue).putInt(v); }
+        public static int Win32VersionValue(Buf s) { return s.getInt(Win32VersionValue); }
+        public static void Win32VersionValue(Buf s, int v) { s.putInt(Win32VersionValue, v); }
+        public static int SizeOfImage(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(SizeOfImage).getInt(); }
+        public static void SizeOfImage(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(SizeOfImage).putInt(v); }
+        public static int SizeOfImage(Buf s) { return s.getInt(SizeOfImage); }
+        public static void SizeOfImage(Buf s, int v) { s.putInt(SizeOfImage, v); }
+        public static int SizeOfHeaders(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(SizeOfHeaders).getInt(); }
+        public static void SizeOfHeaders(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(SizeOfHeaders).putInt(v); }
+        public static int SizeOfHeaders(Buf s) { return s.getInt(SizeOfHeaders); }
+        public static void SizeOfHeaders(Buf s, int v) { s.putInt(SizeOfHeaders, v); }
+        public static int CheckSum(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(CheckSum).getInt(); }
+        public static void CheckSum(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(CheckSum).putInt(v); }
+        public static int CheckSum(Buf s) { return s.getInt(CheckSum); }
+        public static void CheckSum(Buf s, int v) { s.putInt(CheckSum, v); }
+        public static short Subsystem(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(Subsystem).getShort(); }
+        public static void Subsystem(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, short v) { s.add(Subsystem).putShort(v); }
+        public static short Subsystem(Buf s) { return s.getShort(Subsystem); }
+        public static void Subsystem(Buf s, short v) { s.putShort(Subsystem, v); }
+        public static short DllCharacteristics(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(DllCharacteristics).getShort(); }
+        public static void DllCharacteristics(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, short v) { s.add(DllCharacteristics).putShort(v); }
+        public static short DllCharacteristics(Buf s) { return s.getShort(DllCharacteristics); }
+        public static void DllCharacteristics(Buf s, short v) { s.putShort(DllCharacteristics, v); }
+        public static int SizeOfStackReserve(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(SizeOfStackReserve).getInt(); }
+        public static void SizeOfStackReserve(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(SizeOfStackReserve).putInt(v); }
+        public static int SizeOfStackReserve(Buf s) { return s.getInt(SizeOfStackReserve); }
+        public static void SizeOfStackReserve(Buf s, int v) { s.putInt(SizeOfStackReserve, v); }
+        public static int SizeOfStackCommit(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(SizeOfStackCommit).getInt(); }
+        public static void SizeOfStackCommit(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(SizeOfStackCommit).putInt(v); }
+        public static int SizeOfStackCommit(Buf s) { return s.getInt(SizeOfStackCommit); }
+        public static void SizeOfStackCommit(Buf s, int v) { s.putInt(SizeOfStackCommit, v); }
+        public static int SizeOfHeapReserve(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(SizeOfHeapReserve).getInt(); }
+        public static void SizeOfHeapReserve(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(SizeOfHeapReserve).putInt(v); }
+        public static int SizeOfHeapReserve(Buf s) { return s.getInt(SizeOfHeapReserve); }
+        public static void SizeOfHeapReserve(Buf s, int v) { s.putInt(SizeOfHeapReserve, v); }
+        public static int SizeOfHeapCommit(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(SizeOfHeapCommit).getInt(); }
+        public static void SizeOfHeapCommit(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(SizeOfHeapCommit).putInt(v); }
+        public static int SizeOfHeapCommit(Buf s) { return s.getInt(SizeOfHeapCommit); }
+        public static void SizeOfHeapCommit(Buf s, int v) { s.putInt(SizeOfHeapCommit, v); }
+        public static int LoaderFlags(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(LoaderFlags).getInt(); }
+        public static void LoaderFlags(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(LoaderFlags).putInt(v); }
+        public static int LoaderFlags(Buf s) { return s.getInt(LoaderFlags); }
+        public static void LoaderFlags(Buf s, int v) { s.putInt(LoaderFlags, v); }
+        public static int NumberOfRvaAndSizes(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(NumberOfRvaAndSizes).getInt(); }
+        public static void NumberOfRvaAndSizes(@CType("struct _IMAGE_OPTIONAL_HEADER") Address s, int v) { s.add(NumberOfRvaAndSizes).putInt(v); }
+        public static int NumberOfRvaAndSizes(Buf s) { return s.getInt(NumberOfRvaAndSizes); }
+        public static void NumberOfRvaAndSizes(Buf s, int v) { s.putInt(NumberOfRvaAndSizes, v); }
+        public static Address DataDirectory(@Returned @CType("struct _IMAGE_OPTIONAL_HEADER") Address s) { return s.add(DataDirectory); }
+        public static Buf DataDirectory(@Returned Buf s) { return s.from(DataDirectory); }
     }
 
     /** {@code struct _IMAGE_OPTIONAL_HEADER64} - winnt.h:7666, 240 bytes */
-    public static final class IMAGE_OPTIONAL_HEADER64 {
+    @CType("struct _IMAGE_OPTIONAL_HEADER64") public static final class IMAGE_OPTIONAL_HEADER64 {
         private IMAGE_OPTIONAL_HEADER64() {}
         public static final int SIZE = 240;
         /** {@code WORD Magic} */ public static final int Magic = 0;
@@ -426,88 +698,156 @@ public final class WinOffsets {
         /** {@code DWORD LoaderFlags} */ public static final int LoaderFlags = 104;
         /** {@code DWORD NumberOfRvaAndSizes} */ public static final int NumberOfRvaAndSizes = 108;
         /** {@code IMAGE_DATA_DIRECTORY[16] DataDirectory} */ public static final int DataDirectory = 112;
-        public static short Magic(Address s) { return s.add(Magic).getShort(); }
-        public static void Magic(Address s, short v) { s.add(Magic).putShort(v); }
-        public static byte MajorLinkerVersion(Address s) { return s.add(MajorLinkerVersion).getByte(); }
-        public static void MajorLinkerVersion(Address s, byte v) { s.add(MajorLinkerVersion).putByte(v); }
-        public static byte MinorLinkerVersion(Address s) { return s.add(MinorLinkerVersion).getByte(); }
-        public static void MinorLinkerVersion(Address s, byte v) { s.add(MinorLinkerVersion).putByte(v); }
-        public static int SizeOfCode(Address s) { return s.add(SizeOfCode).getInt(); }
-        public static void SizeOfCode(Address s, int v) { s.add(SizeOfCode).putInt(v); }
-        public static int SizeOfInitializedData(Address s) { return s.add(SizeOfInitializedData).getInt(); }
-        public static void SizeOfInitializedData(Address s, int v) { s.add(SizeOfInitializedData).putInt(v); }
-        public static int SizeOfUninitializedData(Address s) { return s.add(SizeOfUninitializedData).getInt(); }
-        public static void SizeOfUninitializedData(Address s, int v) { s.add(SizeOfUninitializedData).putInt(v); }
-        public static int AddressOfEntryPoint(Address s) { return s.add(AddressOfEntryPoint).getInt(); }
-        public static void AddressOfEntryPoint(Address s, int v) { s.add(AddressOfEntryPoint).putInt(v); }
-        public static int BaseOfCode(Address s) { return s.add(BaseOfCode).getInt(); }
-        public static void BaseOfCode(Address s, int v) { s.add(BaseOfCode).putInt(v); }
-        public static long ImageBase(Address s) { return s.add(ImageBase).getLong(); }
-        public static void ImageBase(Address s, long v) { s.add(ImageBase).putLong(v); }
-        public static int SectionAlignment(Address s) { return s.add(SectionAlignment).getInt(); }
-        public static void SectionAlignment(Address s, int v) { s.add(SectionAlignment).putInt(v); }
-        public static int FileAlignment(Address s) { return s.add(FileAlignment).getInt(); }
-        public static void FileAlignment(Address s, int v) { s.add(FileAlignment).putInt(v); }
-        public static short MajorOperatingSystemVersion(Address s) { return s.add(MajorOperatingSystemVersion).getShort(); }
-        public static void MajorOperatingSystemVersion(Address s, short v) { s.add(MajorOperatingSystemVersion).putShort(v); }
-        public static short MinorOperatingSystemVersion(Address s) { return s.add(MinorOperatingSystemVersion).getShort(); }
-        public static void MinorOperatingSystemVersion(Address s, short v) { s.add(MinorOperatingSystemVersion).putShort(v); }
-        public static short MajorImageVersion(Address s) { return s.add(MajorImageVersion).getShort(); }
-        public static void MajorImageVersion(Address s, short v) { s.add(MajorImageVersion).putShort(v); }
-        public static short MinorImageVersion(Address s) { return s.add(MinorImageVersion).getShort(); }
-        public static void MinorImageVersion(Address s, short v) { s.add(MinorImageVersion).putShort(v); }
-        public static short MajorSubsystemVersion(Address s) { return s.add(MajorSubsystemVersion).getShort(); }
-        public static void MajorSubsystemVersion(Address s, short v) { s.add(MajorSubsystemVersion).putShort(v); }
-        public static short MinorSubsystemVersion(Address s) { return s.add(MinorSubsystemVersion).getShort(); }
-        public static void MinorSubsystemVersion(Address s, short v) { s.add(MinorSubsystemVersion).putShort(v); }
-        public static int Win32VersionValue(Address s) { return s.add(Win32VersionValue).getInt(); }
-        public static void Win32VersionValue(Address s, int v) { s.add(Win32VersionValue).putInt(v); }
-        public static int SizeOfImage(Address s) { return s.add(SizeOfImage).getInt(); }
-        public static void SizeOfImage(Address s, int v) { s.add(SizeOfImage).putInt(v); }
-        public static int SizeOfHeaders(Address s) { return s.add(SizeOfHeaders).getInt(); }
-        public static void SizeOfHeaders(Address s, int v) { s.add(SizeOfHeaders).putInt(v); }
-        public static int CheckSum(Address s) { return s.add(CheckSum).getInt(); }
-        public static void CheckSum(Address s, int v) { s.add(CheckSum).putInt(v); }
-        public static short Subsystem(Address s) { return s.add(Subsystem).getShort(); }
-        public static void Subsystem(Address s, short v) { s.add(Subsystem).putShort(v); }
-        public static short DllCharacteristics(Address s) { return s.add(DllCharacteristics).getShort(); }
-        public static void DllCharacteristics(Address s, short v) { s.add(DllCharacteristics).putShort(v); }
-        public static long SizeOfStackReserve(Address s) { return s.add(SizeOfStackReserve).getLong(); }
-        public static void SizeOfStackReserve(Address s, long v) { s.add(SizeOfStackReserve).putLong(v); }
-        public static long SizeOfStackCommit(Address s) { return s.add(SizeOfStackCommit).getLong(); }
-        public static void SizeOfStackCommit(Address s, long v) { s.add(SizeOfStackCommit).putLong(v); }
-        public static long SizeOfHeapReserve(Address s) { return s.add(SizeOfHeapReserve).getLong(); }
-        public static void SizeOfHeapReserve(Address s, long v) { s.add(SizeOfHeapReserve).putLong(v); }
-        public static long SizeOfHeapCommit(Address s) { return s.add(SizeOfHeapCommit).getLong(); }
-        public static void SizeOfHeapCommit(Address s, long v) { s.add(SizeOfHeapCommit).putLong(v); }
-        public static int LoaderFlags(Address s) { return s.add(LoaderFlags).getInt(); }
-        public static void LoaderFlags(Address s, int v) { s.add(LoaderFlags).putInt(v); }
-        public static int NumberOfRvaAndSizes(Address s) { return s.add(NumberOfRvaAndSizes).getInt(); }
-        public static void NumberOfRvaAndSizes(Address s, int v) { s.add(NumberOfRvaAndSizes).putInt(v); }
+        public static short Magic(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(Magic).getShort(); }
+        public static void Magic(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, short v) { s.add(Magic).putShort(v); }
+        public static short Magic(Buf s) { return s.getShort(Magic); }
+        public static void Magic(Buf s, short v) { s.putShort(Magic, v); }
+        public static byte MajorLinkerVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(MajorLinkerVersion).getByte(); }
+        public static void MajorLinkerVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, byte v) { s.add(MajorLinkerVersion).putByte(v); }
+        public static byte MajorLinkerVersion(Buf s) { return s.getByte(MajorLinkerVersion); }
+        public static void MajorLinkerVersion(Buf s, byte v) { s.putByte(MajorLinkerVersion, v); }
+        public static byte MinorLinkerVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(MinorLinkerVersion).getByte(); }
+        public static void MinorLinkerVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, byte v) { s.add(MinorLinkerVersion).putByte(v); }
+        public static byte MinorLinkerVersion(Buf s) { return s.getByte(MinorLinkerVersion); }
+        public static void MinorLinkerVersion(Buf s, byte v) { s.putByte(MinorLinkerVersion, v); }
+        public static int SizeOfCode(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(SizeOfCode).getInt(); }
+        public static void SizeOfCode(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, int v) { s.add(SizeOfCode).putInt(v); }
+        public static int SizeOfCode(Buf s) { return s.getInt(SizeOfCode); }
+        public static void SizeOfCode(Buf s, int v) { s.putInt(SizeOfCode, v); }
+        public static int SizeOfInitializedData(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(SizeOfInitializedData).getInt(); }
+        public static void SizeOfInitializedData(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, int v) { s.add(SizeOfInitializedData).putInt(v); }
+        public static int SizeOfInitializedData(Buf s) { return s.getInt(SizeOfInitializedData); }
+        public static void SizeOfInitializedData(Buf s, int v) { s.putInt(SizeOfInitializedData, v); }
+        public static int SizeOfUninitializedData(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(SizeOfUninitializedData).getInt(); }
+        public static void SizeOfUninitializedData(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, int v) { s.add(SizeOfUninitializedData).putInt(v); }
+        public static int SizeOfUninitializedData(Buf s) { return s.getInt(SizeOfUninitializedData); }
+        public static void SizeOfUninitializedData(Buf s, int v) { s.putInt(SizeOfUninitializedData, v); }
+        public static int AddressOfEntryPoint(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(AddressOfEntryPoint).getInt(); }
+        public static void AddressOfEntryPoint(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, int v) { s.add(AddressOfEntryPoint).putInt(v); }
+        public static int AddressOfEntryPoint(Buf s) { return s.getInt(AddressOfEntryPoint); }
+        public static void AddressOfEntryPoint(Buf s, int v) { s.putInt(AddressOfEntryPoint, v); }
+        public static int BaseOfCode(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(BaseOfCode).getInt(); }
+        public static void BaseOfCode(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, int v) { s.add(BaseOfCode).putInt(v); }
+        public static int BaseOfCode(Buf s) { return s.getInt(BaseOfCode); }
+        public static void BaseOfCode(Buf s, int v) { s.putInt(BaseOfCode, v); }
+        public static long ImageBase(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(ImageBase).getLong(); }
+        public static void ImageBase(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, long v) { s.add(ImageBase).putLong(v); }
+        public static long ImageBase(Buf s) { return s.getLong(ImageBase); }
+        public static void ImageBase(Buf s, long v) { s.putLong(ImageBase, v); }
+        public static int SectionAlignment(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(SectionAlignment).getInt(); }
+        public static void SectionAlignment(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, int v) { s.add(SectionAlignment).putInt(v); }
+        public static int SectionAlignment(Buf s) { return s.getInt(SectionAlignment); }
+        public static void SectionAlignment(Buf s, int v) { s.putInt(SectionAlignment, v); }
+        public static int FileAlignment(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(FileAlignment).getInt(); }
+        public static void FileAlignment(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, int v) { s.add(FileAlignment).putInt(v); }
+        public static int FileAlignment(Buf s) { return s.getInt(FileAlignment); }
+        public static void FileAlignment(Buf s, int v) { s.putInt(FileAlignment, v); }
+        public static short MajorOperatingSystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(MajorOperatingSystemVersion).getShort(); }
+        public static void MajorOperatingSystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, short v) { s.add(MajorOperatingSystemVersion).putShort(v); }
+        public static short MajorOperatingSystemVersion(Buf s) { return s.getShort(MajorOperatingSystemVersion); }
+        public static void MajorOperatingSystemVersion(Buf s, short v) { s.putShort(MajorOperatingSystemVersion, v); }
+        public static short MinorOperatingSystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(MinorOperatingSystemVersion).getShort(); }
+        public static void MinorOperatingSystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, short v) { s.add(MinorOperatingSystemVersion).putShort(v); }
+        public static short MinorOperatingSystemVersion(Buf s) { return s.getShort(MinorOperatingSystemVersion); }
+        public static void MinorOperatingSystemVersion(Buf s, short v) { s.putShort(MinorOperatingSystemVersion, v); }
+        public static short MajorImageVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(MajorImageVersion).getShort(); }
+        public static void MajorImageVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, short v) { s.add(MajorImageVersion).putShort(v); }
+        public static short MajorImageVersion(Buf s) { return s.getShort(MajorImageVersion); }
+        public static void MajorImageVersion(Buf s, short v) { s.putShort(MajorImageVersion, v); }
+        public static short MinorImageVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(MinorImageVersion).getShort(); }
+        public static void MinorImageVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, short v) { s.add(MinorImageVersion).putShort(v); }
+        public static short MinorImageVersion(Buf s) { return s.getShort(MinorImageVersion); }
+        public static void MinorImageVersion(Buf s, short v) { s.putShort(MinorImageVersion, v); }
+        public static short MajorSubsystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(MajorSubsystemVersion).getShort(); }
+        public static void MajorSubsystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, short v) { s.add(MajorSubsystemVersion).putShort(v); }
+        public static short MajorSubsystemVersion(Buf s) { return s.getShort(MajorSubsystemVersion); }
+        public static void MajorSubsystemVersion(Buf s, short v) { s.putShort(MajorSubsystemVersion, v); }
+        public static short MinorSubsystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(MinorSubsystemVersion).getShort(); }
+        public static void MinorSubsystemVersion(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, short v) { s.add(MinorSubsystemVersion).putShort(v); }
+        public static short MinorSubsystemVersion(Buf s) { return s.getShort(MinorSubsystemVersion); }
+        public static void MinorSubsystemVersion(Buf s, short v) { s.putShort(MinorSubsystemVersion, v); }
+        public static int Win32VersionValue(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(Win32VersionValue).getInt(); }
+        public static void Win32VersionValue(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, int v) { s.add(Win32VersionValue).putInt(v); }
+        public static int Win32VersionValue(Buf s) { return s.getInt(Win32VersionValue); }
+        public static void Win32VersionValue(Buf s, int v) { s.putInt(Win32VersionValue, v); }
+        public static int SizeOfImage(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(SizeOfImage).getInt(); }
+        public static void SizeOfImage(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, int v) { s.add(SizeOfImage).putInt(v); }
+        public static int SizeOfImage(Buf s) { return s.getInt(SizeOfImage); }
+        public static void SizeOfImage(Buf s, int v) { s.putInt(SizeOfImage, v); }
+        public static int SizeOfHeaders(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(SizeOfHeaders).getInt(); }
+        public static void SizeOfHeaders(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, int v) { s.add(SizeOfHeaders).putInt(v); }
+        public static int SizeOfHeaders(Buf s) { return s.getInt(SizeOfHeaders); }
+        public static void SizeOfHeaders(Buf s, int v) { s.putInt(SizeOfHeaders, v); }
+        public static int CheckSum(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(CheckSum).getInt(); }
+        public static void CheckSum(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, int v) { s.add(CheckSum).putInt(v); }
+        public static int CheckSum(Buf s) { return s.getInt(CheckSum); }
+        public static void CheckSum(Buf s, int v) { s.putInt(CheckSum, v); }
+        public static short Subsystem(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(Subsystem).getShort(); }
+        public static void Subsystem(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, short v) { s.add(Subsystem).putShort(v); }
+        public static short Subsystem(Buf s) { return s.getShort(Subsystem); }
+        public static void Subsystem(Buf s, short v) { s.putShort(Subsystem, v); }
+        public static short DllCharacteristics(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(DllCharacteristics).getShort(); }
+        public static void DllCharacteristics(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, short v) { s.add(DllCharacteristics).putShort(v); }
+        public static short DllCharacteristics(Buf s) { return s.getShort(DllCharacteristics); }
+        public static void DllCharacteristics(Buf s, short v) { s.putShort(DllCharacteristics, v); }
+        public static long SizeOfStackReserve(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(SizeOfStackReserve).getLong(); }
+        public static void SizeOfStackReserve(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, long v) { s.add(SizeOfStackReserve).putLong(v); }
+        public static long SizeOfStackReserve(Buf s) { return s.getLong(SizeOfStackReserve); }
+        public static void SizeOfStackReserve(Buf s, long v) { s.putLong(SizeOfStackReserve, v); }
+        public static long SizeOfStackCommit(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(SizeOfStackCommit).getLong(); }
+        public static void SizeOfStackCommit(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, long v) { s.add(SizeOfStackCommit).putLong(v); }
+        public static long SizeOfStackCommit(Buf s) { return s.getLong(SizeOfStackCommit); }
+        public static void SizeOfStackCommit(Buf s, long v) { s.putLong(SizeOfStackCommit, v); }
+        public static long SizeOfHeapReserve(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(SizeOfHeapReserve).getLong(); }
+        public static void SizeOfHeapReserve(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, long v) { s.add(SizeOfHeapReserve).putLong(v); }
+        public static long SizeOfHeapReserve(Buf s) { return s.getLong(SizeOfHeapReserve); }
+        public static void SizeOfHeapReserve(Buf s, long v) { s.putLong(SizeOfHeapReserve, v); }
+        public static long SizeOfHeapCommit(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(SizeOfHeapCommit).getLong(); }
+        public static void SizeOfHeapCommit(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, long v) { s.add(SizeOfHeapCommit).putLong(v); }
+        public static long SizeOfHeapCommit(Buf s) { return s.getLong(SizeOfHeapCommit); }
+        public static void SizeOfHeapCommit(Buf s, long v) { s.putLong(SizeOfHeapCommit, v); }
+        public static int LoaderFlags(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(LoaderFlags).getInt(); }
+        public static void LoaderFlags(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, int v) { s.add(LoaderFlags).putInt(v); }
+        public static int LoaderFlags(Buf s) { return s.getInt(LoaderFlags); }
+        public static void LoaderFlags(Buf s, int v) { s.putInt(LoaderFlags, v); }
+        public static int NumberOfRvaAndSizes(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(NumberOfRvaAndSizes).getInt(); }
+        public static void NumberOfRvaAndSizes(@CType("struct _IMAGE_OPTIONAL_HEADER64") Address s, int v) { s.add(NumberOfRvaAndSizes).putInt(v); }
+        public static int NumberOfRvaAndSizes(Buf s) { return s.getInt(NumberOfRvaAndSizes); }
+        public static void NumberOfRvaAndSizes(Buf s, int v) { s.putInt(NumberOfRvaAndSizes, v); }
+        public static Address DataDirectory(@Returned @CType("struct _IMAGE_OPTIONAL_HEADER64") Address s) { return s.add(DataDirectory); }
+        public static Buf DataDirectory(@Returned Buf s) { return s.from(DataDirectory); }
     }
 
     /** {@code struct _IMAGE_DATA_DIRECTORY} - winnt.h:7608, 8 bytes */
-    public static final class IMAGE_DATA_DIRECTORY {
+    @CType("struct _IMAGE_DATA_DIRECTORY") public static final class IMAGE_DATA_DIRECTORY {
         private IMAGE_DATA_DIRECTORY() {}
         public static final int SIZE = 8;
         /** {@code DWORD VirtualAddress} */ public static final int VirtualAddress = 0;
         /** {@code DWORD Size} */ public static final int Size = 4;
-        public static int VirtualAddress(Address s) { return s.add(VirtualAddress).getInt(); }
-        public static void VirtualAddress(Address s, int v) { s.add(VirtualAddress).putInt(v); }
-        public static int Size(Address s) { return s.add(Size).getInt(); }
-        public static void Size(Address s, int v) { s.add(Size).putInt(v); }
+        public static int VirtualAddress(@CType("struct _IMAGE_DATA_DIRECTORY") Address s) { return s.add(VirtualAddress).getInt(); }
+        public static void VirtualAddress(@CType("struct _IMAGE_DATA_DIRECTORY") Address s, int v) { s.add(VirtualAddress).putInt(v); }
+        public static int VirtualAddress(Buf s) { return s.getInt(VirtualAddress); }
+        public static void VirtualAddress(Buf s, int v) { s.putInt(VirtualAddress, v); }
+        public static int Size(@CType("struct _IMAGE_DATA_DIRECTORY") Address s) { return s.add(Size).getInt(); }
+        public static void Size(@CType("struct _IMAGE_DATA_DIRECTORY") Address s, int v) { s.add(Size).putInt(v); }
+        public static int Size(Buf s) { return s.getInt(Size); }
+        public static void Size(Buf s, int v) { s.putInt(Size, v); }
     }
 
     /** {@code struct _CRYPTOAPI_BLOB} - wincrypt.h:769, 16 bytes */
-    public static final class CRYPT_DATA_BLOB {
+    @CType("struct _CRYPTOAPI_BLOB") public static final class CRYPT_DATA_BLOB {
         private CRYPT_DATA_BLOB() {}
         public static final int SIZE = 16;
         /** {@code DWORD cbData} */ public static final int cbData = 0;
         /** {@code BYTE* pbData} */ public static final int pbData = 8;
-        public static int cbData(Address s) { return s.add(cbData).getInt(); }
-        public static void cbData(Address s, int v) { s.add(cbData).putInt(v); }
-        public static Address pbData(Address s) { return s.add(pbData).getAddress(); }
-        public static void pbData(Address s, Address v) { s.add(pbData).putAddress(v); }
+        public static int cbData(@CType("struct _CRYPTOAPI_BLOB") Address s) { return s.add(cbData).getInt(); }
+        public static void cbData(@CType("struct _CRYPTOAPI_BLOB") Address s, int v) { s.add(cbData).putInt(v); }
+        public static int cbData(Buf s) { return s.getInt(cbData); }
+        public static void cbData(Buf s, int v) { s.putInt(cbData, v); }
+        public static Address pbData(@CType("struct _CRYPTOAPI_BLOB") Address s) { return s.add(pbData).getAddress(); }
+        public static void pbData(@CType("struct _CRYPTOAPI_BLOB") Address s, Address v) { s.add(pbData).putAddress(v); }
+        public static Address pbData(Buf s) { return s.getAddress(pbData); }
+        public static void pbData(Buf s, Address v) { s.putAddress(pbData, v); }
     }
 
     /** {@code struct } - mssign.h:13, 24 bytes */
@@ -519,10 +859,16 @@ public final class WinOffsets {
         /** {@code HANDLE hFile} */ public static final int hFile = 16;
         public static int cbSize(Address s) { return s.add(cbSize).getInt(); }
         public static void cbSize(Address s, int v) { s.add(cbSize).putInt(v); }
-        public static Address pwszFileName(Address s) { return s.add(pwszFileName).getAddress(); }
-        public static void pwszFileName(Address s, Address v) { s.add(pwszFileName).putAddress(v); }
+        public static int cbSize(Buf s) { return s.getInt(cbSize); }
+        public static void cbSize(Buf s, int v) { s.putInt(cbSize, v); }
+        public static @CType("wchar_t") Address pwszFileName(Address s) { return s.add(pwszFileName).getAddress(); }
+        public static void pwszFileName(Address s, @CType("wchar_t") Address v) { s.add(pwszFileName).putAddress(v); }
+        public static @CType("wchar_t") Address pwszFileName(Buf s) { return s.getAddress(pwszFileName); }
+        public static void pwszFileName(Buf s, @CType("wchar_t") Address v) { s.putAddress(pwszFileName, v); }
         public static Address hFile(Address s) { return s.add(hFile).getAddress(); }
         public static void hFile(Address s, Address v) { s.add(hFile).putAddress(v); }
+        public static Address hFile(Buf s) { return s.getAddress(hFile); }
+        public static void hFile(Buf s, Address v) { s.putAddress(hFile, v); }
     }
 
     /** {@code struct } - mssign.h:19, 32 bytes */
@@ -535,12 +881,20 @@ public final class WinOffsets {
         /** {@code SIGNER_FILE_INFO* pSignerFileInfo} */ public static final int pSignerFileInfo = 24;
         public static int cbSize(Address s) { return s.add(cbSize).getInt(); }
         public static void cbSize(Address s, int v) { s.add(cbSize).putInt(v); }
-        public static Address pdwIndex(Address s) { return s.add(pdwIndex).getAddress(); }
-        public static void pdwIndex(Address s, Address v) { s.add(pdwIndex).putAddress(v); }
+        public static int cbSize(Buf s) { return s.getInt(cbSize); }
+        public static void cbSize(Buf s, int v) { s.putInt(cbSize, v); }
+        public static @CType("int32") Address pdwIndex(Address s) { return s.add(pdwIndex).getAddress(); }
+        public static void pdwIndex(Address s, @CType("int32") Address v) { s.add(pdwIndex).putAddress(v); }
+        public static @CType("int32") Address pdwIndex(Buf s) { return s.getAddress(pdwIndex); }
+        public static void pdwIndex(Buf s, @CType("int32") Address v) { s.putAddress(pdwIndex, v); }
         public static int dwSubjectChoice(Address s) { return s.add(dwSubjectChoice).getInt(); }
         public static void dwSubjectChoice(Address s, int v) { s.add(dwSubjectChoice).putInt(v); }
+        public static int dwSubjectChoice(Buf s) { return s.getInt(dwSubjectChoice); }
+        public static void dwSubjectChoice(Buf s, int v) { s.putInt(dwSubjectChoice, v); }
         public static Address pSignerFileInfo(Address s) { return s.add(pSignerFileInfo).getAddress(); }
         public static void pSignerFileInfo(Address s, Address v) { s.add(pSignerFileInfo).putAddress(v); }
+        public static Address pSignerFileInfo(Buf s) { return s.getAddress(pSignerFileInfo); }
+        public static void pSignerFileInfo(Buf s, Address v) { s.putAddress(pSignerFileInfo, v); }
     }
 
     /** {@code struct } - mssign.h:26, 32 bytes */
@@ -553,12 +907,20 @@ public final class WinOffsets {
         /** {@code HCERTSTORE hCertStore} */ public static final int hCertStore = 24;
         public static int cbSize(Address s) { return s.add(cbSize).getInt(); }
         public static void cbSize(Address s, int v) { s.add(cbSize).putInt(v); }
-        public static Address pSigningCert(Address s) { return s.add(pSigningCert).getAddress(); }
-        public static void pSigningCert(Address s, Address v) { s.add(pSigningCert).putAddress(v); }
+        public static int cbSize(Buf s) { return s.getInt(cbSize); }
+        public static void cbSize(Buf s, int v) { s.putInt(cbSize, v); }
+        public static @CType("struct _CERT_CONTEXT") Address pSigningCert(Address s) { return s.add(pSigningCert).getAddress(); }
+        public static void pSigningCert(Address s, @CType("struct _CERT_CONTEXT") Address v) { s.add(pSigningCert).putAddress(v); }
+        public static @CType("struct _CERT_CONTEXT") Address pSigningCert(Buf s) { return s.getAddress(pSigningCert); }
+        public static void pSigningCert(Buf s, @CType("struct _CERT_CONTEXT") Address v) { s.putAddress(pSigningCert, v); }
         public static int dwCertPolicy(Address s) { return s.add(dwCertPolicy).getInt(); }
         public static void dwCertPolicy(Address s, int v) { s.add(dwCertPolicy).putInt(v); }
+        public static int dwCertPolicy(Buf s) { return s.getInt(dwCertPolicy); }
+        public static void dwCertPolicy(Buf s, int v) { s.putInt(dwCertPolicy, v); }
         public static Address hCertStore(Address s) { return s.add(hCertStore).getAddress(); }
         public static void hCertStore(Address s, Address v) { s.add(hCertStore).putAddress(v); }
+        public static Address hCertStore(Buf s) { return s.getAddress(hCertStore); }
+        public static void hCertStore(Buf s, Address v) { s.putAddress(hCertStore, v); }
     }
 
     /** {@code struct } - mssign.h:33, 24 bytes */
@@ -571,12 +933,20 @@ public final class WinOffsets {
         /** {@code HWND hwnd} */ public static final int hwnd = 16;
         public static int cbSize(Address s) { return s.add(cbSize).getInt(); }
         public static void cbSize(Address s, int v) { s.add(cbSize).putInt(v); }
+        public static int cbSize(Buf s) { return s.getInt(cbSize); }
+        public static void cbSize(Buf s, int v) { s.putInt(cbSize, v); }
         public static int dwCertChoice(Address s) { return s.add(dwCertChoice).getInt(); }
         public static void dwCertChoice(Address s, int v) { s.add(dwCertChoice).putInt(v); }
+        public static int dwCertChoice(Buf s) { return s.getInt(dwCertChoice); }
+        public static void dwCertChoice(Buf s, int v) { s.putInt(dwCertChoice, v); }
         public static Address pCertStoreInfo(Address s) { return s.add(pCertStoreInfo).getAddress(); }
         public static void pCertStoreInfo(Address s, Address v) { s.add(pCertStoreInfo).putAddress(v); }
-        public static Address hwnd(Address s) { return s.add(hwnd).getAddress(); }
-        public static void hwnd(Address s, Address v) { s.add(hwnd).putAddress(v); }
+        public static Address pCertStoreInfo(Buf s) { return s.getAddress(pCertStoreInfo); }
+        public static void pCertStoreInfo(Buf s, Address v) { s.putAddress(pCertStoreInfo, v); }
+        public static @CType("struct HWND__") Address hwnd(Address s) { return s.add(hwnd).getAddress(); }
+        public static void hwnd(Address s, @CType("struct HWND__") Address v) { s.add(hwnd).putAddress(v); }
+        public static @CType("struct HWND__") Address hwnd(Buf s) { return s.getAddress(hwnd); }
+        public static void hwnd(Buf s, @CType("struct HWND__") Address v) { s.putAddress(hwnd, v); }
     }
 
     /** {@code struct } - mssign.h:40, 40 bytes */
@@ -591,16 +961,28 @@ public final class WinOffsets {
         /** {@code PCRYPT_ATTRIBUTES psUnauthenticated} */ public static final int psUnauthenticated = 32;
         public static int cbSize(Address s) { return s.add(cbSize).getInt(); }
         public static void cbSize(Address s, int v) { s.add(cbSize).putInt(v); }
+        public static int cbSize(Buf s) { return s.getInt(cbSize); }
+        public static void cbSize(Buf s, int v) { s.putInt(cbSize, v); }
         public static int algidHash(Address s) { return s.add(algidHash).getInt(); }
         public static void algidHash(Address s, int v) { s.add(algidHash).putInt(v); }
+        public static int algidHash(Buf s) { return s.getInt(algidHash); }
+        public static void algidHash(Buf s, int v) { s.putInt(algidHash, v); }
         public static int dwAttrChoice(Address s) { return s.add(dwAttrChoice).getInt(); }
         public static void dwAttrChoice(Address s, int v) { s.add(dwAttrChoice).putInt(v); }
+        public static int dwAttrChoice(Buf s) { return s.getInt(dwAttrChoice); }
+        public static void dwAttrChoice(Buf s, int v) { s.putInt(dwAttrChoice, v); }
         public static Address pAttrAuthcode(Address s) { return s.add(pAttrAuthcode).getAddress(); }
         public static void pAttrAuthcode(Address s, Address v) { s.add(pAttrAuthcode).putAddress(v); }
-        public static Address psAuthenticated(Address s) { return s.add(psAuthenticated).getAddress(); }
-        public static void psAuthenticated(Address s, Address v) { s.add(psAuthenticated).putAddress(v); }
-        public static Address psUnauthenticated(Address s) { return s.add(psUnauthenticated).getAddress(); }
-        public static void psUnauthenticated(Address s, Address v) { s.add(psUnauthenticated).putAddress(v); }
+        public static Address pAttrAuthcode(Buf s) { return s.getAddress(pAttrAuthcode); }
+        public static void pAttrAuthcode(Buf s, Address v) { s.putAddress(pAttrAuthcode, v); }
+        public static @CType("struct _CRYPT_ATTRIBUTES") Address psAuthenticated(Address s) { return s.add(psAuthenticated).getAddress(); }
+        public static void psAuthenticated(Address s, @CType("struct _CRYPT_ATTRIBUTES") Address v) { s.add(psAuthenticated).putAddress(v); }
+        public static @CType("struct _CRYPT_ATTRIBUTES") Address psAuthenticated(Buf s) { return s.getAddress(psAuthenticated); }
+        public static void psAuthenticated(Buf s, @CType("struct _CRYPT_ATTRIBUTES") Address v) { s.putAddress(psAuthenticated, v); }
+        public static @CType("struct _CRYPT_ATTRIBUTES") Address psUnauthenticated(Address s) { return s.add(psUnauthenticated).getAddress(); }
+        public static void psUnauthenticated(Address s, @CType("struct _CRYPT_ATTRIBUTES") Address v) { s.add(psUnauthenticated).putAddress(v); }
+        public static @CType("struct _CRYPT_ATTRIBUTES") Address psUnauthenticated(Buf s) { return s.getAddress(psUnauthenticated); }
+        public static void psUnauthenticated(Buf s, @CType("struct _CRYPT_ATTRIBUTES") Address v) { s.putAddress(psUnauthenticated, v); }
     }
 
     /** {@code struct } - mssign.h:49, 16 bytes */
@@ -612,14 +994,20 @@ public final class WinOffsets {
         /** {@code BYTE* pbBlob} */ public static final int pbBlob = 8;
         public static int cbSize(Address s) { return s.add(cbSize).getInt(); }
         public static void cbSize(Address s, int v) { s.add(cbSize).putInt(v); }
+        public static int cbSize(Buf s) { return s.getInt(cbSize); }
+        public static void cbSize(Buf s, int v) { s.putInt(cbSize, v); }
         public static int cbBlob(Address s) { return s.add(cbBlob).getInt(); }
         public static void cbBlob(Address s, int v) { s.add(cbBlob).putInt(v); }
+        public static int cbBlob(Buf s) { return s.getInt(cbBlob); }
+        public static void cbBlob(Buf s, int v) { s.putInt(cbBlob, v); }
         public static Address pbBlob(Address s) { return s.add(pbBlob).getAddress(); }
         public static void pbBlob(Address s, Address v) { s.add(pbBlob).putAddress(v); }
+        public static Address pbBlob(Buf s) { return s.getAddress(pbBlob); }
+        public static void pbBlob(Buf s, Address v) { s.putAddress(pbBlob, v); }
     }
 
     /** {@code struct _CONSOLE_SCREEN_BUFFER_INFO} - consoleapi2.h:64, 22 bytes */
-    public static final class CONSOLE_SCREEN_BUFFER_INFO {
+    @CType("struct _CONSOLE_SCREEN_BUFFER_INFO") public static final class CONSOLE_SCREEN_BUFFER_INFO {
         private CONSOLE_SCREEN_BUFFER_INFO() {}
         public static final int SIZE = 22;
         /** {@code COORD dwSize} */ public static final int dwSize = 0;
@@ -627,24 +1015,38 @@ public final class WinOffsets {
         /** {@code WORD wAttributes} */ public static final int wAttributes = 8;
         /** {@code SMALL_RECT srWindow} */ public static final int srWindow = 10;
         /** {@code COORD dwMaximumWindowSize} */ public static final int dwMaximumWindowSize = 18;
-        public static short wAttributes(Address s) { return s.add(wAttributes).getShort(); }
-        public static void wAttributes(Address s, short v) { s.add(wAttributes).putShort(v); }
+        public static @CType("struct _COORD") Address dwSize(@Returned @CType("struct _CONSOLE_SCREEN_BUFFER_INFO") Address s) { return s.add(dwSize); }
+        public static Buf dwSize(@Returned Buf s) { return s.from(dwSize); }
+        public static @CType("struct _COORD") Address dwCursorPosition(@Returned @CType("struct _CONSOLE_SCREEN_BUFFER_INFO") Address s) { return s.add(dwCursorPosition); }
+        public static Buf dwCursorPosition(@Returned Buf s) { return s.from(dwCursorPosition); }
+        public static short wAttributes(@CType("struct _CONSOLE_SCREEN_BUFFER_INFO") Address s) { return s.add(wAttributes).getShort(); }
+        public static void wAttributes(@CType("struct _CONSOLE_SCREEN_BUFFER_INFO") Address s, short v) { s.add(wAttributes).putShort(v); }
+        public static short wAttributes(Buf s) { return s.getShort(wAttributes); }
+        public static void wAttributes(Buf s, short v) { s.putShort(wAttributes, v); }
+        public static @CType("struct _SMALL_RECT") Address srWindow(@Returned @CType("struct _CONSOLE_SCREEN_BUFFER_INFO") Address s) { return s.add(srWindow); }
+        public static Buf srWindow(@Returned Buf s) { return s.from(srWindow); }
+        public static @CType("struct _COORD") Address dwMaximumWindowSize(@Returned @CType("struct _CONSOLE_SCREEN_BUFFER_INFO") Address s) { return s.add(dwMaximumWindowSize); }
+        public static Buf dwMaximumWindowSize(@Returned Buf s) { return s.from(dwMaximumWindowSize); }
     }
 
     /** {@code struct _COORD} - wincontypes.h:18, 4 bytes */
-    public static final class COORD {
+    @CType("struct _COORD") public static final class COORD {
         private COORD() {}
         public static final int SIZE = 4;
         /** {@code SHORT X} */ public static final int X = 0;
         /** {@code SHORT Y} */ public static final int Y = 2;
-        public static short X(Address s) { return s.add(X).getShort(); }
-        public static void X(Address s, short v) { s.add(X).putShort(v); }
-        public static short Y(Address s) { return s.add(Y).getShort(); }
-        public static void Y(Address s, short v) { s.add(Y).putShort(v); }
+        public static short X(@CType("struct _COORD") Address s) { return s.add(X).getShort(); }
+        public static void X(@CType("struct _COORD") Address s, short v) { s.add(X).putShort(v); }
+        public static short X(Buf s) { return s.getShort(X); }
+        public static void X(Buf s, short v) { s.putShort(X, v); }
+        public static short Y(@CType("struct _COORD") Address s) { return s.add(Y).getShort(); }
+        public static void Y(@CType("struct _COORD") Address s, short v) { s.add(Y).putShort(v); }
+        public static short Y(Buf s) { return s.getShort(Y); }
+        public static void Y(Buf s, short v) { s.putShort(Y, v); }
     }
 
     /** {@code struct tagNONCLIENTMETRICSW} - winuser.h:5434, 504 bytes */
-    public static final class NONCLIENTMETRICSW {
+    @CType("struct tagNONCLIENTMETRICSW") public static final class NONCLIENTMETRICSW {
         private NONCLIENTMETRICSW() {}
         public static final int SIZE = 504;
         /** {@code UINT cbSize} */ public static final int cbSize = 0;
@@ -663,28 +1065,60 @@ public final class WinOffsets {
         /** {@code LOGFONTW lfStatusFont} */ public static final int lfStatusFont = 316;
         /** {@code LOGFONTW lfMessageFont} */ public static final int lfMessageFont = 408;
         /** {@code int iPaddedBorderWidth} */ public static final int iPaddedBorderWidth = 500;
-        public static int cbSize(Address s) { return s.add(cbSize).getInt(); }
-        public static void cbSize(Address s, int v) { s.add(cbSize).putInt(v); }
-        public static int iBorderWidth(Address s) { return s.add(iBorderWidth).getInt(); }
-        public static void iBorderWidth(Address s, int v) { s.add(iBorderWidth).putInt(v); }
-        public static int iScrollWidth(Address s) { return s.add(iScrollWidth).getInt(); }
-        public static void iScrollWidth(Address s, int v) { s.add(iScrollWidth).putInt(v); }
-        public static int iScrollHeight(Address s) { return s.add(iScrollHeight).getInt(); }
-        public static void iScrollHeight(Address s, int v) { s.add(iScrollHeight).putInt(v); }
-        public static int iCaptionWidth(Address s) { return s.add(iCaptionWidth).getInt(); }
-        public static void iCaptionWidth(Address s, int v) { s.add(iCaptionWidth).putInt(v); }
-        public static int iCaptionHeight(Address s) { return s.add(iCaptionHeight).getInt(); }
-        public static void iCaptionHeight(Address s, int v) { s.add(iCaptionHeight).putInt(v); }
-        public static int iSmCaptionWidth(Address s) { return s.add(iSmCaptionWidth).getInt(); }
-        public static void iSmCaptionWidth(Address s, int v) { s.add(iSmCaptionWidth).putInt(v); }
-        public static int iSmCaptionHeight(Address s) { return s.add(iSmCaptionHeight).getInt(); }
-        public static void iSmCaptionHeight(Address s, int v) { s.add(iSmCaptionHeight).putInt(v); }
-        public static int iMenuWidth(Address s) { return s.add(iMenuWidth).getInt(); }
-        public static void iMenuWidth(Address s, int v) { s.add(iMenuWidth).putInt(v); }
-        public static int iMenuHeight(Address s) { return s.add(iMenuHeight).getInt(); }
-        public static void iMenuHeight(Address s, int v) { s.add(iMenuHeight).putInt(v); }
-        public static int iPaddedBorderWidth(Address s) { return s.add(iPaddedBorderWidth).getInt(); }
-        public static void iPaddedBorderWidth(Address s, int v) { s.add(iPaddedBorderWidth).putInt(v); }
+        public static int cbSize(@CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(cbSize).getInt(); }
+        public static void cbSize(@CType("struct tagNONCLIENTMETRICSW") Address s, int v) { s.add(cbSize).putInt(v); }
+        public static int cbSize(Buf s) { return s.getInt(cbSize); }
+        public static void cbSize(Buf s, int v) { s.putInt(cbSize, v); }
+        public static int iBorderWidth(@CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(iBorderWidth).getInt(); }
+        public static void iBorderWidth(@CType("struct tagNONCLIENTMETRICSW") Address s, int v) { s.add(iBorderWidth).putInt(v); }
+        public static int iBorderWidth(Buf s) { return s.getInt(iBorderWidth); }
+        public static void iBorderWidth(Buf s, int v) { s.putInt(iBorderWidth, v); }
+        public static int iScrollWidth(@CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(iScrollWidth).getInt(); }
+        public static void iScrollWidth(@CType("struct tagNONCLIENTMETRICSW") Address s, int v) { s.add(iScrollWidth).putInt(v); }
+        public static int iScrollWidth(Buf s) { return s.getInt(iScrollWidth); }
+        public static void iScrollWidth(Buf s, int v) { s.putInt(iScrollWidth, v); }
+        public static int iScrollHeight(@CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(iScrollHeight).getInt(); }
+        public static void iScrollHeight(@CType("struct tagNONCLIENTMETRICSW") Address s, int v) { s.add(iScrollHeight).putInt(v); }
+        public static int iScrollHeight(Buf s) { return s.getInt(iScrollHeight); }
+        public static void iScrollHeight(Buf s, int v) { s.putInt(iScrollHeight, v); }
+        public static int iCaptionWidth(@CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(iCaptionWidth).getInt(); }
+        public static void iCaptionWidth(@CType("struct tagNONCLIENTMETRICSW") Address s, int v) { s.add(iCaptionWidth).putInt(v); }
+        public static int iCaptionWidth(Buf s) { return s.getInt(iCaptionWidth); }
+        public static void iCaptionWidth(Buf s, int v) { s.putInt(iCaptionWidth, v); }
+        public static int iCaptionHeight(@CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(iCaptionHeight).getInt(); }
+        public static void iCaptionHeight(@CType("struct tagNONCLIENTMETRICSW") Address s, int v) { s.add(iCaptionHeight).putInt(v); }
+        public static int iCaptionHeight(Buf s) { return s.getInt(iCaptionHeight); }
+        public static void iCaptionHeight(Buf s, int v) { s.putInt(iCaptionHeight, v); }
+        public static @CType("struct tagLOGFONTW") Address lfCaptionFont(@Returned @CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(lfCaptionFont); }
+        public static Buf lfCaptionFont(@Returned Buf s) { return s.from(lfCaptionFont); }
+        public static int iSmCaptionWidth(@CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(iSmCaptionWidth).getInt(); }
+        public static void iSmCaptionWidth(@CType("struct tagNONCLIENTMETRICSW") Address s, int v) { s.add(iSmCaptionWidth).putInt(v); }
+        public static int iSmCaptionWidth(Buf s) { return s.getInt(iSmCaptionWidth); }
+        public static void iSmCaptionWidth(Buf s, int v) { s.putInt(iSmCaptionWidth, v); }
+        public static int iSmCaptionHeight(@CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(iSmCaptionHeight).getInt(); }
+        public static void iSmCaptionHeight(@CType("struct tagNONCLIENTMETRICSW") Address s, int v) { s.add(iSmCaptionHeight).putInt(v); }
+        public static int iSmCaptionHeight(Buf s) { return s.getInt(iSmCaptionHeight); }
+        public static void iSmCaptionHeight(Buf s, int v) { s.putInt(iSmCaptionHeight, v); }
+        public static @CType("struct tagLOGFONTW") Address lfSmCaptionFont(@Returned @CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(lfSmCaptionFont); }
+        public static Buf lfSmCaptionFont(@Returned Buf s) { return s.from(lfSmCaptionFont); }
+        public static int iMenuWidth(@CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(iMenuWidth).getInt(); }
+        public static void iMenuWidth(@CType("struct tagNONCLIENTMETRICSW") Address s, int v) { s.add(iMenuWidth).putInt(v); }
+        public static int iMenuWidth(Buf s) { return s.getInt(iMenuWidth); }
+        public static void iMenuWidth(Buf s, int v) { s.putInt(iMenuWidth, v); }
+        public static int iMenuHeight(@CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(iMenuHeight).getInt(); }
+        public static void iMenuHeight(@CType("struct tagNONCLIENTMETRICSW") Address s, int v) { s.add(iMenuHeight).putInt(v); }
+        public static int iMenuHeight(Buf s) { return s.getInt(iMenuHeight); }
+        public static void iMenuHeight(Buf s, int v) { s.putInt(iMenuHeight, v); }
+        public static @CType("struct tagLOGFONTW") Address lfMenuFont(@Returned @CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(lfMenuFont); }
+        public static Buf lfMenuFont(@Returned Buf s) { return s.from(lfMenuFont); }
+        public static @CType("struct tagLOGFONTW") Address lfStatusFont(@Returned @CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(lfStatusFont); }
+        public static Buf lfStatusFont(@Returned Buf s) { return s.from(lfStatusFont); }
+        public static @CType("struct tagLOGFONTW") Address lfMessageFont(@Returned @CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(lfMessageFont); }
+        public static Buf lfMessageFont(@Returned Buf s) { return s.from(lfMessageFont); }
+        public static int iPaddedBorderWidth(@CType("struct tagNONCLIENTMETRICSW") Address s) { return s.add(iPaddedBorderWidth).getInt(); }
+        public static void iPaddedBorderWidth(@CType("struct tagNONCLIENTMETRICSW") Address s, int v) { s.add(iPaddedBorderWidth).putInt(v); }
+        public static int iPaddedBorderWidth(Buf s) { return s.getInt(iPaddedBorderWidth); }
+        public static void iPaddedBorderWidth(Buf s, int v) { s.putInt(iPaddedBorderWidth, v); }
     }
 
 }

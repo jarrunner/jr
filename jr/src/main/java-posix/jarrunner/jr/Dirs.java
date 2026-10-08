@@ -16,7 +16,7 @@ public final class Dirs {
     /** Directory entry names directly under parentDir (files excluded, "." and ".." excluded). */
     public static List<String> listDirNames(String parentDir) {
         var out = new ArrayList<String>();
-        var dir = PosixApi.opendir(cstr(parentDir));
+        var dir = PosixApi.opendir(parentDir);
         if (dir.toLong() == 0) {
             return out;
         }
@@ -25,7 +25,7 @@ public final class Dirs {
             if (type != PosixApi.DT_DIR) {
                 continue;
             }
-            var name = string(e.add(PosixOffsets.dirent.d_name), 256);
+            var name = string(PosixOffsets.dirent.d_name(e), 256);
             if (!name.equals(".") && !name.equals("..")) {
                 out.add(name);
             }

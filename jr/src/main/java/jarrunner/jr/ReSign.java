@@ -26,7 +26,7 @@ public final class ReSign {
         var store = NULL;
         try {
             if (!s.signPfx.isEmpty()) {
-                var pfx = FileIo.readAllNative(s.signPfx);
+                var pfx = FileIo.readAllBytes(s.signPfx);
                 if (pfx == null) {
                     throw new ReError("Cannot read certificate file: " + s.signPfx);
                 }
@@ -34,8 +34,8 @@ public final class ReSign {
                 var password = wcstr(env == null ? "" : env);
 
                 var blob = alloc(WinOffsets.CRYPT_DATA_BLOB.SIZE);
-                WinOffsets.CRYPT_DATA_BLOB.cbData(blob, pfx.size());
-                WinOffsets.CRYPT_DATA_BLOB.pbData(blob, pfx.data());
+                WinOffsets.CRYPT_DATA_BLOB.cbData(blob, pfx.length);
+                WinOffsets.CRYPT_DATA_BLOB.pbData(blob, alloc(pfx));
                 // NO_PERSIST_KEY: the private key lives only in this process's memory, so signing
                 // leaves nothing behind in the user's key store
                 store = WinApi.pfxImportCertStore(blob, password,
@@ -64,10 +64,7 @@ public final class ReSign {
                 if (hash == null) {
                     throw new ReError("-Xjr:sign.thumbprint must be a 40-hex-digit SHA-1 thumbprint");
                 }
-                var hashBuf = alloc(hash.length);
-                for (var i = 0; i < hash.length; i++) {
-                    hashBuf.add(i).putByte(hash[i]);
-                }
+                var hashBuf = alloc(hash);
                 var hashBlob = alloc(WinOffsets.CRYPT_DATA_BLOB.SIZE);
                 WinOffsets.CRYPT_DATA_BLOB.cbData(hashBlob, hash.length);
                 WinOffsets.CRYPT_DATA_BLOB.pbData(hashBlob, hashBuf);
@@ -128,14 +125,14 @@ public final class ReSign {
             var contextPtr = ptrVar();
             var hr = WinApi.signerSignEx2(0, subject, signerCert, sigInfo, NULL,
                     hasTimestamp ? SIGNER_TIMESTAMP_RFC3161 : 0,
-                    hasTimestamp ? cstr(OID_SHA256) : NULL,
+                    hasTimestamp ? ascii(OID_SHA256) : NULL,
                     hasTimestamp ? wcstr(s.signTimestamp) : NULL,
                     NULL, NULL, contextPtr, NULL, NULL);
             if (hr < 0) {
                 throw new ReError("Signing failed (HRESULT 0x" + hex8(hr) + ")"
                         + (hasTimestamp ? " - check the timestamp URL and the network" : ""));
             }
-            var context = contextPtr.getAddress();
+            var context = ptrOf(contextPtr);
             if (context.toLong() != 0) {
                 WinApi.signerFreeSignerContext(context);
             }
@@ -210,9 +207,11 @@ public final class ReSign {
 
     /** Overwrites a wide-string password's bytes in place - mirrors reSign's SecureZeroMemory on
      *  the password buffer, so the PFX password does not sit in memory any longer than needed. */
+    @Unsafe("trusts that wideString came from wcstr of a chars-long string, so it holds chars + 1 UTF-16 units")
     private static void wipe(Address wideString, int chars) {
+        var w = Buf.wrap(wideString, (chars + 1) * 2);
         for (var i = 0; i <= chars; i++) { // includes the NUL terminator
-            wideString.add(i * 2).putChar((char) 0);
+            w.putChar(i * 2, (char) 0);
         }
     }
 }

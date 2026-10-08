@@ -1,51 +1,52 @@
 package jarrunner.jr;
 
-import org.teavm.interop.Address;
-
-import static jarrunner.jr.N.*;
+import java.util.Arrays;
 
 /**
- * A growable native byte buffer for building a VS_VERSIONINFO block, mirroring resedit.c's ReBuf -
- * except resedit.c's version block is capped at 65535 bytes (its own check, "Version information too
- * large"), so this allocates that cap up front rather than reimplementing realloc; N/Arena's own
- * program-lifetime region already outlives the single UpdateResourceW call that consumes it.
+ * A growable little-endian byte buffer for building resource data (a VS_VERSIONINFO block, an icon group, a
+ * string table), mirroring resedit.c's ReBuf. It is a Java array, so every write is bounds-checked and the data
+ * needs no scope; it is copied to native memory only for UpdateResourceW (PRP-35).
  */
 final class ReBuf {
-    private static final int CAP = 65536;
-
-    final Address base = alloc(CAP);
+    byte[] buf = new byte[256];
     int len;
 
-    void putShort(short v) {
-        base.add(len).putShort(v);
-        len += 2;
+    private void room(int n) {
+        if (len + n > buf.length) buf = Arrays.copyOf(buf, Math.max(buf.length * 2, len + n));
+    }
+
+    void putByte(int v) {
+        room(1);
+        buf[len++] = (byte) v;
+    }
+
+    void putShort(int v) {
+        putByte(v);
+        putByte(v >> 8);
     }
 
     void putInt(int v) {
-        base.add(len).putInt(v);
-        len += 4;
+        putShort(v);
+        putShort(v >>> 16);
     }
 
-    /** Copies size bytes from a native struct (e.g. a VS_FIXEDFILEINFO scratch buffer) verbatim. */
-    void putStruct(Address src, int size) {
-        for (var i = 0; i < size; i++) {
-            base.add(len + i).putByte(src.add(i).getByte());
-        }
-        len += size;
+    void put(byte[] b) {
+        room(b.length);
+        System.arraycopy(b, 0, buf, len, b.length);
+        len += b.length;
     }
 
     /** UTF-16LE, NUL-terminated - a version-block "key". */
     void putWideStringZ(String s) {
         for (var i = 0; i < s.length(); i++) {
-            putShort((short) s.charAt(i));
+            putShort(s.charAt(i));
         }
-        putShort((short) 0);
+        putShort(0);
     }
 
     void align4() {
         while (len % 4 != 0) {
-            base.add(len).putByte((byte) 0);
-            len++;
+            putByte(0);
         }
     }
 
@@ -56,16 +57,21 @@ final class ReBuf {
     int begin(String key, int valueLenUnits, int type) {
         align4();
         var start = len;
-        putShort((short) 0); // wLength placeholder, patched in end()
-        putShort((short) valueLenUnits);
-        putShort((short) type);
+        putShort(0); // wLength placeholder, patched in end()
+        putShort(valueLenUnits);
+        putShort(type);
         putWideStringZ(key);
         align4();
         return start;
     }
 
     void end(int start) {
-        var nodeLen = (short) (len - start);
-        base.add(start).putShort(nodeLen);
+        var nodeLen = len - start;
+        buf[start] = (byte) nodeLen;
+        buf[start + 1] = (byte) (nodeLen >> 8);
+    }
+
+    byte[] bytes() {
+        return Arrays.copyOf(buf, len);
     }
 }

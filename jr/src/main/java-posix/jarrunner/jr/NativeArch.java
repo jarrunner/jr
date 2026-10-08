@@ -16,6 +16,6 @@ public final class NativeArch {
         if (PosixApi.uname(buf) != 0) {
             return "unknown";
         }
-        return string(buf.add(PosixOffsets.utsname.machine), 65);
+        return string(PosixOffsets.utsname.machine(buf), 65);
     }
 }

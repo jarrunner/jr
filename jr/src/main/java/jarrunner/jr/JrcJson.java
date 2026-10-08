@@ -7,17 +7,16 @@ package jarrunner.jr;
 public final class JrcJson {
     private JrcJson() {}
 
-    /** True if the text (a byte string, as FileIo.readAll returns it) starts with '{', after an
-     *  optional UTF-8 BOM and whitespace. */
-    public static boolean looksLikeJson(String bytes) {
-        var i = bytes.startsWith("ï»¿") ? 3 : 0;
-        while (i < bytes.length() && bytes.charAt(i) <= ' ') i++;
-        return i < bytes.length() && bytes.charAt(i) == '{';
+    /** True if the text (decoded, BOM already dropped - see N.text) starts with '{' after whitespace. */
+    public static boolean looksLikeJson(String text) {
+        var i = 0;
+        while (i < text.length() && text.charAt(i) <= ' ') i++;
+        return i < text.length() && text.charAt(i) == '{';
     }
 
     /** Parses and applies; returns null, or the parse error. */
-    public static String load(String bytes, Config c) {
-        var root = JsonReader.parse(Utf8.decode(bytes));
+    public static String load(String text, Config c) {
+        var root = JsonReader.parse(text);
         if (root.isError()) return root.error();
         if (root.kind() != JsonValue.OBJECT) return "the config must be a JSON object";
         apply(root, c);

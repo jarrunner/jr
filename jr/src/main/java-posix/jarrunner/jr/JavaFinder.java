@@ -75,7 +75,7 @@ public final class JavaFinder {
 
     private static String resolveRealPath(String path) {
         var buf = alloc(PosixApi.PATH_MAX);
-        var p = PosixApi.realpath(cstr(path), buf);
+        var p = PosixApi.realpath(utf8(path), buf);
         return p.toLong() == 0 ? null : string(buf);
     }
     /** The Java home a java binary belongs to, through any symlinks (/usr/bin/java -> /etc/alternatives/java ->

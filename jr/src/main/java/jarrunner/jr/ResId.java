@@ -42,7 +42,7 @@ public final class ResId {
     /** MAKEINTRESOURCEW for a numeric id, or a real wide-string pointer - what a WinAPI call takes
      *  for an LPCWSTR type/name parameter. */
     public Address toAddress() {
-        return name == null ? Address.fromLong(id & 0xFFFFL) : wcstr(name);
+        return name == null ? intResource(id) : wcstr(name);
     }
 
     /** Reads a type/name Address exactly as an Enum* callback receives it: IS_INTRESOURCE tests

@@ -37,8 +37,15 @@ public final class Launch {
             Log.info("AOT cache skipped: Java " + (java.major > 0 ? java.major + " predates" : "of unknown version cannot use")
                     + " the JDK 25 AOT options");
         }
+        if (currentAot && !fitsCodePage(java.home, systemAcp())) {
+            // PRP-34, measured with JDK 25: from a home outside the system code page the JVM cannot open its own
+            // lib\modules when given an AOT cache, and the cache-writing java.exe it spawns itself fails the same way
+            // even under a UTF-8 jvm=dll, so every launch would pay for a training run that never produces a cache.
+            Log.info("AOT cache skipped: the JDK cannot use one from a folder outside the ANSI code page: " + java.home);
+            currentAot = false;
+        }
         AotCache.jvmTag = AotCache.jvmTag(java);
-        var javaPath = java.javaExe(exeName);
+        var javaPath = CmdLineBuilder.forJava(java.javaExe(exeName));
         cmdLine = config.javaArgs.isBlank() ? CmdLineBuilder.buildTraditionalMode(javaPath, appArgs, currentAot)
                 : CmdLineBuilder.buildConfigMode(javaPath, config, appArgs, currentAot);
         Log.info("Final command: " + cmdLine);
@@ -65,6 +72,14 @@ public final class Launch {
         } else if (inProcess) {
             Log.warn("No in-process JVM for " + java.home + " (no jli.dll, or a different architecture from this exe)");
         }
+        if (!fitsCodePage(cmdLine, systemAcp())) {
+            // PRP-34: jr passes the command line as UTF-16, but java.exe reads it through GetCommandLineA, and the
+            // JVM finds its own files the same way. Nothing jr can send gets past that.
+            var note = "  The command line has characters outside this computer's ANSI code page (" + systemAcp()
+                    + "): java.exe receives them as '?'.\n";
+            Log.warn(note.strip());
+            tried.append(note);
+        }
         var r = ProcessLauncher.launch(cmdLine, hasConsole, stderr, GUI_WAIT_MS);
         if (owned) {
             WinApi.closeHandle(stderr);
@@ -82,15 +97,16 @@ public final class Launch {
     }
 
     /** False when no JVM exists in this process: jvm.dll never loaded, or JNI_CreateJavaVM failed. */
+    @Unsafe("trusts that jvm.dll's JNI_GetCreatedJavaVMs has the signature JniGetCreatedVmsFn declares")
     private static boolean jvmWasCreated() {
-        var jvm = WinApi.getModuleHandleA(cstr("jvm.dll"));
-        var fn = jvm.toLong() == 0 ? NULL : WinApi.getProcAddress(jvm, cstr("JNI_GetCreatedJavaVMs"));
+        var jvm = WinApi.getModuleHandleW("jvm.dll");
+        var fn = jvm.toLong() == 0 ? NULL : WinApi.getProcAddress(jvm, "JNI_GetCreatedJavaVMs");
         if (fn.toLong() == 0) {
             return jvm.toLong() != 0;
         }
         var n = intVar();
         ((JniGetCreatedVmsFn) (Object) fn).invoke(ptrVar(), 1, n);
-        return n.getInt() > 0;
+        return intOf(n) > 0;
     }
 
     private static void finish(LaunchResult r, String text) {

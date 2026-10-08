@@ -10,13 +10,14 @@ import static jarrunner.jr.N.*;
 public final class WinIcons {
     private WinIcons() {}
 
+    @Unsafe("trusts that comctl32's LoadIconWithScaleDown has the signature LoadIconScaleDownFn declares")
     static void set(Address hwnd) {
-        var self = WinApi.getModuleHandleA(NULL);
-        var group = Address.fromLong(1); // MAKEINTRESOURCE(1): the RT_GROUP_ICON jr stamps
+        var self = WinApi.getModuleHandleW(NULL);
+        var group = intResource(1); // the RT_GROUP_ICON jr stamps
         var small = ptrVar();
         var large = ptrVar();
-        var comctl = WinApi.getModuleHandleA(cstr("comctl32.dll"));
-        var fn = comctl.toLong() == 0 ? NULL : WinApi.getProcAddress(comctl, cstr("LoadIconWithScaleDown"));
+        var comctl = WinApi.getModuleHandleW("comctl32.dll");
+        var fn = comctl.toLong() == 0 ? NULL : WinApi.getProcAddress(comctl, "LoadIconWithScaleDown");
         var ok = false;
         if (fn.toLong() != 0) {
             var load = (LoadIconScaleDownFn) (Object) fn;
@@ -24,10 +25,10 @@ public final class WinIcons {
             var lg = WinApi.getSystemMetrics(WinApi.SM_CXICON);
             ok = load.invoke(self, group, sm, sm, small) >= 0 & load.invoke(self, group, lg, lg, large) >= 0;
         }
-        if (!ok && WinApi.extractIconExW(wcstr(ExeInfo.fullPath()), 0, large, small, 1) <= 0) {
+        if (!ok && WinApi.extractIconExW(ExeInfo.fullPath(), 0, large, small, 1) <= 0) {
             return;
         }
-        WinApi.sendMessageA(hwnd, WinApi.WM_SETICON, WinApi.ICON_SMALL, small.getAddress().toLong());
-        WinApi.sendMessageA(hwnd, WinApi.WM_SETICON, WinApi.ICON_BIG, large.getAddress().toLong());
+        WinApi.sendMessageW(hwnd, WinApi.WM_SETICON, WinApi.ICON_SMALL, ptrOf(small).toLong());
+        WinApi.sendMessageW(hwnd, WinApi.WM_SETICON, WinApi.ICON_BIG, ptrOf(large).toLong());
     }
 }

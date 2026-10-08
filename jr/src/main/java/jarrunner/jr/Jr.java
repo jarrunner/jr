@@ -1,5 +1,7 @@
 package jarrunner.jr;
 
+import org.teavm.interop.Address;
+
 import static jarrunner.jr.N.*;
 
 
@@ -22,9 +24,13 @@ public final class Jr {
             Dbg.log("WinApi constants not initialized at startup");
         }
         Timing.init();
+        args = commandLineArgs();
+        if (Checks.ON && args.length == 1 && args[0].equals("-Xjr:checks-selftest")) { // checks builds only (PRP-35)
+            Buf.alloc(4).getInt(2); // 4 bytes at offset 2 of a 4-byte buffer: must throw
+        }
         var replaced = ExeInfo.fullPath() + SelfUpdate.REPLACED; // left by -Xjr:update; gone once no instance holds it
         if (FileIo.exists(replaced)) {
-            WinApi.deleteFileA(cstr(replaced));
+            WinApi.deleteFileW(replaced);
         }
         var exeBaseName = ExeInfo.baseNameNoExt();
         var configPath = ExeInfo.fullPathNoExt() + ".jrc";
@@ -63,9 +69,9 @@ public final class Jr {
         ErrorReport.config = config;
         ErrorReport.javaExeName = javaExeName;
 
-        WinApi.setEnvironmentVariableA(cstr("JR_LAUNCH_MODE"), cstr(hasConsole ? "console" : "gui"));
-        WinApi.setEnvironmentVariableA(cstr("JR_AOT_STATE"), cstr("off"));
-        WinApi.setEnvironmentVariableA(cstr("JR_AOT_CACHE"), cstr(""));
+        Cstr.setEnv("JR_LAUNCH_MODE", hasConsole ? "console" : "gui");
+        Cstr.setEnv("JR_AOT_STATE", "off");
+        Cstr.setEnv("JR_AOT_CACHE", "");
 
         ConsoleMode.restoreRedirectedStdHandles();
         if (useJvmDll) {
@@ -98,7 +104,7 @@ public final class Jr {
             var withNewline = report.isEmpty() || report.endsWith("\n") ? report : report + "\n";
             if (hasConsole) {
                 if (result.ok()) {
-                    System.out.print(withNewline);
+                    Stderr.out(withNewline);
                 } else {
                     Stderr.print(withNewline);
                 }
@@ -124,7 +130,7 @@ public final class Jr {
             var text = opts.doctor == 1 ? Doctor.report(config, configLabel(configPath, config), javaExeName)
                     : Repair.run(config, javaExeName, hasConsole, guiMode);
             if (hasConsole) {
-                System.out.print(text);
+                Stderr.out(text);
             } else {
                 ErrorDialog.show(opts.doctor == 1 ? "jr doctor" : "jr repair", opts.doctor == 1
                         ? "What jr would do on this computer, and why. Nothing was changed." : "What jr repaired.", text, "");
@@ -223,6 +229,25 @@ public final class Jr {
         Launch.hasConsole = hasConsole;
         Launch.guiMode = guiMode;
         Launch.run(java, enableAOT, useJvmDll);
+    }
+
+    /** The arguments as typed, from GetCommandLineW (PRP-34). TeaVM's main(String[]) is built from the C argv,
+     *  which Windows hands over in the ANSI code page: a name in Cyrillic or Devanagari, or an emoji, arrives as
+     *  '?'. CommandLineToArgvW splits the same way the CRT does for ordinary quoting; argv[0] is this exe. */
+    @Unsafe("trusts CommandLineToArgvW's count n for the length of the pointer array it returns")
+    private static String[] commandLineArgs() {
+        return memScoped(() -> {
+            var count = intVar();
+            var argv = WinApi.commandLineToArgvW(WinApi.getCommandLineW(), count);
+            var n = argv.toLong() == 0 ? 0 : intOf(count);
+            var array = Buf.wrap(argv, n * Address.sizeOf());
+            var out = new String[Math.max(n - 1, 0)];
+            for (var i = 1; i < n; i++) {
+                out[i - 1] = wstring(array.getAddress(i * Address.sizeOf()));
+            }
+            if (argv.toLong() != 0) WinApi.localFree(argv);
+            return out;
+        });
     }
 
     private static String configLabel(String configPath, Config config) {

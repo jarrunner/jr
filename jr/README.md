@@ -50,7 +50,7 @@ A running exe cannot edit its own file (`BeginUpdateResource` fails with "Cannot
   jr-icon-editor.exe -Xjr:edit=jr.exe -Xjr:icon=..\icon\jr-icon.ico
   del jr-icon-editor.exe
 
-Check it took with `jr.exe -Xjr:list-resources=jr.exe` (expect six `ICON` entries plus one `GROUP_ICON`). This is a real edit of jr.exe's own bytes, not something SignPath (or any signing step) should run after - do it before signing, same as every other resource edit in this toolkit.
+Check it took with `jr.exe -Xjr:list-resources=jr.exe` (expect six `ICON` entries plus one `GROUP_ICON`). This is a real edit of jr.exe's own bytes, so it must come before signing (and before packing with UPX, see `../docs/upx.md`), same as every other resource edit in this toolkit.
 
 Verified end-to-end against real jars in `../test-scripts/` - not just "it compiles": correct help text, AOT cache auto-created on first run (matching launcher.c's base52 naming exactly), correct exit-code passthrough on both success and a real thrown exception, correct arg passthrough, and (PRP-09) a real 195MB JDK download+checksum+extract+install+launch cycle against jbang's cache layout. See the findings docs for the actual runs.
 

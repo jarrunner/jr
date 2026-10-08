@@ -5,7 +5,7 @@ import org.teavm.interop.Address;
 import static jarrunner.jr.N.*;
 
 /**
- * CreateProcessA-based child spawn, mirroring launcher.c's main() tail. STARTUPINFOA and
+ * CreateProcessW-based child spawn, mirroring launcher.c's main() tail. STARTUPINFOW and
  * PROCESS_INFORMATION are read/written as raw byte buffers rather than via
  * org.teavm.interop.Structure - see guidelines.teavmcpp.md for why. Field offsets come from
  * WinOffsets, verified against the real compiler (see PRP-08).
@@ -13,7 +13,7 @@ import static jarrunner.jr.N.*;
 public final class ProcessLauncher {
     private ProcessLauncher() {}
 
-    private static final int STARTUPINFO_SIZE = WinOffsets.STARTUPINFOA.SIZE;
+    private static final int STARTUPINFO_SIZE = WinOffsets.STARTUPINFOW.SIZE;
     private static final int PROCESS_INFO_SIZE = WinOffsets.PROCESS_INFORMATION.SIZE;
     private static final int STARTF_USESTDHANDLES = WinApi.STARTF_USESTDHANDLES;
 
@@ -21,21 +21,21 @@ public final class ProcessLauncher {
      *  that a start failure can be reported; a process still running then is left to run (detached). */
     public static LaunchResult launch(String cmdLine, boolean hasConsole, Address guiStderr, int guiWaitMs) {
         var si = alloc(STARTUPINFO_SIZE);
-        WinOffsets.STARTUPINFOA.cb(si, STARTUPINFO_SIZE);
+        WinOffsets.STARTUPINFOW.cb(si, STARTUPINFO_SIZE);
 
         if (hasConsole) {
-            WinOffsets.STARTUPINFOA.dwFlags(si, STARTF_USESTDHANDLES);
-            WinOffsets.STARTUPINFOA.hStdInput(si, WinApi.getStdHandle(WinApi.STD_INPUT_HANDLE));
-            WinOffsets.STARTUPINFOA.hStdOutput(si, WinApi.getStdHandle(WinApi.STD_OUTPUT_HANDLE));
-            WinOffsets.STARTUPINFOA.hStdError(si, WinApi.getStdHandle(WinApi.STD_ERROR_HANDLE));
+            WinOffsets.STARTUPINFOW.dwFlags(si, STARTF_USESTDHANDLES);
+            WinOffsets.STARTUPINFOW.hStdInput(si, WinApi.getStdHandle(WinApi.STD_INPUT_HANDLE));
+            WinOffsets.STARTUPINFOW.hStdOutput(si, WinApi.getStdHandle(WinApi.STD_OUTPUT_HANDLE));
+            WinOffsets.STARTUPINFOW.hStdError(si, WinApi.getStdHandle(WinApi.STD_ERROR_HANDLE));
         } else if (guiStderr.toLong() != 0) {
-            WinOffsets.STARTUPINFOA.dwFlags(si, STARTF_USESTDHANDLES);
-            WinOffsets.STARTUPINFOA.hStdError(si, guiStderr);
+            WinOffsets.STARTUPINFOW.dwFlags(si, STARTF_USESTDHANDLES);
+            WinOffsets.STARTUPINFOW.hStdError(si, guiStderr);
         }
 
         var pi = alloc(PROCESS_INFO_SIZE);
 
-        var ok = WinApi.createProcessA(NULL, cstr(cmdLine), NULL,
+        var ok = WinApi.createProcessW(NULL, wcstr(cmdLine), NULL,
                 NULL, 1, 0, NULL, NULL, si, pi) != 0;
 
         if (!ok) {
@@ -59,7 +59,7 @@ public final class ProcessLauncher {
         WinApi.waitForSingleObject(hProcess, WinApi.INFINITE);
         var exitCodeVar = intVar();
         WinApi.getExitCodeProcess(hProcess, exitCodeVar);
-        var exitCode = exitCodeVar.getInt();
+        var exitCode = intOf(exitCodeVar);
         Log.info("Java process exited with code: " + exitCode);
 
         WinApi.closeHandle(hProcess);
@@ -72,11 +72,11 @@ public final class ProcessLauncher {
      *  console/GUI mode, and never inherits/redirects standard handles. */
     public static boolean runHiddenAndWait(String cmdLine) {
         var si = alloc(STARTUPINFO_SIZE);
-        WinOffsets.STARTUPINFOA.cb(si, STARTUPINFO_SIZE);
+        WinOffsets.STARTUPINFOW.cb(si, STARTUPINFO_SIZE);
 
         var pi = alloc(PROCESS_INFO_SIZE);
 
-        var ok = WinApi.createProcessA(NULL, cstr(cmdLine), NULL,
+        var ok = WinApi.createProcessW(NULL, wcstr(cmdLine), NULL,
                 NULL, 0, WinApi.CREATE_NO_WINDOW, NULL, NULL,
                 si, pi) != 0;
         if (!ok) {
@@ -88,7 +88,7 @@ public final class ProcessLauncher {
         WinApi.waitForSingleObject(hProcess, WinApi.INFINITE);
         var exitCodeVar = intVar();
         WinApi.getExitCodeProcess(hProcess, exitCodeVar);
-        var exitCode = exitCodeVar.getInt();
+        var exitCode = intOf(exitCodeVar);
         WinApi.closeHandle(hProcess);
         WinApi.closeHandle(hThread);
         return exitCode == 0;

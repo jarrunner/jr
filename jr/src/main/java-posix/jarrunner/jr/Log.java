@@ -9,7 +9,7 @@ import static jarrunner.jr.N.*;
 public final class Log {
     private Log() {}
 
-    private static Address file;
+    @Handle private static Address file;
     private static boolean enabled;
 
     public static void init(String path, boolean overwrite) {
@@ -17,7 +17,7 @@ public final class Log {
             enabled = false;
             return;
         }
-        file = PosixApi.fopen(cstr(path), cstr(overwrite ? "w" : "a"));
+        file = PosixApi.fopen(utf8(path), ascii(overwrite ? "w" : "a"));
         if (file.toLong() != 0) {
             enabled = true;
             FileIo.append(file, "\n========================================\n");

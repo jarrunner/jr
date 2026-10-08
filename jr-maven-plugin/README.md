@@ -52,6 +52,21 @@ mvn -Djr.installDir=<dir> package    also copies the exe to <dir>
 - `architectures`: `x86_64` (default) and/or `arm64`; with several, the exes are named `<name>-windows-<arch>.exe`.
 - `outputDirectory` (default `target/jr`), `installDir` (`jr.installDir`), `skip` (`jr.skip`).
 
+## macOS (1.2.0)
+
+`platforms` (`jr.platforms`): `windows` (default) and/or `macos`. The Windows exes are stamped with Windows' own resource calls, so they are built only on Windows. The macOS outputs are built on any OS, Windows and CI included, and land in `target/jr/macos/`:
+
+- `macosForms` (`jr.macosForms`): `binary` (default) and/or `app`.
+  - `binary` is one file, `<name>`, with the app's config embedded in it. It copies and installs like any command-line tool. It has no icon, because macOS gives icons to bundles, not to bare binaries.
+  - `app` is `<Display Name>.app` (Info.plist, the binary, the icon) plus `<name>-<version>-macos.zip` of it, which is the single file to download. The zip keeps the executable bit. With `source=path`, the jar goes inside the app (`Contents/Resources`). When the build runs on a Mac, Apple's `codesign` seals the bundle ad hoc; built elsewhere, the app runs the same but `codesign -v` reports it as unsealed.
+- `macosArchitecture` (`jr.macosArchitecture`): `arm64`, `x86_64`, or `universal` (default; one fat binary for both).
+- `macosIcon`: a `.png`, `.icns`, or PNG-entry `.ico`; default `icon`. `macosNoIcon` (`jr.macosNoIcon`) leaves the icon out. Inside the app, jr passes `-Xdock:name` and `-Xdock:icon` to Java, so the Dock shows the app's name and icon rather than "java".
+- `macosDisplayName` (default `productName`, else `name`), `macosBundleId` (default `appId` with `:` as `.`). The app needs macOS 13 or later.
+- With `source=path` and no `jarPath`, a `binary` built on a Mac runs the build's own jar, as on Windows. Built anywhere else it expects `<jar name>` beside itself.
+- How the config gets in: jr's macOS build carries an empty 16 KB `__DATA,__jrc` section. The plugin writes the config there and recomputes the affected page hashes of the binary's ad-hoc signature, so the result runs on Apple silicon without a Mac in the build. An embedded config wins over any `.jrc` beside the binary, as on Windows.
+- Signing: ad hoc only, with no Apple Developer ID. A copy downloaded with a browser is blocked by Gatekeeper until the user allows it (System Settings, Privacy & Security, Open Anyway). Installing with `curl` avoids that. See jr's `docs/macos.md`.
+- In a release, the binary and the app's zip are published and listed in `SHA256SUMS`. They are not in the update file, because `-Xjr:update` is Windows-only.
+
 ## The release folder (1.2.0)
 
 For a release build (`source=url`, or `release=true`) the goal also writes everything a release publishes into `releaseDirectory` (default `target/jr/release`, emptied first), so no script has to assemble it:

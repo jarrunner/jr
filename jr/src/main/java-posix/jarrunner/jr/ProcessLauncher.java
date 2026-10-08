@@ -12,24 +12,31 @@ import static jarrunner.jr.N.*;
 public final class ProcessLauncher {
     private ProcessLauncher() {}
 
+    /** The NULL-terminated char*[] posix_spawn takes: argc + 1 pointer slots, each a UTF-8 string. */
+    private static Address argv(String javaPath, List<String> args) {
+        var argc = args.size() + 1;
+        var p = Address.sizeOf();
+        var argv = Buf.alloc((argc + 1) * p);
+        argv.putAddress(0, utf8(javaPath));
+        for (var i = 0; i < args.size(); i++) {
+            argv.putAddress((i + 1) * p, utf8(args.get(i)));
+        }
+        argv.putAddress(argc * p, NULL);
+        return argv.ptr();
+    }
+
     /** javaPath plus every argument, in order - argv[0] is javaPath itself, matching C convention. */
     public static LaunchResult launch(String javaPath, List<String> args) {
         return memScoped(() -> {
-            var argc = args.size() + 1;
-            var argv = alloc((argc + 1) * Address.sizeOf());
-            argv.putAddress(cstr(javaPath));
-            for (var i = 0; i < args.size(); i++) {
-                argv.add((i + 1) * Address.sizeOf()).putAddress(cstr(args.get(i)));
-            }
-            argv.add(argc * Address.sizeOf()).putAddress(NULL);
+            var argv = argv(javaPath, args);
 
             var envp = PosixApi.getEnviron();
             var pidVar = intVar();
-            var rc = PosixApi.posixSpawn(pidVar, cstr(javaPath), NULL, NULL, argv, envp);
+            var rc = PosixApi.posixSpawn(pidVar, javaPath, NULL, NULL, argv, envp);
             if (rc != 0) {
                 return new LaunchResult(false, -1);
             }
-            var pid = pidVar.getInt();
+            var pid = intOf(pidVar);
             Log.info("Java process started successfully (PID: " + pid + ")");
 
             var statusVar = intVar();
@@ -40,7 +47,7 @@ public final class ProcessLauncher {
             if (waited < 0) {
                 return new LaunchResult(false, -1);
             }
-            var status = statusVar.getInt();
+            var status = intOf(statusVar);
             var exitCode = PosixApi.wifexited(status) != 0 ? PosixApi.wexitstatus(status) : 128;
             Log.info("Java process exited with code: " + exitCode);
             return new LaunchResult(true, exitCode);

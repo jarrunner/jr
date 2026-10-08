@@ -20,7 +20,7 @@ public final class UpdateCheck {
         Log.info("update check: " + c.updateUrl);
         var raw = Http.getToBuffer(c.updateUrl, 4 * 1024 * 1024);
         if (raw == null) return u.done(ERROR, "Could not fetch the update file:\n" + c.updateUrl);
-        var root = JsonReader.parse(Utf8.decode(raw));
+        var root = JsonReader.parse(raw);
         if (root.isError()) return u.done(ERROR, "The update file is not valid JSON (" + root.error() + "):\n" + c.updateUrl);
         var format = root.get("format");
         if (format == null || !"1".equals(format.num())) {

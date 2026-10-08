@@ -2,13 +2,16 @@ package jarrunner.jr;
 
 import static jarrunner.jr.N.*;
 
-/** GetCurrentDirectoryA wrapper. */
+/** GetCurrentDirectoryW wrapper. */
 public final class Cwd {
     private Cwd() {}
 
     public static String get() {
-        var buf = alloc(1024);
-        var len = WinApi.getCurrentDirectoryA(1024, buf);
-        return len <= 0 ? "" : string(buf, len);
+        return memScoped(() -> {
+            var n = WinApi.getCurrentDirectoryW(0, NULL);
+            var buf = alloc(n * 2 + 2);
+            var len = WinApi.getCurrentDirectoryW(n, buf);
+            return len <= 0 || len >= n ? "" : wstring(buf, len);
+        });
     }
 }

@@ -143,8 +143,7 @@ public class Config {
      *  stamped under rather than assuming one. Relies on WinApi being initialized first - see the
      *  top of Jr.main. */
     private static String loadEmbedded() {
-        var module = WinApi.loadLibraryExW(wcstr(ExeInfo.fullPath()), NULL,
-                WinApi.LOAD_LIBRARY_AS_DATAFILE | WinApi.LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+        var module = WinApi.loadLibraryExW(ExeInfo.fullPath(), NULL, WinApi.LOAD_LIBRARY_AS_DATAFILE | WinApi.LOAD_LIBRARY_AS_IMAGE_RESOURCE);
         if (module.toLong() == 0) {
             Dbg.log("loadEmbedded: LoadLibraryExW failed, error " + WinApi.getLastError());
             return null;
@@ -154,15 +153,11 @@ public class Config {
             var name = ResId.of("JRC");
             var langs = ReCallbacks.getLangs(module, type, name);
             var found = langs.length == 0 ? null : ReEntries.find(module, type, name, langs[0]);
-            Dbg.log("loadEmbedded: " + (found == null ? "no RCDATA/JRC resource" : found.size() + " bytes"));
+            Dbg.log("loadEmbedded: " + (found == null ? "no RCDATA/JRC resource" : found.length + " bytes"));
             if (found == null) {
                 return null;
             }
-            var sb = new StringBuilder(found.size());
-            for (var i = 0; i < found.size(); i++) {
-                sb.append((char) (found.data().add(i).getByte() & 0xFF));
-            }
-            return sb.toString();
+            return text(found);
         } finally {
             WinApi.freeLibrary(module);
         }

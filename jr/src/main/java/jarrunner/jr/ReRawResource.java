@@ -10,19 +10,19 @@ public final class ReRawResource {
         var type = ResId.parse(raw.type(), true);
         var name = ResId.parse(raw.name(), false);
         checkJrcJson(raw, report);
-        var file = FileIo.readAllNative(raw.file());
-        if (file == null) {
+        var size = FileInfo.size(raw.file());
+        if (size <= 0 || size > 64L * 1024 * 1024 || !FileIo.exists(raw.file())) { // mirrors reReadFileAlloc's limits
             throw new ReError("Cannot read resource file: " + raw.file());
         }
         if (!list.queueReplace(module, type, name)) {
             throw new ReError("Too many resource changes in one run");
         }
         var lang = list.lastLang;
-        if (!list.add(type, name, lang, file.data(), file.size())) {
+        if (!list.addFile(type, name, lang, raw.file())) { // read off-heap when the update is written (ReApply)
             throw new ReError("Too many resource changes in one run");
         }
         report.append("Resource ").append(raw.type()).append("/").append(raw.name()).append(": ")
-                .append(raw.file()).append(" (").append(file.size()).append(" bytes)\n");
+                .append(raw.file()).append(" (").append(size).append(" bytes)\n");
     }
 
     /** RCDATA/JRC is jr's own config: a jrc-json is sanity-checked before it is baked, and a

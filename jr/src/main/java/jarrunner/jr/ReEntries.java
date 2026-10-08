@@ -9,7 +9,7 @@ import static jarrunner.jr.N.*;
 
 /**
  * The pending resource update: a list of (type, name, language) entries to write, or to delete
- * when data is the null Address - mirrors resedit.c's ReEntry/ReEntries/reAdd/reQueueReplace/reFind.
+ * when data is null - mirrors resedit.c's ReEntry/ReEntries/reAdd/reQueueReplace/reFind.
  * Existing resources are read from the target first (loaded as a data file, see reApplyResources),
  * the module is released, and only then is the file opened for update - EndUpdateResource cannot
  * rewrite a file that is mapped.
@@ -21,9 +21,12 @@ public final class ReEntries {
      *  own language, so it is replaced rather than joined by a second copy - RE_DEFAULT_LANG. */
     public static final short DEFAULT_LANG = 0x0409; // MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US)
 
-    public record Entry(ResId type, ResId name, short lang, Address data, int size) {
+    /** The new content is data (a Java array, copied to native memory only for UpdateResourceW) or file (a large
+     *  raw resource, read straight into native memory then, never onto the 32 MB Java heap); both null means
+     *  delete (PRP-35). */
+    public record Entry(ResId type, ResId name, short lang, byte[] data, String file) {
         boolean isDelete() {
-            return data.toLong() == 0;
+            return data == null && file == null;
         }
     }
 
@@ -36,12 +39,21 @@ public final class ReEntries {
         return list;
     }
 
-    /** mirrors reAdd. data may be the null Address, meaning "delete this resource". */
-    public boolean add(ResId type, ResId name, short lang, Address data, int size) {
+    /** mirrors reAdd. data may be null, meaning "delete this resource". */
+    public boolean add(ResId type, ResId name, short lang, byte[] data) {
+        return add(new Entry(type, name, lang, data, null));
+    }
+
+    /** A resource whose content is read from file when the update is written. */
+    public boolean addFile(ResId type, ResId name, short lang, String file) {
+        return add(new Entry(type, name, lang, null, file));
+    }
+
+    private boolean add(Entry e) {
         if (list.size() >= MAX_ENTRIES) {
             return false;
         }
-        list.add(new Entry(type, name, lang, data, size));
+        list.add(e);
         return true;
     }
 
@@ -51,7 +63,7 @@ public final class ReEntries {
     public boolean queueReplace(Address module, ResId type, ResId name) {
         var langs = ReCallbacks.getLangs(module, type, name);
         for (var lang : langs) {
-            if (!add(type, name, lang, NULL, 0)) {
+            if (!add(type, name, lang, null)) {
                 return false;
             }
         }
@@ -59,11 +71,9 @@ public final class ReEntries {
         return true;
     }
 
-    public record Found(Address data, int size) {}
-
-    /** Existing resource bytes, valid until the module is freed - mirrors reFind. Null if module is
-     *  the null handle (no resource section) or the resource does not exist. */
-    public static Found find(Address module, ResId type, ResId name, short lang) {
+    /** A copy of an existing resource's bytes - mirrors reFind. Null if module is the null handle (no resource
+     *  section) or the resource does not exist. */
+    public static byte[] find(Address module, ResId type, ResId name, short lang) {
         if (module.toLong() == 0) {
             return null;
         }
@@ -75,6 +85,6 @@ public final class ReEntries {
         if (g.toLong() == 0) {
             return null;
         }
-        return new Found(WinApi.lockResource(g), WinApi.sizeofResource(module, r));
+        return bytesOf(WinApi.lockResource(g), WinApi.sizeofResource(module, r));
     }
 }

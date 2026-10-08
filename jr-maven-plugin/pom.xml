@@ -43,6 +43,10 @@
     <!-- The jr exes this plugin bundles: build-win.ps1 -NoIcon -DistDir dist-noicon. Icon-less on purpose:
          an app exe carries an icon only when its own pom names one, never jr's. -->
     <jr.dist>${project.basedir}/../jr/dist-noicon</jr.dist>
+    <!-- The macOS jr binaries this plugin bundles (PRP-36): built on a Mac by ../jr/build-macos.sh, collected here by
+         ../jr/sync-to-mac.ps1 -Build -Fetch (or from a GitHub release). A plugin built without them makes no macOS
+         outputs and says so. -->
+    <jr.macdist>${project.basedir}/../jr/dist-macos</jr.macdist>
   </properties>
 
   <dependencies>
@@ -81,6 +85,12 @@
       <version>${jackson.version}</version>
     </dependency>
     <dependency>
+      <!-- the .app zip keeps the executable bit, which java.util.zip cannot write -->
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+      <version>1.27.1</version>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>5.11.4</version>
@@ -96,6 +106,15 @@
         <includes>
           <include>jr-windows-x86_64.exe</include>
           <include>jr-windows-arm64.exe</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>${jr.macdist}</directory>
+        <targetPath>jarrunner/jr/maven</targetPath>
+        <includes>
+          <include>jr-macos</include>
+          <include>jr-macos-arm64</include>
+          <include>jr-macos-x86_64</include>
         </includes>
       </resource>
       <resource>

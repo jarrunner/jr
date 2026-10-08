@@ -16,7 +16,7 @@ public final class ConsoleMode {
     // Address is a raw-pointer intrinsic, not a real heap object, and an Address[] silently
     // corrupts (confirmed: segfaults inside the very save/restore loop that used one - see
     // guidelines.teavmcpp.md). Three plain fields instead of a loop over an array.
-    private static Address saved0, saved1, saved2;
+    @Handle private static Address saved0, saved1, saved2;
     private static boolean wasConsole0, wasConsole1, wasConsole2;
 
     public static boolean isGuiMode() {
@@ -85,15 +85,9 @@ public final class ConsoleMode {
         }
         Address h;
         if (hasConsole) {
-            h = WinApi.createFileA(cstr(fd == 0 ? "CONIN$" : "CONOUT$"),
-                    WinApi.GENERIC_READ | WinApi.GENERIC_WRITE,
-                    WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE,
-                    NULL, WinApi.OPEN_EXISTING, 0, NULL);
+            h = WinApi.createFileW(fd == 0 ? "CONIN$" : "CONOUT$", WinApi.GENERIC_READ | WinApi.GENERIC_WRITE, WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE, NULL, WinApi.OPEN_EXISTING, 0, NULL);
         } else {
-            h = WinApi.createFileA(cstr("NUL"),
-                    WinApi.GENERIC_READ | WinApi.GENERIC_WRITE,
-                    WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE,
-                    NULL, WinApi.OPEN_EXISTING, 0, NULL);
+            h = WinApi.createFileW("NUL", WinApi.GENERIC_READ | WinApi.GENERIC_WRITE, WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE, NULL, WinApi.OPEN_EXISTING, 0, NULL);
         }
         if (h != WinApi.INVALID_HANDLE_VALUE) {
             bindStdStream(fd, stdId, h);
@@ -115,7 +109,7 @@ public final class ConsoleMode {
         }
         if (WinApi.dup2(tmp, fd) == 0) {
             WinApi.close(tmp);
-            WinApi.setStdHandle(stdId, Address.fromLong(WinApi.getOsfHandle(fd)));
+            WinApi.setStdHandle(stdId, handle(WinApi.getOsfHandle(fd)));
         } else {
             WinApi.close(tmp);
         }

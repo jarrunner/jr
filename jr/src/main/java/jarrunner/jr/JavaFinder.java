@@ -30,19 +30,19 @@ public final class JavaFinder {
     }
 
     static String resolveRealPath(String path) {
-        var h = WinApi.createFileA(cstr(path), 0,
-                WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE | WinApi.FILE_SHARE_DELETE,
-                NULL, WinApi.OPEN_EXISTING, WinApi.FILE_FLAG_BACKUP_SEMANTICS, NULL);
-        if (h == WinApi.INVALID_HANDLE_VALUE) {
-            return null;
-        }
-        var buf = alloc(1024);
-        var len = WinApi.getFinalPathNameByHandleA(h, buf, 1024, 0);
-        WinApi.closeHandle(h);
-        if (len == 0 || len >= 1024) {
-            return null;
-        }
-        var s = string(buf, len);
-        return s.startsWith("\\\\?\\") ? s.substring(4) : s;
+        return memScoped(() -> {
+            var h = WinApi.createFileW(path, 0, WinApi.FILE_SHARE_READ | WinApi.FILE_SHARE_WRITE | WinApi.FILE_SHARE_DELETE, NULL, WinApi.OPEN_EXISTING, WinApi.FILE_FLAG_BACKUP_SEMANTICS, NULL);
+            if (h == WinApi.INVALID_HANDLE_VALUE) {
+                return null;
+            }
+            var buf = alloc(4096 * 2);
+            var len = WinApi.getFinalPathNameByHandleW(h, buf, 4096, 0);
+            WinApi.closeHandle(h);
+            if (len == 0 || len >= 4096) {
+                return null;
+            }
+            var s = wstring(buf, len);
+            return s.startsWith("\\\\?\\") ? s.substring(4) : s;
+        });
     }
 }

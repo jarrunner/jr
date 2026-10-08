@@ -12,6 +12,7 @@ public final class ExitHook {
 
     static boolean armed;
 
+    @Unsafe("turns ExitHook.onExit into a C function pointer; AtExitFn declares its void(void) signature")
     static void install() {
         var handler = (Address) (Object) Function.get(AtExitFn.class, ExitHook.class, "onExit");
         register("ucrtbase.dll", "_crt_atexit", handler);
@@ -20,9 +21,10 @@ public final class ExitHook {
         armed = true;
     }
 
-    private static void register(String dll, String fn, Address handler) {
-        var module = WinApi.getModuleHandleA(cstr(dll));
-        var addr = module.toLong() == 0 ? NULL : WinApi.getProcAddress(module, cstr(fn));
+    @Unsafe("trusts that the CRT export fn is atexit-shaped: int (*)(void (*)(void))")
+    private static void register(String dll, String fn, @Escapes Address handler) {
+        var module = WinApi.getModuleHandleW(dll);
+        var addr = module.toLong() == 0 ? NULL : WinApi.getProcAddress(module, ascii(fn));
         if (addr.toLong() != 0) {
             var ok = ((AtExitRegisterFn) (Object) addr).invoke(handler) == 0;
             Log.info("Exit hook in " + dll + ": " + (ok ? "registered" : "failed"));

@@ -27,8 +27,12 @@ public final class JarPath {
     private static List<String> splitOnWhitespace(String s) {
         var out = new java.util.ArrayList<String>();
         var start = -1;
+        var quoted = false; // PRP-34: -jar "/home/me/My Apps/app.jar" was cut at the space, so no AOT cache
         for (var i = 0; i < s.length(); i++) {
-            if (Character.isWhitespace(s.charAt(i))) {
+            if (s.charAt(i) == '"') {
+                quoted = !quoted;
+            }
+            if (!quoted && Character.isWhitespace(s.charAt(i))) {
                 if (start >= 0) {
                     out.add(s.substring(start, i));
                     start = -1;

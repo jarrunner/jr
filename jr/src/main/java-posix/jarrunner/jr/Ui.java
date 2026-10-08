@@ -15,12 +15,12 @@ public final class Ui {
     }
 
     private static void show(String title, String message, boolean isError) {
-        var prefix = isError ? "[ERROR] " : "[INFO] ";
-        var out = isError ? System.err : System.out;
-        out.println();
-        out.println(prefix + title);
-        out.println(message);
-        out.println();
+        var text = "\n" + (isError ? "[ERROR] " : "[INFO] ") + title + "\n" + message + "\n\n";
+        if (isError) {
+            Stderr.print(text);
+        } else {
+            Stderr.out(text);
+        }
         Log.write(isError ? "ERROR" : "INFO", title + ": " + message);
     }
 }

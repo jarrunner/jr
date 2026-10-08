@@ -19,18 +19,18 @@ public final class Sha256 {
             if (WinApi.bCryptOpenAlgorithmProvider(algHandleVar, wcstr(WinApi.BCRYPT_SHA256_ALGORITHM), NULL, 0) < 0) {
                 return null;
             }
-            var algHandle = algHandleVar.getAddress();
+            var algHandle = ptrOf(algHandleVar);
 
             var prop = intVar();
             var result = intVar();
-            WinApi.bCryptGetProperty(algHandle, wcstr(WinApi.BCRYPT_OBJECT_LENGTH), prop, 4, result, 0);
-            var hashObjLen = prop.getInt();
+            WinApi.bCryptGetProperty(algHandle, WinApi.BCRYPT_OBJECT_LENGTH, prop, 4, result, 0);
+            var hashObjLen = intOf(prop);
             // NOTE: the real constant (verified against llvm-mingw's bcrypt.h, not memory - see
             // guidelines.teavmcpp.md) is "HashDigestLength", NOT "HashLength" as MSDN examples'
             // BCRYPT_HASH_LENGTH name would suggest - passing the wrong string here silently
             // returns STATUS_INFO_LENGTH_MISMATCH rather than "property not found".
-            WinApi.bCryptGetProperty(algHandle, wcstr(WinApi.BCRYPT_HASH_LENGTH), prop, 4, result, 0);
-            var hashLen = prop.getInt();
+            WinApi.bCryptGetProperty(algHandle, WinApi.BCRYPT_HASH_LENGTH, prop, 4, result, 0);
+            var hashLen = intOf(prop);
 
             if (hashObjLen <= 0 || hashLen <= 0) {
                 WinApi.bCryptCloseAlgorithmProvider(algHandle, 0);
@@ -43,9 +43,9 @@ public final class Sha256 {
                 WinApi.bCryptCloseAlgorithmProvider(algHandle, 0);
                 return null;
             }
-            var hashHandle = hashHandleVar.getAddress();
+            var hashHandle = ptrOf(hashHandleVar);
 
-            var f = WinApi.fopen(cstr(path), cstr("rb"));
+            var f = FileIo.open(path, "rb");
             if (f.toLong() == 0) {
                 WinApi.bCryptDestroyHash(hashHandle);
                 WinApi.bCryptCloseAlgorithmProvider(algHandle, 0);
@@ -73,8 +73,8 @@ public final class Sha256 {
             }
 
             var sb = new StringBuilder(hashLen * 2);
-            for (var i = 0; i < hashLen; i++) {
-                var b = hashVal.add(i).getByte() & 0xFF;
+            for (var x : bytesOf(hashVal, hashLen)) {
+                var b = x & 0xFF;
                 sb.append(HEX.charAt(b >> 4)).append(HEX.charAt(b & 0xF));
             }
             return sb.toString();

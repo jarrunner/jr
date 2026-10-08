@@ -7,6 +7,6 @@ public final class Cstr {
     private Cstr() {}
 
     public static String readEnv(String name) {
-        return string(PosixApi.getenv(cstr(name)));
+        return string(PosixApi.getenv(utf8(name)));
     }
 }

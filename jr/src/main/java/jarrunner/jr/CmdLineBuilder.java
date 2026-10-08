@@ -22,7 +22,10 @@ public final class CmdLineBuilder {
         if (!aotArg.isEmpty()) {
             sb.append(' ').append(aotArg);
         }
-        sb.append(' ').append(config.javaArgs);
+        // The jar keeps its real name everywhere else (doctor, logs, the AOT cache name); only java.exe gets the
+        // short form, when it needs one (see forJava).
+        var shortJar = forJava(jarPath);
+        sb.append(' ').append(shortJar.equals(jarPath) ? config.javaArgs : config.javaArgs.replace(jarPath, shortJar));
         if (!config.appArgs.isBlank()) {
             sb.append(' ').append(config.appArgs);
         }
@@ -47,15 +50,18 @@ public final class CmdLineBuilder {
             sb.append(' ').append(aotArg);
         }
         sb.append(" -jar");
+        var jarDone = false;
         for (var a : tokens) {
-            sb.append(' ').append(WinQuote.quote(a));
+            var isJar = !jarDone && a.equals(jarPath);
+            jarDone |= isJar;
+            sb.append(' ').append(WinQuote.quote(isJar ? forJava(a) : a));
         }
         return sb.toString();
     }
 
     private static String aotArg(String jarPath, boolean enableAOT) {
-        WinApi.setEnvironmentVariableA(cstr("JR_AOT_STATE"), cstr("off"));
-        WinApi.setEnvironmentVariableA(cstr("JR_AOT_CACHE"), cstr(""));
+        Cstr.setEnv("JR_AOT_STATE", "off");
+        Cstr.setEnv("JR_AOT_CACHE", "");
         if (!enableAOT || jarPath.isEmpty()) {
             return "";
         }
@@ -66,17 +72,17 @@ public final class CmdLineBuilder {
         }
         AotCache.cleanupOldFiles(jarPath, cachePath);
         var exists = FileIo.exists(cachePath);
-        WinApi.setEnvironmentVariableA(cstr("JR_AOT_CACHE"), cstr(cachePath));
-        WinApi.setEnvironmentVariableA(cstr("JR_AOT_STATE"), cstr(exists ? "using" : "creating"));
+        Cstr.setEnv("JR_AOT_CACHE", cachePath);
+        Cstr.setEnv("JR_AOT_STATE", exists ? "using" : "creating");
         if (exists) {
             Log.info("Using existing AOT cache: " + cachePath);
-            return "-XX:AOTCache=\"" + cachePath + "\"";
+            return "-XX:AOTCache=\"" + forJava(cachePath) + "\"";
         }
         Log.info("Creating new AOT cache: " + cachePath);
         // JDK 25 reports the one-step cache creation with five unconditional lines (no -Xlog
         // setting silences them) on stdout, where they would land in a CLI's output. Moved to
         // stderr, on this one run only (PRP-30).
-        return "-XX:AOTCacheOutput=\"" + cachePath + "\" -XX:+DisplayVMOutputToStderr";
+        return "-XX:AOTCacheOutput=\"" + forJava(cachePath) + "\" -XX:+DisplayVMOutputToStderr";
     }
 
     /** What jr tells the app about itself, as -Dio.github.jarrunner.jr.* properties (PRP-30): start
@@ -87,7 +93,7 @@ public final class CmdLineBuilder {
         var sb = new StringBuilder();
         prop(sb, "startMicros", Long.toString(Timing.startMicros()));
         prop(sb, "beforeJvmMicros", Long.toString(Timing.elapsedMicros()));
-        prop(sb, "exe", ExeInfo.fullPath());
+        prop(sb, "exe", forJava(ExeInfo.fullPath()));
         if (c != null && c.jsonRoot != null) {
             flatten(sb, "", c.jsonRoot);
         }
@@ -95,7 +101,7 @@ public final class CmdLineBuilder {
         // current directory happened to be. An ErrorFile in the app's own vm.args wins.
         var crashDir = c != null && c.vmArgs.contains("ErrorFile") ? null : JrDirs.of("crash");
         if (crashDir != null) {
-            sb.append(" \"-XX:ErrorFile=").append(crashDir).append('\\').append(ExeInfo.baseNameNoExt()).append("-hs_err_pid%p.log\"");
+            sb.append(" \"-XX:ErrorFile=").append(forJava(crashDir + "\\" + ExeInfo.baseNameNoExt() + "-hs_err_pid%p.log")).append('"');
         }
         return sb.toString();
     }
@@ -121,4 +127,41 @@ public final class CmdLineBuilder {
     }
 
     private static final String PROP_PREFIX = "-Dio.github.jarrunner.jr.";
+
+    /** A path jr puts on the java command line, in a form java.exe can receive (PRP-34). java.exe reads its
+     *  command line in the ANSI code page, so a path under C:\Users\Шива\ would reach it as C:\Users\????\. The
+     *  path's 8.3 short name is plain ASCII and names the same file, so it is used instead; for a file that does
+     *  not exist yet (an AOT cache about to be written), the folder's short name. Unchanged when the path fits the
+     *  code pages (see readable) or the volume keeps no short names. */
+    public static String forJava(String path) {
+        if (path == null || path.isEmpty() || readable(path)) {
+            return path;
+        }
+        var s = shortName(path);
+        if (s == null) {
+            var slash = path.lastIndexOf('\\');
+            var dir = slash > 0 ? shortName(path.substring(0, slash)) : null;
+            s = dir == null ? null : dir + path.substring(slash);
+        }
+        if (s == null || !readable(s)) {
+            Log.warn("No short (8.3) name makes this path readable to java.exe: " + path);
+            return path;
+        }
+        Log.info("Using the short name " + s + " for " + path);
+        return s;
+    }
+
+    /** Readable by java.exe (the system code page) and by an in-process JVM (this process's), since jvm=dll can
+     *  fall back to a child process. */
+    private static boolean readable(String s) {
+        return fitsCodePage(s, systemAcp()) && fitsCodePage(s, WinApi.getACP());
+    }
+
+    private static String shortName(String path) {
+        return memScoped(() -> {
+            var buf = alloc(4096 * 2);
+            var len = WinApi.getShortPathNameW(path, buf, 4096);
+            return len == 0 || len >= 4096 ? null : wstring(buf, len);
+        });
+    }
 }

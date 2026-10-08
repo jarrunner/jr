@@ -17,6 +17,7 @@ import org.teavm.interop.Function;
  * Langs, but each level is its own distinct callback method), so plain static fields are a safe and
  * much simpler accumulator than threading a native "param" pointer the way resedit.c does.
  */
+@Unsafe("hands Java methods to EnumResource*W as C callbacks; the *Callback classes declare their C signatures")
 public final class ReCallbacks {
     private ReCallbacks() {}
 

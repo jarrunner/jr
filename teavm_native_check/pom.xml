@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.github.jarrunner</groupId>
+  <artifactId>teavm_native_check</artifactId>
+  <version>1.0</version>
+  <packaging>jar</packaging>
+
+  <description>A javac plugin that turns the native-memory rules of a TeaVM C-backend project (pointers do not outlive their scope, no Address.ofData, scoped allocation, raw access only where marked) into compile errors. Compile time only: it adds nothing to the program it checks. No dependencies beyond the JDK's own jdk.compiler API.</description>
+
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <junit.version>5.11.4</junit.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.14.0</version>
+        <configuration>
+          <!-- An empty processor path. Otherwise javac 25 looks for plugins on the classpath, finds this plugin's own
+               service file in target/classes, and instantiates it (to ask autoStart()) before it is compiled. -->
+          <compilerArgs>
+            <arg>-processorpath</arg>
+            <arg>${project.build.directory}/no-processors</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.2</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>

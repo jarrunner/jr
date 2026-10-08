@@ -1,5 +1,7 @@
 package jarrunner.jr;
 
+import static jarrunner.jr.N.*;
+
 /**
  * Java Runner (jr) for Linux/macOS - PRP-21's first real (non-demo) milestone on the POSIX side.
  * Deliberately NOT full parity with the Windows Jr.java: JDK auto-install, the jvm-dll in-process
@@ -15,6 +17,7 @@ package jarrunner.jr;
 public final class PosixJr {
     public static void main(String[] args) {
         Timing.init();
+        args = utf8Args(args);
         var exeBaseName = ExeInfo.baseNameNoExt();
         var configPath = ExeInfo.fullPathNoExt() + ".jrc";
 
@@ -37,9 +40,9 @@ public final class PosixJr {
         if (opts.createConfig) {
             var ok = Config.createSample(configPath, opts.createConfigJar);
             if (ok) {
-                System.out.println("Wrote " + configPath);
+                Stderr.out("Wrote " + configPath + "\n");
             } else {
-                System.err.println("Could not write " + configPath);
+                Stderr.println("Could not write " + configPath);
             }
             Log.close();
             PosixApi.exit(ok ? 0 : 1);
@@ -47,12 +50,38 @@ public final class PosixJr {
         }
 
         var javaExeName = "java";
-        if (opts.help || (config.javaArgs.isBlank() && opts.appArgs.isEmpty())) {
+        if (opts.help || (config.javaArgs.isBlank() && !config.hasRunTarget() && opts.appArgs.isEmpty())) {
             var displayJavaPath = JavaFinder.findInPath(javaExeName);
-            Help.show(exeBaseName, javaExeName, displayJavaPath, configPath, config.found);
+            Help.show(exeBaseName, javaExeName, displayJavaPath,
+                    config.embedded ? "embedded in this binary (__DATA,__jrc)" : configPath, config.found);
             Log.close();
             PosixApi.exit(opts.help ? 0 : 1);
             return;
+        }
+
+        if (config.loadError != null) {
+            Ui.error(true, "Invalid jr Config", "The app's config could not be read:\n" + config.loadError);
+            Log.close();
+            PosixApi.exit(1);
+            return;
+        }
+
+        // A remote jar (run.url / run.maven / jar.sources) becomes an ordinary "-jar <cached path>" before
+        // anything else looks at java.args, as on Windows, so AOT naming etc. work unchanged.
+        if (config.hasRunTarget()) {
+            if (!config.javaArgs.isBlank()) {
+                Ui.error(true, "Invalid .jrc", "Set java.args or run.url/run.maven, not both.");
+                Log.close();
+                PosixApi.exit(1);
+                return;
+            }
+            var jar = RemoteJar.resolve(config);
+            if (jar == null) {
+                Log.close();
+                PosixApi.exit(1);
+                return;
+            }
+            config.javaArgs = "-jar " + JrcJson.quote(jar);
         }
 
         var resolved = resolveJava(config, javaExeName);
@@ -104,5 +133,40 @@ public final class PosixJr {
         }
         Log.info("Using " + home + " (" + chooser.rule + ")");
         return new String[] {home + "/bin/" + javaExeName, String.valueOf(JavaFinder.releaseMajor(home))};
+    }
+
+    /** The arguments as the raw UTF-8 bytes the OS holds (PRP-34). TeaVM builds main's args with mbrtoc16 in the
+     *  C library's locale, so with LANG unset (locale "C") a non-ASCII argument is cut short. Linux keeps argv in
+     *  /proc/self/cmdline, NUL-separated. Anywhere that file is missing (macOS) or disagrees on the count, the
+     *  args TeaVM made are kept; the macOS port can read _NSGetArgv() the same way. */
+    private static String[] utf8Args(String[] teavmArgs) {
+        return memScoped(() -> {
+            var f = PosixApi.fopen("/proc/self/cmdline", "rb");
+            if (f.toLong() == 0) {
+                return teavmArgs;
+            }
+            var cap = 1 << 20;
+            var buf = Buf.alloc(cap + 1);
+            var total = 0;
+            long got;
+            while (total < cap && (got = PosixApi.fread(buf.slice(total, cap - total).ptr(), 1, cap - total, f)) > 0) {
+                total += (int) got;
+            }
+            PosixApi.fclose(f);
+            var out = new java.util.ArrayList<String>();
+            var start = 0;
+            for (var i = 0; i < total; i++) {
+                if (buf.getByte(i) == 0) {
+                    out.add(text(buf.slice(start, i - start).ptr(), i - start));
+                    start = i + 1;
+                }
+            }
+            if (total == cap || out.size() != teavmArgs.length + 1) {
+                return teavmArgs;
+            }
+            var args = new String[teavmArgs.length];
+            for (var i = 0; i < args.length; i++) args[i] = out.get(i + 1);
+            return args;
+        });
     }
 }

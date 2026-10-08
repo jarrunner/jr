@@ -1,18 +1,14 @@
-# Builds jr (the Java/TeaVM launcher under jr/) from source on a clean Windows machine, signs it
-# through SignPath Foundation, and publishes it as a GitHub release. Run by pushing a tag vX.Y.Z,
-# or by hand from the Actions tab: with publish unticked it only builds, and the exes are kept as
-# a workflow artifact, which is how a change to this file is tested.
+# Builds jr (the Java/TeaVM launcher under jr/) from source on clean Windows and macOS machines and
+# publishes it as a GitHub release with SHA256SUMS. Run by pushing a tag vX.Y.Z,
+# or by hand from the Actions tab: with publish unticked it only builds, and the binaries are kept
+# as workflow artifacts, which is how a change to this file is tested.
 #
 # Inputs, all fetched by this workflow, nothing from the maintainer's machine: JDK 25 (Temurin),
 # Maven, TeaVM from Maven Central, llvm-mingw (msvcrt, x86_64 host) pinned to the release the
-# local builds use. Outputs: jr.exe (= jr-windows-x86_64.exe, the 1.0.0 asset name), the arm64
-# cross-build, the same two without jr's icon (what jr-maven-plugin bundles), and SHA256SUMS.
-#
-# Signing needs, in the repository settings:
-#   secret   SIGNPATH_API_TOKEN        a SignPath CI user's API token
-#   variable SIGNPATH_ORGANIZATION_ID  the SignPath organization id
-# Until the secret exists the signing step is skipped and the release is published unsigned.
-# Nothing may touch an exe after SignPath returns it: any change invalidates the signature.
+# local builds use, and the runner's own Xcode on macOS. Outputs: jr.exe (= jr-windows-x86_64.exe,
+# the 1.0.0 asset name), the arm64 cross-build, the same two without jr's icon (what
+# jr-maven-plugin bundles), jr-macos (universal) with its two thin slices, install.sh (the macOS
+# installer), and SHA256SUMS.
 #
 # The C launcher that used to be built here lives in its own repository now (jarrunner/jr_legacy_c).
 
@@ -41,20 +37,8 @@ env:
 jobs:
   build:
     runs-on: windows-latest
-    env:
-      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Version
-        id: ver
-        shell: pwsh
-        run: |
-          $v = if ('${{ github.event_name }}' -eq 'workflow_dispatch') { '${{ inputs.version }}' } else { '${{ github.ref_name }}'.TrimStart('v') }
-          if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "version must be X.Y.Z, got '$v'" }
-          $publish = '${{ github.event_name }}' -eq 'push' -or '${{ inputs.publish }}' -eq 'true'
-          "version=$v" >> $env:GITHUB_OUTPUT
-          "publish=$($publish.ToString().ToLower())" >> $env:GITHUB_OUTPUT
 
       - uses: actions/setup-java@v4
         with:
@@ -69,6 +53,14 @@ jobs:
           Invoke-WebRequest -UseBasicParsing $url -OutFile "$env:RUNNER_TEMP\llvm-mingw.zip"
           Expand-Archive "$env:RUNNER_TEMP\llvm-mingw.zip" -DestinationPath $env:RUNNER_TEMP
           "$env:RUNNER_TEMP\$env:LLVM_MINGW\bin" >> $env:GITHUB_PATH
+
+      # jr's javac runs this plugin (PRP-35): a broken native-memory rule fails the build below.
+      - name: Native-memory checker
+        shell: pwsh
+        working-directory: teavm_native_check
+        run: |
+          mvn -B -q install
+          if ($LASTEXITCODE -ne 0) { throw 'teavm_native_check build or tests failed' }
 
       - name: Build
         shell: pwsh
@@ -95,53 +87,96 @@ jobs:
           Copy-Item dist-noicon\jr-windows-arm64.exe ..\unsigned\jr-noicon-windows-arm64.exe
           Get-ChildItem ..\unsigned | ForEach-Object { '{0,-34} {1,9:N0}' -f $_.Name, $_.Length }
 
-      - name: Upload unsigned
-        id: upload-unsigned
+      - name: Upload build
         uses: actions/upload-artifact@v4
         with:
           name: jr-unsigned
           path: unsigned/
           if-no-files-found: error
 
-      - name: Sign with SignPath
-        if: env.SIGNPATH_API_TOKEN != '' && steps.ver.outputs.publish == 'true'
-        uses: signpath/github-action-submit-signing-request@v2
+  # macOS: built natively with Apple clang (jr/build-macos.sh), arm64 + x86_64 joined into one
+  # universal binary, each signed ad hoc (arm64 macOS runs no unsigned code). Ad hoc is not
+  # Gatekeeper-approved, so the supported install is jr/install.sh (curl sets no quarantine flag).
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
         with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: jr
-          signing-policy-slug: release-signing
-          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
-          wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: 3600
-          output-artifact-directory: signed
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Native-memory checker
+        working-directory: teavm_native_check
+        run: mvn -B -q install
+
+      - name: Build
+        working-directory: jr
+        run: |
+          clang --version | head -1
+          sh build-macos.sh universal
+
+      - name: Check the binaries run
+        working-directory: jr
+        run: |
+          mkdir -p ../macos
+          cp build-macos_universal/jr-macos ../macos/jr-macos
+          cp build-macos_arm64/jr-posix ../macos/jr-macos-arm64
+          cp build-macos_x64/jr-posix ../macos/jr-macos-x86_64
+          for f in ../macos/*; do
+            codesign -v "$f" || { echo "$f is not signed"; exit 1; }
+            echo "$(basename $f): $(lipo -archs $f), $(wc -c < $f | tr -d ' ') bytes"
+          done
+          ../macos/jr-macos -Xjr:help 2>&1 | grep -q 'Java Runner' || { echo 'jr -Xjr:help did not answer'; exit 1; }
+          arch -x86_64 ../macos/jr-macos -Xjr:help 2>&1 | grep -q 'Java Runner' || { echo 'the x86_64 slice did not answer under Rosetta'; exit 1; }
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: jr-macos
+          path: macos/
+          if-no-files-found: error
+
+  publish:
+    needs: [build, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        id: ver
+        run: |
+          if [ '${{ github.event_name }}' = workflow_dispatch ]; then v='${{ inputs.version }}'; else v='${{ github.ref_name }}'; v=${v#v}; fi
+          echo "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "version must be X.Y.Z, got '$v'"; exit 1; }
+          publish=false
+          if [ '${{ github.event_name }}' = push ] || [ '${{ inputs.publish }}' = true ]; then publish=true; fi
+          echo "version=$v" >> $GITHUB_OUTPUT
+          echo "publish=$publish" >> $GITHUB_OUTPUT
+
+      - uses: actions/download-artifact@v4
+        if: steps.ver.outputs.publish == 'true'
+        with:
+          path: in
 
       - name: Release assets
         if: steps.ver.outputs.publish == 'true'
-        shell: pwsh
         run: |
-          $from = if (Test-Path signed\jr.exe) { 'signed' } else { Write-Host 'SignPath not configured: releasing unsigned'; 'unsigned' }
-          if ($from -eq 'signed') {
-            Get-ChildItem signed\*.exe | ForEach-Object { $s = Get-AuthenticodeSignature $_.FullName; if ($s.Status -ne 'Valid') { throw "$($_.Name): signature is $($s.Status)" } }
-          }
-          New-Item -ItemType Directory -Force out | Out-Null
-          Copy-Item "$from\*.exe" out
-          Copy-Item out\jr.exe out\jr-windows-x86_64.exe
-          $sums = Get-ChildItem out\*.exe | Sort-Object Name | ForEach-Object { '{0}  {1}' -f (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower(), $_.Name }
-          [IO.File]::WriteAllText("$PWD\out\SHA256SUMS", (($sums -join "`n") + "`n"))
+          mkdir -p out
+          cp in/jr-unsigned/*.exe in/jr-macos/* jr/install.sh out/
+          cp out/jr.exe out/jr-windows-x86_64.exe
+          (cd out && sha256sum $(ls | sort) > SHA256SUMS)
+          cat out/SHA256SUMS
 
       - name: Publish release
         if: steps.ver.outputs.publish == 'true'
-        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = 'v${{ steps.ver.outputs.version }}'
-          $files = (Get-ChildItem out -File).FullName
-          gh release view $tag *> $null
-          if ($LASTEXITCODE -eq 0) {
-            gh release upload $tag @files --clobber
-          } else {
-            gh release create $tag @files --title "jr ${{ steps.ver.outputs.version }}" --generate-notes --target $env:GITHUB_SHA
-          }
-          if ($LASTEXITCODE -ne 0) { throw 'publishing the release failed' }
+          tag='v${{ steps.ver.outputs.version }}'
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release upload "$tag" out/* --clobber
+          else
+            gh release create "$tag" out/* --title "jr ${{ steps.ver.outputs.version }}" --generate-notes --target "$GITHUB_SHA"
+          fi

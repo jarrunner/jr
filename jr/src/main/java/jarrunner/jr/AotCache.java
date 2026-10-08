@@ -14,7 +14,7 @@ public final class AotCache {
 
     /** PRP-31: a cache the JVM may have refused is the cheapest cause to rule out when it fails to start. */
     static void deleteLast() {
-        if (!lastPath.isEmpty() && WinApi.deleteFileA(N.cstr(lastPath)) != 0) {
+        if (!lastPath.isEmpty() && WinApi.deleteFileW(lastPath) != 0) {
             Log.info("Deleted AOT cache: " + lastPath);
         }
     }
@@ -28,6 +28,17 @@ public final class AotCache {
         return encodeBase52(h >>> 34);
     }
 
+    /** The jar's name without .jar, with anything outside ASCII as '_' (PRP-34): the cache file does not exist
+     *  until java.exe writes it, so it has no 8.3 short name, and java.exe receives its path through the ANSI code
+     *  page. An ASCII jar name gives the same cache name as before. */
+    static String baseName(String jarPath) {
+        var chars = Paths.baseNameNoExt(jarPath).toCharArray();
+        for (var i = 0; i < chars.length; i++) {
+            if (chars[i] > 0x7E) chars[i] = '_';
+        }
+        return new String(chars);
+    }
+
     /** "<dir>\<jarBaseName>.<sizeB52>.<modTimeB52>.aot", or "" if the jar's file info can't be read. */
     public static String buildCacheName(String jarPath) {
         var size = FileInfo.size(jarPath);
@@ -36,7 +47,7 @@ public final class AotCache {
             return "";
         }
         var dir = Paths.dirOf(jarPath);
-        var base = Paths.baseNameNoExt(jarPath);
+        var base = baseName(jarPath);
         var name = base + "." + encodeBase52(size) + "." + encodeBase52(modTime) + (jvmTag.isEmpty() ? "" : "." + jvmTag) + ".aot";
         return dir.isEmpty() ? name : dir + "\\" + name;
     }
@@ -44,13 +55,13 @@ public final class AotCache {
     public static void cleanupOldFiles(String jarPath, String currentCachePath) {
         var jarDir = Paths.dirOf(jarPath);
         var dir = jarDir.isEmpty() ? Cwd.get() : jarDir;
-        var base = Paths.baseNameNoExt(jarPath);
+        var base = baseName(jarPath);
         var pattern = dir + "\\" + base + ".*.aot";
         var currentFileName = Paths.fileNameOf(currentCachePath);
 
         memScoped(() -> {
-            var findData = alloc(WinOffsets.WIN32_FIND_DATAA.SIZE);
-            var findHandle = WinApi.findFirstFileA(cstr(pattern), findData);
+            var findData = alloc(WinOffsets.WIN32_FIND_DATAW.SIZE);
+            var findHandle = WinApi.findFirstFileW(pattern, findData);
             if (findHandle.toLong() == 0 || findHandle == WinApi.INVALID_HANDLE_VALUE) {
                 return;
             }
@@ -58,10 +69,10 @@ public final class AotCache {
                 var foundName = Dirs.fileName(findData);
                 if (!AsciiStr.equalsIgnoreCase(foundName, currentFileName)) {
                     var fullPath = dir + "\\" + foundName;
-                    WinApi.deleteFileA(cstr(fullPath));
+                    WinApi.deleteFileW(fullPath);
                     Log.info("Cleaned up old AOT file: " + fullPath);
                 }
-            } while (WinApi.findNextFileA(findHandle, findData) != 0);
+            } while (WinApi.findNextFileW(findHandle, findData) != 0);
             WinApi.findClose(findHandle);
         });
     }

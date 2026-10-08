@@ -47,8 +47,8 @@ public final class ReManifest {
             source = s.manifest;
         } else {
             var existing = ReEntries.find(module, ResId.of(WinApi.RT_MANIFEST), ResId.of(1), lang);
-            if (existing != null && existing.size() > 0) {
-                base = rawBytesToString(existing.data(), existing.size());
+            if (existing != null && existing.length > 0) {
+                base = text(existing);
                 source = "the existing manifest";
             } else {
                 base = GENERATED_MANIFEST;
@@ -80,11 +80,7 @@ public final class ReManifest {
             }
         }
 
-        var outBytes = alloc(out.length());
-        for (var i = 0; i < out.length(); i++) {
-            outBytes.add(i).putByte((byte) out.charAt(i));
-        }
-        if (!list.add(ResId.of(WinApi.RT_MANIFEST), ResId.of(1), lang, outBytes, out.length())) {
+        if (!list.add(ResId.of(WinApi.RT_MANIFEST), ResId.of(1), lang, utf8Bytes(out))) { // a manifest is UTF-8 XML
             throw new ReError("Too many resource changes in one run");
         }
 
@@ -94,13 +90,5 @@ public final class ReManifest {
         if (!s.executionLevel.isEmpty()) {
             report.append("Execution level: ").append(s.executionLevel).append("\n");
         }
-    }
-
-    private static String rawBytesToString(Address p, int len) {
-        var chars = new char[len];
-        for (var i = 0; i < len; i++) {
-            chars[i] = (char) (p.add(i).getByte() & 0xFF);
-        }
-        return new String(chars);
     }
 }

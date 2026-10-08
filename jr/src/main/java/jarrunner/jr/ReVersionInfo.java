@@ -57,24 +57,22 @@ public final class ReVersionInfo {
 
         // Carry over what the target already has
         var existing = ReEntries.find(module, ResId.of(WinApi.RT_VERSION), ResId.of(WinApi.VS_VERSION_INFO), lang);
-        if (existing != null && existing.size() > 0) {
-            var block = existing.data();
-            var value = queryValue(block, "\\");
-            if (value != null && value.length() >= WinOffsets.VS_FIXEDFILEINFO.SIZE) {
-                for (var i = 0; i < WinOffsets.VS_FIXEDFILEINFO.SIZE; i++) {
-                    ffi.add(i).putByte(value.address().add(i).getByte());
-                }
+        if (existing != null && existing.length > 0) {
+            var block = alloc(existing);
+            var value = queryBytes(block, "\\");
+            if (value != null && value.length >= WinOffsets.VS_FIXEDFILEINFO.SIZE) {
+                putBytes(ffi, java.util.Arrays.copyOf(value, WinOffsets.VS_FIXEDFILEINFO.SIZE));
             }
-            var trans = queryValue(block, "\\VarFileInfo\\Translation");
-            if (trans != null && trans.length() >= 4) {
-                translation[0] = trans.address().getShort();
-                translation[1] = trans.address().add(2).getShort();
+            var trans = queryBytes(block, "\\VarFileInfo\\Translation");
+            if (trans != null && trans.length >= 4) {
+                translation[0] = (short) Le.u16(trans, 0);
+                translation[1] = (short) Le.u16(trans, 2);
             }
             for (var stdName : STD_STRINGS) {
                 var path = "\\StringFileInfo\\" + hex4Lower(translation[0]) + hex4Lower(translation[1]) + "\\" + stdName;
-                var v = queryValue(block, path);
-                if (v != null && v.length() > 0) {
-                    vs.set(stdName, wstring(v.address(), v.length()));
+                var v = queryString(block, path);
+                if (v != null) {
+                    vs.set(stdName, v);
                 }
             }
         }
@@ -106,7 +104,7 @@ public final class ReVersionInfo {
         var tableKey = hex4Upper(translation[0]) + hex4Upper(translation[1]);
         var b = new ReBuf();
         var root = b.begin("VS_VERSION_INFO", WinOffsets.VS_FIXEDFILEINFO.SIZE, 0);
-        b.putStruct(ffi, WinOffsets.VS_FIXEDFILEINFO.SIZE);
+        b.put(bytesOf(ffi, WinOffsets.VS_FIXEDFILEINFO.SIZE));
         var sfi = b.begin("StringFileInfo", 0, 1);
         var table = b.begin(tableKey, 0, 1);
         for (var i = 0; i < vs.names.size(); i++) {
@@ -128,7 +126,7 @@ public final class ReVersionInfo {
             throw new ReError("Version information too large");
         }
 
-        if (!list.add(ResId.of(WinApi.RT_VERSION), ResId.of(WinApi.VS_VERSION_INFO), lang, b.base, b.len)) {
+        if (!list.add(ResId.of(WinApi.RT_VERSION), ResId.of(WinApi.VS_VERSION_INFO), lang, b.bytes())) {
             throw new ReError("Too many resource changes in one run");
         }
 
@@ -149,15 +147,19 @@ public final class ReVersionInfo {
         report.append("\n");
     }
 
-    private record QueryResult(Address address, int length) {}
-
-    private static QueryResult queryValue(Address block, String path) {
+    /** A binary value (length in bytes), copied out of the block, or null. */
+    private static byte[] queryBytes(Address block, String path) {
         var outPtr = ptrVar();
         var outLen = intVar();
-        if (WinApi.verQueryValueW(block, wcstr(path), outPtr, outLen) == 0) {
-            return null;
-        }
-        return new QueryResult(outPtr.getAddress(), outLen.getInt());
+        return WinApi.verQueryValueW(block, path, outPtr, outLen) == 0 ? null : bytesOf(ptrOf(outPtr), intOf(outLen));
+    }
+
+    /** A string value (length in WCHARs), or null if absent or empty. */
+    private static String queryString(Address block, String path) {
+        var outPtr = ptrVar();
+        var outLen = intVar();
+        return WinApi.verQueryValueW(block, path, outPtr, outLen) == 0 || intOf(outLen) == 0 ? null
+                : wstring(ptrOf(outPtr), intOf(outLen));
     }
 
     private static String hex4Lower(short v) {
