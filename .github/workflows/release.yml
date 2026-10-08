@@ -100,6 +100,7 @@ jobs:
           $rel = & .\dist\jr-windows-x86_64.exe -Xjr:checks-selftest 2>&1 | Out-String
           if ($rel -notmatch 'Unknown jr option') { throw "the release exe knows -Xjr:checks-selftest, so it carries the checks:`n$rel" }
           'checks build: overrun caught; release exe has no checks'
+          exit 0  # the last native command's exit code would otherwise end the step
 
       - name: Upload build
         uses: actions/upload-artifact@v4
