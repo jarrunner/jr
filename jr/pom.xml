@@ -22,7 +22,7 @@
     <jr.noicon>false</jr.noicon>
     <jr.icon>${project.basedir}/../icon/jr-icon.ico</jr.icon>
     <jr.manifest>${project.basedir}/../jr-maven-plugin/src/main/resources/jarrunner/jr/maven/app.manifest</jr.manifest>
-    <!-- teavm-native-check (PRP-35): the native-memory rules, enforced by javac. build-macos.sh reads this same
+    <!-- teavm-native-check (PRP-35): the native-memory rules, enforced by javac. the profiles read this same
          line, so both source trees are checked against one configuration. -->
     <!-- PRP-35 phase 3: the Checks.ON constant comes from src/checks-off (release) or, with -Dchecks, src/checks-on. -->
     <jr.checks.src>src/checks-off/java</jr.checks.src>
@@ -31,11 +31,6 @@
     <nativecheck>tracked=jarrunner.jr.ReError takes=jarrunner.jr.N.handOver wrappers=jarrunner.jr.Buf trust=jarrunner.jr.Buf.wrap scope=jarrunner.jr.N.memScoped alloc=jarrunner.jr.N.alloc raw=jarrunner.jr.N,jarrunner.jr.Arena,jarrunner.jr.Buf,jarrunner.jr.WinApi,jarrunner.jr.WinOffsets,jarrunner.jr.PosixApi,jarrunner.jr.PosixOffsets</nativecheck>
   </properties>
   <dependencies>
-    <dependency>
-      <groupId>${teavm.groupId}</groupId>
-      <artifactId>teavm-tooling</artifactId>
-      <version>${teavm.version}</version>
-    </dependency>
     <dependency>
       <groupId>${teavm.groupId}</groupId>
       <artifactId>teavm-classlib</artifactId>
@@ -146,6 +141,19 @@
       <build>
         <plugins>
           <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.6.0</version>
+            <executions>
+              <execution>
+                <id>os-sources</id>
+                <phase>generate-sources</phase>
+                <goals><goal>add-source</goal></goals>
+                <configuration><sources><source>src/main/java-linux</source><source>bindings/posix/gen/linux_x64</source></sources></configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
             <groupId>${teavm.groupId}</groupId>
             <artifactId>teavm-maven-plugin</artifactId>
             <version>${teavm.version}</version>
@@ -181,6 +189,115 @@
                     <target><id>x86_64</id><compiler>${jr.zig}</compiler><output>${jr.dist}/jr-linux-x86_64</output><args><arg>-target</arg><arg>x86_64-linux-gnu</arg></args></target>
                   </targets>
                 </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- mvn package on a Mac (Apple clang, Xcode command line tools): the POSIX tree with the macOS Os and bindings ->
+         TeaVM -> ${jr.dist}/jr-macos-arm64, jr-macos-x86_64 and jr-macos (universal), each with an empty 16 KB __DATA,__jrc
+         section that jr-maven-plugin fills with an app's config, each signed ad hoc. Built by CI on a macOS runner. -->
+    <profile>
+      <id>macos</id>
+      <activation><os><family>mac</family></os><property><name>!linux</name></property></activation>
+      <properties><jr.src>src/main/java-posix</jr.src></properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.6.0</version>
+            <executions>
+              <execution>
+                <id>os-sources</id>
+                <phase>generate-sources</phase>
+                <goals><goal>add-source</goal></goals>
+                <configuration><sources><source>src/main/java-macos</source><source>bindings/posix/gen/macos_arm64</source></sources></configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>${teavm.groupId}</groupId>
+            <artifactId>teavm-maven-plugin</artifactId>
+            <version>${teavm.version}</version>
+            <executions>
+              <execution>
+                <id>teavm-c</id>
+                <phase>process-classes</phase>
+                <goals><goal>compile</goal></goals>
+                <configuration>
+                  <targetType>C</targetType>
+                  <mainClass>jarrunner.jr.PosixJr</mainClass>
+                  <targetDirectory>${project.build.directory}/c</targetDirectory>
+                  <minHeapSize>4</minHeapSize>
+                  <maxHeapSize>32</maxHeapSize>
+                  <optimizationLevel>ADVANCED</optimizationLevel>
+                  <assertionsRemoved>true</assertionsRemoved>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>io.github.jarrunner</groupId>
+            <artifactId>teavm-c-maven-plugin</artifactId>
+            <version>${teavmc.version}</version>
+            <executions>
+              <execution>
+                <id>native</id>
+                <goals><goal>compile</goal></goals>
+                <configuration>
+                  <includes><include>bindings/posix</include></includes>
+                  <args>
+                    <arg>-mmacosx-version-min=13.0</arg><arg>-Oz</arg><arg>-flto</arg><arg>-w</arg>
+                    <arg>-Wl,-dead_strip</arg><arg>-Wl,-S</arg><arg>-Wl,-x</arg>
+                    <arg>-Wl,-sectcreate,__DATA,__jrc,bindings/posix/jrc-slot.bin</arg>
+                  </args>
+                  <targets>
+                    <target><id>arm64</id><compiler>clang</compiler><output>${jr.dist}/jr-macos-arm64</output><args><arg>-arch</arg><arg>arm64</arg></args></target>
+                    <target><id>x86_64</id><compiler>clang</compiler><output>${jr.dist}/jr-macos-x86_64</output><args><arg>-arch</arg><arg>x86_64</arg></args></target>
+                    <target><id>universal</id><compiler>clang</compiler><output>${jr.dist}/jr-macos</output><args><arg>-arch</arg><arg>arm64</arg><arg>-arch</arg><arg>x86_64</arg></args></target>
+                  </targets>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.6.4</version>
+            <configuration><executable>codesign</executable></configuration>
+            <executions>
+              <!-- the generated bindings' static asserts, checked against the real macOS SDK before anything is built -->
+              <execution>
+                <id>verify-bindings-arm64</id>
+                <phase>validate</phase>
+                <goals><goal>exec</goal></goals>
+                <configuration><executable>clang</executable><arguments><argument>-arch</argument><argument>arm64</argument><argument>-fsyntax-only</argument><argument>-w</argument><argument>-I</argument><argument>bindings/posix</argument><argument>bindings/posix/verify-posix-macos_arm64.c</argument></arguments></configuration>
+              </execution>
+              <execution>
+                <id>verify-bindings-x86_64</id>
+                <phase>validate</phase>
+                <goals><goal>exec</goal></goals>
+                <configuration><executable>clang</executable><arguments><argument>-arch</argument><argument>x86_64</argument><argument>-fsyntax-only</argument><argument>-w</argument><argument>-I</argument><argument>bindings/posix</argument><argument>bindings/posix/verify-posix-macos_x64.c</argument></arguments></configuration>
+              </execution>
+              <execution>
+                <id>sign-arm64</id>
+                <phase>package</phase>
+                <goals><goal>exec</goal></goals>
+                <configuration><arguments><argument>-s</argument><argument>-</argument><argument>-f</argument><argument>${jr.dist}/jr-macos-arm64</argument></arguments></configuration>
+              </execution>
+              <execution>
+                <id>sign-x86_64</id>
+                <phase>package</phase>
+                <goals><goal>exec</goal></goals>
+                <configuration><arguments><argument>-s</argument><argument>-</argument><argument>-f</argument><argument>${jr.dist}/jr-macos-x86_64</argument></arguments></configuration>
+              </execution>
+              <execution>
+                <id>sign-universal</id>
+                <phase>package</phase>
+                <goals><goal>exec</goal></goals>
+                <configuration><arguments><argument>-s</argument><argument>-</argument><argument>-f</argument><argument>${jr.dist}/jr-macos</argument></arguments></configuration>
               </execution>
             </executions>
           </plugin>

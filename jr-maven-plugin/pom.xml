@@ -43,8 +43,8 @@
     <!-- The jr exes this plugin bundles: mvn package "-Djr.noicon=true" "-Djr.dist=dist-noicon". Icon-less on purpose:
          an app exe carries an icon only when its own pom names one, never jr's. -->
     <jr.dist>${project.basedir}/../jr/dist-noicon</jr.dist>
-    <!-- The macOS jr binaries this plugin bundles (PRP-36): built on a Mac by ../jr/build-macos.sh, collected here by
-         ../jr/sync-to-mac.ps1 -Build -Fetch (or from a GitHub release). A plugin built without them makes no macOS
+    <!-- The macOS jr binaries this plugin bundles (PRP-36): built by jr's mvn package on a Mac (CI job macos), collected here
+         from that CI run's artifact or a GitHub release. A plugin built without them makes no macOS
          outputs and says so. -->
     <jr.macdist>${project.basedir}/../jr/dist-macos</jr.macdist>
   </properties>

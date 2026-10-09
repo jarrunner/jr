@@ -101,8 +101,8 @@ jobs:
           path: unsigned/
           if-no-files-found: error
 
-  # macOS: built natively with Apple clang (jr/build-macos.sh), arm64 + x86_64 joined into one
-  # universal binary, each signed ad hoc (arm64 macOS runs no unsigned code). Ad hoc is not
+  # macOS: built natively with Apple clang by mvn package (profile macos): arm64, x86_64 and a universal binary,
+  # each signed ad hoc (arm64 macOS runs no unsigned code). Ad hoc is not
   # Gatekeeper-approved, so the supported install is jr/install.sh (curl sets no quarantine flag).
   macos:
     runs-on: macos-latest
@@ -119,15 +119,13 @@ jobs:
         working-directory: jr
         run: |
           clang --version | head -1
-          sh build-macos.sh universal
+          mvn -B clean package
 
       - name: Check the binaries run
         working-directory: jr
         run: |
           mkdir -p ../macos
-          cp build-macos_universal/jr-macos ../macos/jr-macos
-          cp build-macos_arm64/jr-posix ../macos/jr-macos-arm64
-          cp build-macos_x64/jr-posix ../macos/jr-macos-x86_64
+          cp dist/jr-macos dist/jr-macos-arm64 dist/jr-macos-x86_64 ../macos/
           for f in ../macos/*; do
             codesign -v "$f" || { echo "$f is not signed"; exit 1; }
             echo "$(basename $f): $(lipo -archs $f), $(wc -c < $f | tr -d ' ') bytes"
@@ -135,12 +133,12 @@ jobs:
           ../macos/jr-macos -Xjr:help 2>&1 | grep -q 'Java Runner' || { echo 'jr -Xjr:help did not answer'; exit 1; }
           arch -x86_64 ../macos/jr-macos -Xjr:help 2>&1 | grep -q 'Java Runner' || { echo 'the x86_64 slice did not answer under Rosetta'; exit 1; }
 
-      # PRP-35: the checks build, after the release binaries were copied out (it reuses build-macos_arm64).
+      # PRP-35: the checks build (into dist-checks/), after the release binaries were copied out.
       - name: Checks build
         working-directory: jr
         run: |
-          CHECKS=1 sh build-macos.sh macos_arm64
-          out=$(build-macos_arm64/jr-posix -Xjr:checks-selftest 2>&1) && { echo "the checks build exited 0"; exit 1; }
+          mvn -B clean package -Dchecks
+          out=$(dist-checks/jr-macos-arm64 -Xjr:checks-selftest 2>&1) && { echo "the checks build exited 0"; exit 1; }
           echo "$out" | grep -q 'native buffer overrun: 4 bytes at offset 2 of a 4-byte buffer' || { echo "the checks build did not catch the planted overrun:"; echo "$out"; exit 1; }
           ../macos/jr-macos -Xjr:checks-selftest 2>&1 | grep -q 'Unknown jr option' || { echo 'the release binary knows -Xjr:checks-selftest'; exit 1; }
           echo 'checks build: overrun caught; release binary has no checks'

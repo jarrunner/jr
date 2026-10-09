@@ -19,7 +19,7 @@ tcc (`C:\user\Apps\tcc-0.9.27-win64\tcc.exe`) does NOT work - hits a structural 
 - `-Djr.noicon=true` leaves the icon off; `-Djr.dist=<dir>` picks the output folder; `-Dteavmc.targets=x86_64,editor` builds a subset.
 - `-Dchecks` is the checks build (every `Buf` access checked; output `dist-checks\`). Never ship it.
 - `-Dlinux` builds the POSIX tree for Linux x86_64 with `zig cc` (`dist\jr-linux-x86_64`), from any OS; `-Djr.zig=<path>` when zig is not on PATH.
-- macOS is still built on a Mac by `build-macos.sh`, until it moves into the pom too.
+- On a Mac, the `macos` profile is active by itself and builds `dist/jr-macos-arm64`, `dist/jr-macos-x86_64` and the universal `dist/jr-macos` (see `../docs/macos.md`).
 
 The compiler flags live in the pom (the `windows` and `linux` profiles), which is the one place to change them. teavm-c-maven-plugin writes each compiler's full output to `target\teavmc-<target>.log`.
 
@@ -176,7 +176,7 @@ This takes about 20 s. It rewrites both Java files, then has llvm-mingw's clang 
 This replaced PRP-08's `offsetgen/` (struct offsets only) and PRP-11's `wintype-poc/` (type checking via an annotation processor), both superseded by `../prp/12-prp.01.report.md` and kept as history in `history/`.
 
 ## Native memory: through N, checked by the compiler (PRP-18, PRP-35)
-TeaVM's GC frees or moves any Java array known only through an `Address`, so `Address.ofData(javaArray)` passed to native code is a use-after-free waiting for the next GC (measured in the memsafe-lab experiment, now in the jarrunner/jr-archives repository, write-up in `../prp/18-prp.01.lab-findings-and-api-proposal.md`). Every string, buffer, struct and out-parameter handed to native code therefore comes from `jarrunner.jr.N`, which allocates off the GC heap (`Arena`: one malloc'd 64 KB block plus malloc'd overflow chunks). Since PRP-35 the rules below are not conventions: the javac plugin [teavm-native-check](https://github.com/jarrunner/teavm-native-check) checks them on every build (Maven, `build-macos.sh` and CI), and a broken rule fails the build with a message that says what is wrong, why, and what to write instead.
+TeaVM's GC frees or moves any Java array known only through an `Address`, so `Address.ofData(javaArray)` passed to native code is a use-after-free waiting for the next GC (measured in the memsafe-lab experiment, now in the jarrunner/jr-archives repository, write-up in `../prp/18-prp.01.lab-findings-and-api-proposal.md`). Every string, buffer, struct and out-parameter handed to native code therefore comes from `jarrunner.jr.N`, which allocates off the GC heap (`Arena`: one malloc'd 64 KB block plus malloc'd overflow chunks). Since PRP-35 the rules below are not conventions: the javac plugin [teavm-native-check](https://github.com/jarrunner/teavm-native-check) checks them on every build (every Maven build, and CI), and a broken rule fails the build with a message that says what is wrong, why, and what to write instead.
 
 A native call, the way it is written now:
 

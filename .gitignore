@@ -25,6 +25,7 @@ gradlew.bat
 # Distribution directories
 dist/
 dist-noicon/
+dist-checks/
 distributions/
 shade/
 target/

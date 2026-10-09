@@ -5,7 +5,7 @@ import org.teavm.interop.Address;
 import static jarrunner.jr.N.*;
 
 /** The few things Linux and macOS spell differently, kept in one small class so the rest of the
- *  POSIX tree stays shared. This is the Linux version; build-macos.sh swaps in
+ *  POSIX tree stays shared. This is the Linux version (src/main/java-linux); the macos profile uses
  *  src/main/java-macos/jarrunner/jr/Os.java in its place. */
 final class Os {
     private Os() {}

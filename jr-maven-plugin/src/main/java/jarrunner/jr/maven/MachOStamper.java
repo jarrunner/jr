@@ -14,7 +14,7 @@ import java.util.List;
 /** Writes an app's config into a macOS jr binary and keeps its ad-hoc signature valid (PRP-36), in plain Java so
  *  it runs on Windows and in CI as well as on a Mac.
  *
- *  jr's macOS build links an empty 16 KB {@code __DATA,__jrc} section into every binary (build-macos.sh). The config
+ *  jr's macOS build links an empty 16 KB {@code __DATA,__jrc} section into every binary (jr's macos Maven profile). The config
  *  is written there as UTF-8 plus a NUL, in place, so no offset, size or load command changes. What does change is
  *  the hash of each 4 KB page holding it, which the binary's CodeDirectory records: arm64 macOS refuses to run code
  *  whose pages no longer match. So the matching hash slots are recomputed, in every CodeDirectory of every slice of

@@ -4,8 +4,8 @@ import org.teavm.interop.Address;
 
 import static jarrunner.jr.N.*;
 
-/** macOS version of Os (see src/main/java-posix/jarrunner/jr/Os.java), swapped in by
- *  build-macos.sh. Needs the macOS bindings: nsGetExecutablePath is bound only from
+/** macOS version of Os (the Linux one is src/main/java-linux/jarrunner/jr/Os.java), used by
+ *  the pom's macos profile. Needs the macOS bindings: nsGetExecutablePath is bound only from
  *  jr-posix-macos.h / posix-macos.symbols. */
 final class Os {
     private Os() {}
@@ -33,7 +33,7 @@ final class Os {
         return resolved.toLong() == 0 ? string(buf) : string(resolved);
     }
 
-    /** The app config the maven plugin wrote into this binary (PRP-36), or null if there is none. build-macos.sh
+    /** The app config the maven plugin wrote into this binary (PRP-36), or null if there is none. The macos profile
      *  links an empty (all-zero) __DATA,__jrc section into every jr; the plugin fills it with the config text,
      *  NUL-terminated, and re-signs. dyld maps it with the rest of the image, so this reads memory, not the file. */
     static String embeddedConfig() {

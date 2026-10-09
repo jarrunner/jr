@@ -50,7 +50,7 @@ final class MacOutputs {
         try (InputStream in = MacOutputs.class.getResourceAsStream(res)) {
             if (in == null) {
                 throw new MojoExecutionException("this jr-maven-plugin build carries no " + res
-                        + " (its bundled macOS jr binaries are built on a Mac: jr/build-macos.sh)");
+                        + " (its bundled macOS jr binaries are built on a Mac by jr's mvn package)");
             }
             return in.readAllBytes();
         } catch (IOException e) {

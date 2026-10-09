@@ -6,8 +6,8 @@
 # generated _Static_asserts.
 # Output: gen/<target>/jarrunner/jr/{PosixApi,PosixOffsets}.java - same package as the Windows
 # WinApi/WinOffsets, so PosixJr.java and its POSIX-specific helper classes compile unchanged
-# against whichever target's generated files are on the classpath. Only linux_x64's output is
-# currently adopted into ../../src/main/java-posix - see PRP-21's status file.
+# against whichever target's generated files are on the classpath. The output folders are
+# used as a source root by the pom (linux_x64 for -Dlinux, macos_arm64 for the macos profile).
 cd "$(dirname "$0")" || exit 1
 Z=$(cygpath -w /c/user/Apps/zig-x86_64-windows-0.16.0/lib/libc/include)
 run() { # $1 target dir name, $2 clang triple, rest: clang include/define args
