@@ -12,7 +12,7 @@ import java.nio.file.Files;
 import javax.imageio.ImageIO;
 
 /** Makes a macOS .icns from the icon the pom names (PRP-36), so one icon serves the Windows exe and the Mac app.
- *  Accepts a .icns (used as it is), a .png, or a .ico whose entries are PNG (the form build-ico.ps1 writes; a
+ *  Accepts a .icns (used as it is), a .png, or a .ico whose entries are PNG (the form of jr's own icon/jr-icon.ico; a
  *  BMP-only .ico is refused with a message). The largest image is scaled down to each size macOS uses, never up,
  *  and stored as PNG entries: icp4 16, icp5 32, icp6 64, ic07 128, ic08 256, ic09 512, ic10 1024. */
 final class IcnsWriter {

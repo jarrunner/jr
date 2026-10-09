@@ -94,7 +94,7 @@ public final class Progress {
 
     /** The window shows this exe's own icon - whatever is stamped into it, a client's own icon
      *  included - read from the exe file itself. Windows scales it from the single 256x256 entry
-     *  jr stamps (see icon/build-ico.ps1); no extra sizes are packaged. A caption icon needs WS_SYSMENU, which also brings
+     *  jr stamps (see icon/jr-icon.ico); no extra sizes are packaged. A caption icon needs WS_SYSMENU, which also brings
      *  a close button; that is greyed out, since closing the window would not stop the download. */
     private void showOwnIcon() {
         WinIcons.set(hwndWindow);
