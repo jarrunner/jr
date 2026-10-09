@@ -1,4 +1,0 @@
-macro:JX_WindowFromPoint windowFromPoint (Address)
-macro:JX_div div (int, int, Address)
-POINT
-div_t DivT

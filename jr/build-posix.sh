@@ -7,7 +7,7 @@
 # Real-gcc verification (not just zig's bundled clang) is a separate step - see PRP-21's status
 # file for why that mattered and how it's checked on WSL.
 # Usage: sh build-posix.sh [linux_x64]   (only linux_x64 has real Java to compile the port itself
-#   against right now; the other 3 targets exist as jextract_teavm-generated bindings only, in
+#   against right now; the other 3 targets exist as jextract-teavm-generated bindings only, in
 #   bindings/posix/gen/ - see PRP-21)
 T=${1:-linux_x64}
 case $T in

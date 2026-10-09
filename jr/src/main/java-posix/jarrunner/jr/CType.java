@@ -2,7 +2,7 @@ package jarrunner.jr;
 
 import java.lang.annotation.*;
 
-/** The C type an Address points to, e.g. {@code @CType("struct _STARTUPINFOW")}: written by jextract_teavm on the
+/** The C type an Address points to, e.g. {@code @CType("struct _STARTUPINFOW")}: written by jextract-teavm on the
  *  generated bindings (parameters, returns, struct classes, accessors), checked at compile time by
  *  teavm-native-check (rule NC6). No run-time cost. */
 @Retention(RetentionPolicy.SOURCE)

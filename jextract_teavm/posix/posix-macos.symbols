@@ -1,4 +1,0 @@
-# macOS only: its WEXITSTATUS/WIFEXITED take their argument's address (_W_INT), which jextract-teavm refuses as a
-# macro because TeaVM may pass a constant. posix.h wraps them in functions; these bind like any other.
-jx_wexitstatus wexitstatus
-jx_wifexited wifexited
