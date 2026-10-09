@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.github.jarrunner</groupId>
   <artifactId>jr</artifactId>
-  <version>1.2.0</version>
+  <version>1.2.1</version>
   <packaging>jar</packaging>
 
   <description>jr, a Java/TeaVM launcher that picks java.exe/javaw.exe (or posix_spawn's java on Linux/macOS), reads a sibling .jrc config, manages an AOT cache, and auto-installs a matching JDK on Windows. Supersedes jr_legacy_c, the original C implementation, as the primary implementation - see this repo's CLAUDE.md for the platform decision.</description>
@@ -22,6 +22,13 @@
     <jr.noicon>false</jr.noicon>
     <jr.icon>${project.basedir}/../icon/jr-icon.ico</jr.icon>
     <jr.manifest>${project.basedir}/../jr-maven-plugin/src/main/resources/jarrunner/jr/maven/app.manifest</jr.manifest>
+    <!-- Version information stamped into jr's own Windows exes: an exe with none (no company, product or
+         description) is what antivirus heuristics distrust; 1.2.0 shipped without it and Defender flagged it. -->
+    <jr.version.quad>${project.version}.0</jr.version.quad>
+    <jr.version.company>jarrunner</jr.version.company>
+    <jr.version.product>jr</jr.version.product>
+    <jr.version.description>jr - Java Runner launcher</jr.version.description>
+    <jr.version.copyright>Copyright (c) the jarrunner authors. Apache License 2.0</jr.version.copyright>
     <!-- teavm-native-check (PRP-35): the native-memory rules, enforced by javac. the profiles read this same
          line, so both source trees are checked against one configuration. -->
     <!-- PRP-35 phase 3: the Checks.ON constant comes from src/checks-off (release) or, with -Dchecks, src/checks-on. -->
@@ -116,7 +123,7 @@
                 <phase>package</phase>
                 <goals><goal>exec</goal></goals>
                 <configuration>
-                  <arguments><argument>-Xjr:edit=${jr.dist}/jr-windows-x86_64.exe</argument><argument>-Xjr:icon=${jr.icon}</argument><argument>-Xjr:manifest=${jr.manifest}</argument></arguments>
+                  <arguments><argument>-Xjr:edit=${jr.dist}/jr-windows-x86_64.exe</argument><argument>-Xjr:icon=${jr.icon}</argument><argument>-Xjr:manifest=${jr.manifest}</argument><argument>-Xjr:version=${jr.version.quad}</argument><argument>-Xjr:version.CompanyName=${jr.version.company}</argument><argument>-Xjr:version.ProductName=${jr.version.product}</argument><argument>-Xjr:version.FileDescription=${jr.version.description}</argument><argument>-Xjr:version.LegalCopyright=${jr.version.copyright}</argument><argument>-Xjr:version.InternalName=jr</argument><argument>-Xjr:version.OriginalFilename=jr.exe</argument></arguments>
                 </configuration>
               </execution>
               <execution>
@@ -124,7 +131,41 @@
                 <phase>package</phase>
                 <goals><goal>exec</goal></goals>
                 <configuration>
-                  <arguments><argument>-Xjr:edit=${jr.dist}/jr-windows-arm64.exe</argument><argument>-Xjr:icon=${jr.icon}</argument><argument>-Xjr:manifest=${jr.manifest}</argument></arguments>
+                  <arguments><argument>-Xjr:edit=${jr.dist}/jr-windows-arm64.exe</argument><argument>-Xjr:icon=${jr.icon}</argument><argument>-Xjr:manifest=${jr.manifest}</argument><argument>-Xjr:version=${jr.version.quad}</argument><argument>-Xjr:version.CompanyName=${jr.version.company}</argument><argument>-Xjr:version.ProductName=${jr.version.product}</argument><argument>-Xjr:version.FileDescription=${jr.version.description}</argument><argument>-Xjr:version.LegalCopyright=${jr.version.copyright}</argument><argument>-Xjr:version.InternalName=jr</argument><argument>-Xjr:version.OriginalFilename=jr.exe</argument></arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- -Djr.noicon=true (the builds jr-maven-plugin bundles): no icon, but the same version information,
+         which the plugin overwrites with the app's own. -->
+    <profile>
+      <id>windows-noicon</id>
+      <activation><os><family>windows</family></os><property><name>jr.noicon</name><value>true</value></property></activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>version-x86_64</id>
+                <phase>package</phase>
+                <goals><goal>exec</goal></goals>
+                <configuration>
+                  <skip>false</skip>
+                  <arguments><argument>-Xjr:edit=${jr.dist}/jr-windows-x86_64.exe</argument><argument>-Xjr:version=${jr.version.quad}</argument><argument>-Xjr:version.CompanyName=${jr.version.company}</argument><argument>-Xjr:version.ProductName=${jr.version.product}</argument><argument>-Xjr:version.FileDescription=${jr.version.description}</argument><argument>-Xjr:version.LegalCopyright=${jr.version.copyright}</argument><argument>-Xjr:version.InternalName=jr</argument><argument>-Xjr:version.OriginalFilename=jr.exe</argument></arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>version-arm64</id>
+                <phase>package</phase>
+                <goals><goal>exec</goal></goals>
+                <configuration>
+                  <skip>false</skip>
+                  <arguments><argument>-Xjr:edit=${jr.dist}/jr-windows-arm64.exe</argument><argument>-Xjr:version=${jr.version.quad}</argument><argument>-Xjr:version.CompanyName=${jr.version.company}</argument><argument>-Xjr:version.ProductName=${jr.version.product}</argument><argument>-Xjr:version.FileDescription=${jr.version.description}</argument><argument>-Xjr:version.LegalCopyright=${jr.version.copyright}</argument><argument>-Xjr:version.InternalName=jr</argument><argument>-Xjr:version.OriginalFilename=jr.exe</argument></arguments>
                 </configuration>
               </execution>
             </executions>

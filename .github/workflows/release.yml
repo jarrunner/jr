@@ -72,6 +72,12 @@ jobs:
           if ($help -notmatch 'Java Runner') { throw "jr -Xjr:help did not answer:`n$help" }
           $res = & .\dist\jr-windows-x86_64.exe -Xjr:list-resources=dist-noicon\jr-windows-x86_64.exe 2>&1 | Out-String
           if ($res -cmatch '(?m)^\s+ICON\s') { throw "the -NoIcon build carries an icon:`n$res" }
+          # 1.2.0 shipped with no version information and Defender flagged it as a trojan (Sabsik !ml).
+          foreach ($exe in 'dist\jr-windows-x86_64.exe', 'dist\jr-windows-arm64.exe', 'dist-noicon\jr-windows-x86_64.exe', 'dist-noicon\jr-windows-arm64.exe') {
+            $vi = (Get-Item $exe).VersionInfo
+            if ($vi.CompanyName -ne 'jarrunner' -or -not $vi.FileDescription -or -not $vi.FileVersion) { throw "$exe carries no version information" }
+            '{0}: {1} {2}' -f $exe, $vi.FileDescription, $vi.FileVersion
+          }
           New-Item -ItemType Directory -Force ..\unsigned | Out-Null
           Copy-Item dist\jr-windows-x86_64.exe ..\unsigned\jr.exe
           Copy-Item dist\jr-windows-arm64.exe ..\unsigned\jr-windows-arm64.exe
