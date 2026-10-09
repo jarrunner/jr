@@ -38,6 +38,8 @@ The Java code that makes up jr also compiles for POSIX systems. The Linux build 
 
 Download, rename if desired, and start using immediately! Tested on Windows 11.
 
+**New to jr? Read the [getting-started guide](docs/guide.md):** run any jar with jr, then give your own app its own exe with jr-maven-plugin, in your Maven build and in CI.
+
 ## Related repositories
 
 - [jr-maven-plugin](https://github.com/jarrunner/jr-maven-plugin) builds a jr launcher for your own app in its Maven build: your icon, your version, your config baked in. It bundles the jr binaries of a jr release.
@@ -155,16 +157,16 @@ myapp arg1 arg2
 
 ### jr's own options: `-Xjr:`
 
-The `.jrc` file is the place for settings. For a one-off override, jr takes options in the style of java's own `-X` options, and they must come **first**, before the jar or the app's arguments:
+An app's settings are baked into its exe by [jr-maven-plugin](docs/guide.md). For a one-off override, jr takes options in the style of java's own `-X` options, and they must come **first**, before the jar or the app's arguments:
 
 ```batch
 jr.exe [-Xjr:options] <jar-file> [app args...]
-myapp.exe [-Xjr:options] [app args...]          (java.args set in myapp.jrc)
+myapp.exe [-Xjr:options] [app args...]          (an app's own exe, its config baked in)
 ```
 
-- `-Xjr:<key>=<value>` sets any `.jrc` key for this run, overriding the `.jrc`: `-Xjr:jvm=dll`, `-Xjr:aot=false`, `-Xjr:java.home=C:\Java\jdk-25`, `-Xjr:java.version=25+`. Quote values with spaces either way: `"-Xjr:java.home=C:\Program Files\Java\jdk-25"` or `-Xjr:java.home="C:\Program Files\Java\jdk-25"`.
+- `-Xjr:<key>=<value>` sets any config key for this run, overriding the config: `-Xjr:jvm=dll`, `-Xjr:aot=false`, `-Xjr:java.home=C:\Java\jdk-25`, `-Xjr:java.version=25+`. Quote values with spaces either way: `"-Xjr:java.home=C:\Program Files\Java\jdk-25"` or `-Xjr:java.home="C:\Program Files\Java\jdk-25"`.
 - `-Xjr:yes` don't ask before auto-installing Java.
-- `-Xjr:create-config[=<jar>]` write a sample `<exe>.jrc`.
+- `-Xjr:create-config[=<jar>]` write an old-style `<exe>.jrc` file (see Mode 2 below).
 - `-Xjr:help` show help.
 
 jr reads only the leading run of `-Xjr:` tokens and stops at the first token that is not one. Everything from there on goes to the app exactly as typed, so an app's own `--yes`, `-jar` or even `-Xjr:...` argument is never taken for a jr option and never removed. An unknown `-Xjr:` option is an error, not silently ignored.
@@ -203,7 +205,9 @@ jr.exe -Xjr:aot=false -Xjr:java.home=C:\Java\jdk-25 myapp.jar --verbose
 - When run from terminal → runs with `java.exe` (console output visible)
 - AOT cache enabled by default for faster subsequent launches
 
-### Mode 2: Config Mode (With .jrc Configuration File)
+### Mode 2 (older): a .jrc Configuration File beside the exe
+
+**For a new app, use [jr-maven-plugin](docs/guide.md) instead:** it bakes the config into the app's own exe, which a file beside it cannot override. jr reads a `.jrc` file only when the exe has no config baked in, and that support will be removed. This section stays for exes already set up this way.
 
 For applications you run frequently, create a configuration file:
 

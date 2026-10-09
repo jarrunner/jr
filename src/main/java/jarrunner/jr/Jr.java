@@ -254,7 +254,7 @@ public final class Jr {
         if (config.embedded) {
             return "embedded in this exe (RCDATA/JRC resource)";
         }
-        return configPath + " (" + (config.found ? "found" : "not found") + ")";
+        return config.found ? configPath + " (an old-style .jrc file)" : "none baked in";
     }
 
     private static void handleCreateConfig(JrOptions opts, String configPath, boolean hasConsole) {
