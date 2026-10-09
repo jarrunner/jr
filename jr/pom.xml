@@ -10,7 +10,10 @@
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <teavm.version>0.15.0</teavm.version>
+    <!-- TeaVM from the jarrunner/teavm fork (branch 0.16.0-jr): upstream 0.16.0 plus the C-backend fixes that
+         postprocess.ps1 used to patch into the generated C (PRP-37). Built with -Pteavm.publish.groupId. -->
+    <teavm.groupId>io.github.jarrunner.teavm</teavm.groupId>
+    <teavm.version>0.16.0-jr.1</teavm.version>
     <!-- teavm_native_check (PRP-35): the native-memory rules, enforced by javac. build-posix.sh reads this same
          line, so both source trees are checked against one configuration. -->
     <!-- PRP-35 phase 3: the Checks.ON constant comes from src/checks-off (release) or, with -Dchecks, src/checks-on. -->
@@ -19,12 +22,12 @@
   </properties>
   <dependencies>
     <dependency>
-      <groupId>org.teavm</groupId>
+      <groupId>${teavm.groupId}</groupId>
       <artifactId>teavm-tooling</artifactId>
       <version>${teavm.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.teavm</groupId>
+      <groupId>${teavm.groupId}</groupId>
       <artifactId>teavm-classlib</artifactId>
       <version>${teavm.version}</version>
     </dependency>

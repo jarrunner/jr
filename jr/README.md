@@ -23,17 +23,15 @@ Resolve the four extra jars TeaVMTool's own classpath needs (teavm-classlib, tea
 
   java -cp "%CP%;target\classes" jarrunner.jr.build.BuildDriver target\classes target\c jarrunner.jr.Jr "%CLASSLIB_JARS%"
 
-Patch the generated tree for clang/mingw (see the findings doc and guidelines.teavmcpp.md for exactly what and why - this now also inserts `#include <Windows.h>`/`#include <time.h>`/`#include <winhttp.h>`/`#include <bcrypt.h>`/`#include <commctrl.h>`/`#include "mssign.h"` into definitions.h, and copies `bindings\mssign.h` next to `all.c`, so no `-include` compiler flags are needed any more):
-
-  powershell -File postprocess.ps1 -Dir target\c
+No patching step: TeaVM comes from the jarrunner/teavm fork (`io.github.jarrunner.teavm`, branch `0.16.0-jr`, see the pom), which carries the clang/mingw fixes as source changes, and the headers for jr's own Win32 calls arrive through `@Include("jr-winapi.h")` on the generated WinApi. Both used to be a `postprocess.ps1` step that edited the generated C (PRP-37).
 
 Compile - the java-install feature (PRP-09) needs three extra libs linked (winhttp/bcrypt/comctl32), and the resource-editing/signing port (PRP-20 phase 2) needs three more (version/crypt32/mssign32 - all six OS-provided, no vcredist implication, same reasoning as PRP-06). `-Wno-error=incompatible-function-pointer-types` is required by jextract_teavm's own callback convention (see "Callbacks: C calling Java" in `../jextract_teavm/README.md`) - clang 16+ makes that mismatch an error by default, and the ABI is the same either way:
 
-  x86_64-w64-mingw32-clang -O2 -Wno-error=incompatible-function-pointer-types -o jr.exe target\c\all.c -lwinhttp -lbcrypt -lcomctl32 -lversion -lcrypt32 -lmssign32 -lgdi32
+  x86_64-w64-mingw32-clang -O2 -Wno-error=incompatible-function-pointer-types -I bindings\windows -o jr.exe target\c\all.c -lwinhttp -lbcrypt -lcomctl32 -lversion -lcrypt32 -lmssign32 -lgdi32
 
 For a size-optimized build (matches the numbers in 09-prp.02.teavm-port.md):
 
-  x86_64-w64-mingw32-clang -Oz -flto -ffunction-sections -fdata-sections -Wl,--gc-sections -s -Wno-error=incompatible-function-pointer-types -o jr.exe target\c\all.c -lwinhttp -lbcrypt -lcomctl32 -lversion -lcrypt32 -lmssign32 -lgdi32
+  x86_64-w64-mingw32-clang -Oz -flto -ffunction-sections -fdata-sections -Wl,--gc-sections -s -Wno-error=incompatible-function-pointer-types -I bindings\windows -o jr.exe target\c\all.c -lwinhttp -lbcrypt -lcomctl32 -lversion -lcrypt32 -lmssign32 -lgdi32
 
 ### Baking in the default icon (PRP-24)
 The just-linked `jr.exe` has no custom icon yet - stamp it with `../icon/jr-icon.ico` (PRP-22's final "jr" monogram, `concept-02-jr-monogram.svg`) using jr's own resource-editing feature on itself.

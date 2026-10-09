@@ -36,13 +36,11 @@ build() { # $1 target dir name, $2 clang -arch
   CHK=src/checks-off/java; [ -n "${CHECKS:-}" ] && CHK=src/checks-on/java  # PRP-35: CHECKS=1 for a bounds-checked build
   javac -d "$B/classes" -cp "$CP" -processorpath "$NC" "-Xplugin:NativeCheck $NCARGS" $(find "$B/src" $CHK -name '*.java') || return 1
   java -cp "$CP:$B/classes" jarrunner.jr.build.BuildDriver "$B/classes" "$B/c" jarrunner.jr.PosixJr "$CLASSLIB" > "$B/teavm.log" 2>&1 || { tail -30 "$B/teavm.log"; return 1; }
-  # TeaVM's C runtime needs two things macOS lacks: <uchar.h> (string.c) and POSIX real-time timers
-  # (fiber.c). bindings/posix/macos-shim supplies both; each header says why it is C.
-  S=$PWD/bindings/posix/macos-shim
   # The empty slot jr-maven-plugin fills with an app's config (PRP-36): 16 KB of zeros as its own section, so
   # the plugin can find it by name, write the config in place and re-sign, without changing the file's layout.
   dd if=/dev/zero of="$B/jrc-slot" bs=16384 count=1 2>/dev/null
-  clang -arch $ARCH -mmacosx-version-min=$MINOS -Oz -flto -w -I "$S" -include "$S/teavm-timers.h" \
+  # TeaVM 0.16 handles macOS itself (uchar.h, fiber.c), so bindings/posix/macos-shim is no longer used (PRP-37).
+  clang -arch $ARCH -mmacosx-version-min=$MINOS -Oz -flto -w \
       -I "$PWD/bindings/posix" -Wl,-dead_strip -Wl,-S -Wl,-x \
       -Wl,-sectcreate,__DATA,__jrc,"$B/jrc-slot" \
       -o "$B/jr-posix" "$B/c/all.c" > "$B/clang.log" 2>&1 || { grep -m20 error "$B/clang.log"; return 1; }
@@ -64,8 +62,9 @@ if [ ! -f "$NC" ] || [ -n "$(find ../teavm_native_check/src ../teavm_native_chec
   fi
 fi
 NCARGS=$(sed -n 's:.*<nativecheck>\(.*\)</nativecheck>.*:\1:p' pom.xml)
-M2=$HOME/.m2/repository/org/teavm
-V=0.15.0
+TG=$(sed -n 's:.*<teavm.groupId>\(.*\)</teavm.groupId>.*:\1:p' pom.xml)  # TeaVM's coordinates come from the pom (PRP-37)
+V=$(sed -n 's:.*<teavm.version>\(.*\)</teavm.version>.*:\1:p' pom.xml)
+M2=$HOME/.m2/repository/$(echo "$TG" | tr . /)
 # BuildDriver splits this argument on ';' on every OS
 CLASSLIB="$M2/teavm-classlib/$V/teavm-classlib-$V.jar;$M2/teavm-interop/$V/teavm-interop-$V.jar;$M2/teavm-platform/$V/teavm-platform-$V.jar;$M2/teavm-core/$V/teavm-core-$V.jar"
 

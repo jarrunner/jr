@@ -21,8 +21,9 @@ CP=$(cat cp.txt)
 NC=$(cygpath -w ~/.m2/repository/io/github/jarrunner/teavm_native_check/1.0/teavm_native_check-1.0.jar)
 [ -f "$NC" ] || (cd ../teavm_native_check && mvn -q install) || exit 1
 NCARGS=$(sed -n 's:.*<nativecheck>\(.*\)</nativecheck>.*:\1:p' pom.xml)
-M2=$(cygpath -w ~/.m2/repository/org/teavm)
-V=0.15.0
+TG=$(sed -n 's:.*<teavm.groupId>\(.*\)</teavm.groupId>.*:\1:p' pom.xml)  # TeaVM's coordinates come from the pom (PRP-37)
+V=$(sed -n 's:.*<teavm.version>\(.*\)</teavm.version>.*:\1:p' pom.xml)
+M2=$(cygpath -w ~/.m2/repository/$(echo "$TG" | tr . /))
 CLASSLIB="$M2\\teavm-classlib\\$V\\teavm-classlib-$V.jar;$M2\\teavm-interop\\$V\\teavm-interop-$V.jar;$M2\\teavm-platform\\$V\\teavm-platform-$V.jar;$M2\\teavm-core\\$V\\teavm-core-$V.jar"
 B=build-posix-$T
 rm -rf "$B" && mkdir -p "$B/classes"

@@ -1,6 +1,6 @@
 <#
 Full local build recipe for the TeaVM/Java jr, in one script - compiles the Java, generates C via
-BuildDriver, patches it for clang/mingw (postprocess.ps1), links it for each requested Windows
+BuildDriver (TeaVM from the jarrunner/teavm fork, so the C needs no patching; PRP-37), links it for each requested Windows
 architecture, and bakes in the default icon (PRP-24). Mirrors README.md's manual step-by-step;
 read that first if this script needs changing; it explains the WHY behind each step.
 
@@ -76,8 +76,6 @@ Write-Host '[3/4] generating C (TeaVM, once - architecture-agnostic)'
 if (Test-Path target/c) { Remove-Item -Recurse -Force target/c }
 java -cp "$fullCp;target/classes" jarrunner.jr.build.BuildDriver target/classes target/c jarrunner.jr.Jr $extraClasspath
 if ($LASTEXITCODE -ne 0) { throw 'BuildDriver failed' }
-powershell -File postprocess.ps1 -Dir target/c
-if ($LASTEXITCODE -ne 0) { throw 'postprocess.ps1 failed' }
 
 New-Item -ItemType Directory -Force $DistDir | Out-Null
 $libs = @('-lwinhttp', '-lbcrypt', '-lcomctl32', '-lversion', '-lcrypt32', '-lmssign32', '-lgdi32')
