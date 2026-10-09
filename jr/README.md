@@ -14,24 +14,14 @@ Installed at `C:\user\Apps\cmdtools\llvm-mingw-msvcrt-x86_64\` and its `bin\` is
 tcc (`C:\user\Apps\tcc-0.9.27-win64\tcc.exe`) does NOT work - hits a structural `#pragma once` bug against TeaVM's per-class header layout. Kept installed since it's tiny and the findings doc records exactly where it breaks, in case a newer tcc build is ever worth retrying.
 
 ## Build recipe
-**Normally just run `powershell -File build-win.ps1`** (PRP-24). It does every step below, links both Windows architectures, and stamps the icon. Output: `dist\jr-windows-<arch>.exe` (size-optimized, the one to ship) and `dist\jr-windows-<arch>-fat.exe` (plain `-O2`, kept for comparison). `-Arch x86_64` builds one architecture, `-NoIcon` skips the icon. The llvm-mingw install carries an aarch64 target too, so the arm64 build is a real cross-compile, not a rename; check with the PE header's Machine field (0x8664 / 0xAA64). The manual steps, for when the script needs changing:
+**`mvn package`** (PRP-37). On Windows the `windows` profile is active by itself and does every step: javac (with teavm-native-check), TeaVM's own `teavm-maven-plugin` writes the C to `target\c` (`targetType` C, heap 4-32 MB, `ADVANCED`), [teavm-c-maven-plugin](https://github.com/jarrunner/teavm-c-maven-plugin) compiles it with llvm-mingw for each architecture, and `exec-maven-plugin` stamps jr's icon and manifest on with a third, unstamped x86_64 build (an exe cannot edit itself). Output: `dist\jr-windows-x86_64.exe` and `dist\jr-windows-arm64.exe`. The llvm-mingw install carries an aarch64 target too, so the arm64 build is a real cross-compile, not a rename; check with the PE header's Machine field (0x8664 / 0xAA64).
 
-  mvn -q compile
-  mvn -q dependency:build-classpath -Dmdep.outputFile=cp.txt
+- `-Djr.noicon=true` leaves the icon off; `-Djr.dist=<dir>` picks the output folder; `-Dteavmc.targets=x86_64,editor` builds a subset.
+- `-Dchecks` is the checks build (every `Buf` access checked; output `dist-checks\`). Never ship it.
+- `-Dlinux` builds the POSIX tree for Linux x86_64 with `zig cc` (`dist\jr-linux-x86_64`), from any OS; `-Djr.zig=<path>` when zig is not on PATH.
+- macOS is still built on a Mac by `build-macos.sh`, until it moves into the pom too.
 
-Resolve the four extra jars TeaVMTool's own classpath needs (teavm-classlib, teavm-interop, teavm-platform, teavm-core - see BuildDriver's javadoc for why), then generate the C:
-
-  java -cp "%CP%;target\classes" jarrunner.jr.build.BuildDriver target\classes target\c jarrunner.jr.Jr "%CLASSLIB_JARS%"
-
-No patching step: TeaVM comes from the jarrunner/teavm fork (`io.github.jarrunner.teavm`, branch `0.16.0-jr`, see the pom), which carries the clang/mingw fixes as source changes, and the headers for jr's own Win32 calls arrive through `@Include("jr-winapi.h")` on the generated WinApi. Both used to be a `postprocess.ps1` step that edited the generated C (PRP-37).
-
-Compile - the java-install feature (PRP-09) needs three extra libs linked (winhttp/bcrypt/comctl32), and the resource-editing/signing port (PRP-20 phase 2) needs three more (version/crypt32/mssign32 - all six OS-provided, no vcredist implication, same reasoning as PRP-06). `-Wno-error=incompatible-function-pointer-types` is required by jextract-teavm's own callback convention (see "Callbacks: C calling Java" in the [jextract-teavm README](https://github.com/jarrunner/jextract-teavm)) - clang 16+ makes that mismatch an error by default, and the ABI is the same either way:
-
-  x86_64-w64-mingw32-clang -O2 -Wno-error=incompatible-function-pointer-types -I bindings\windows -o jr.exe target\c\all.c -lwinhttp -lbcrypt -lcomctl32 -lversion -lcrypt32 -lmssign32 -lgdi32
-
-For a size-optimized build (matches the numbers in 09-prp.02.teavm-port.md):
-
-  x86_64-w64-mingw32-clang -Oz -flto -ffunction-sections -fdata-sections -Wl,--gc-sections -s -Wno-error=incompatible-function-pointer-types -I bindings\windows -o jr.exe target\c\all.c -lwinhttp -lbcrypt -lcomctl32 -lversion -lcrypt32 -lmssign32 -lgdi32
+The compiler flags live in the pom (the `windows` and `linux` profiles), which is the one place to change them. teavm-c-maven-plugin writes each compiler's full output to `target\teavmc-<target>.log`.
 
 ### Baking in the default icon (PRP-24)
 The just-linked `jr.exe` has no custom icon yet - stamp it with `../icon/jr-icon.ico` (PRP-22's final "jr" monogram, `concept-02-jr-monogram.svg`) using jr's own resource-editing feature on itself.
@@ -186,7 +176,7 @@ This takes about 20 s. It rewrites both Java files, then has llvm-mingw's clang 
 This replaced PRP-08's `offsetgen/` (struct offsets only) and PRP-11's `wintype-poc/` (type checking via an annotation processor), both superseded by `../prp/12-prp.01.report.md` and kept as history in `history/`.
 
 ## Native memory: through N, checked by the compiler (PRP-18, PRP-35)
-TeaVM's GC frees or moves any Java array known only through an `Address`, so `Address.ofData(javaArray)` passed to native code is a use-after-free waiting for the next GC (measured in the memsafe-lab experiment, now in the jarrunner/jr-archives repository, write-up in `../prp/18-prp.01.lab-findings-and-api-proposal.md`). Every string, buffer, struct and out-parameter handed to native code therefore comes from `jarrunner.jr.N`, which allocates off the GC heap (`Arena`: one malloc'd 64 KB block plus malloc'd overflow chunks). Since PRP-35 the rules below are not conventions: the javac plugin [teavm-native-check](https://github.com/jarrunner/teavm-native-check) checks them on every build (Maven, `build-posix.sh` and CI), and a broken rule fails the build with a message that says what is wrong, why, and what to write instead.
+TeaVM's GC frees or moves any Java array known only through an `Address`, so `Address.ofData(javaArray)` passed to native code is a use-after-free waiting for the next GC (measured in the memsafe-lab experiment, now in the jarrunner/jr-archives repository, write-up in `../prp/18-prp.01.lab-findings-and-api-proposal.md`). Every string, buffer, struct and out-parameter handed to native code therefore comes from `jarrunner.jr.N`, which allocates off the GC heap (`Arena`: one malloc'd 64 KB block plus malloc'd overflow chunks). Since PRP-35 the rules below are not conventions: the javac plugin [teavm-native-check](https://github.com/jarrunner/teavm-native-check) checks them on every build (Maven, `build-macos.sh` and CI), and a broken rule fails the build with a message that says what is wrong, why, and what to write instead.
 
 A native call, the way it is written now:
 
@@ -207,7 +197,7 @@ The pieces:
 - **Fields hold handles only.** An `Address` field must be marked `@Handle` (a window, a file, a module: memory the OS owns), never memory from N.
 - **Pointer parameters are borrowed.** A method may use a pointer it is given but not keep it. If it returns the pointer or a pointer into it, mark the parameter `@Returned`. If it keeps it after returning, mark it `@Escapes`; then its callers must pass memory that outlives the call.
 - **Raw access is marked.** `p.add`, `getInt`/`putInt` and friends, pointers made from numbers (`Address.fromLong`) and casts between a pointer and a `Function` are allowed only in N, Arena, Buf, the generated classes, or a method marked `@Unsafe("why it is safe")`. That keeps the code to review with care a short list: `grep -rn @Unsafe src`. For the two non-memory cases there are named helpers, `handle(long)` for an OS handle number and `intResource(id)` for MAKEINTRESOURCE.
-- **Buffers that know their size:** `Buf.alloc(n)` (or `Buf.wrap(p, n)` inside `@Unsafe` code) with `getInt(off)`, `slice(off, len)` and `ptr()` for the OS. In a checks build (`build-win.ps1 -Checks`, into `dist-checks/`) every access is checked and an overrun stops the program with `jr: native buffer overrun: ...`; in the release build the checks compile to nothing. `-Xjr:checks-selftest` proves a checks build catches one.
+- **Buffers that know their size:** `Buf.alloc(n)` (or `Buf.wrap(p, n)` inside `@Unsafe` code) with `getInt(off)`, `slice(off, len)` and `ptr()` for the OS. In a checks build (`mvn package -Dchecks`, into `dist-checks/`) every access is checked and an overrun stops the program with `jr: native buffer overrun: ...`; in the release build the checks compile to nothing. `-Xjr:checks-selftest` proves a checks build catches one.
 - **Never:** `Address.ofData` / `Address.ofObject`, an array of pointers, or `Thread.sleep`, `wait` or `synchronized` inside a scope (TeaVM's threads are fibers sharing one arena).
 
 The full list of rules (NC1-NC7), the plugin's settings in `pom.xml` (`<nativecheck>`), and the reasons behind each decision are in `../prp/35-prp.status.md`.

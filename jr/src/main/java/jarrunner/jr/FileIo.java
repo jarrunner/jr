@@ -26,7 +26,7 @@ public final class FileIo {
         return b == null ? null : text(b);
     }
 
-    /** Files read onto the Java heap are capped here: TeaVM's heap is 32 MB (BuildDriver), and a parser may hold a
+    /** Files read onto the Java heap are capped here: TeaVM's heap is 32 MB (maxHeapSize in the pom), and a parser may hold a
      *  second copy. Bigger payloads (raw resources, up to 64 MB) go off-heap through {@link #readFully}. */
     public static final int MAX_HEAP_READ = 8 << 20;
 

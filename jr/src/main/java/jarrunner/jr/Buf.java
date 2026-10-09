@@ -2,7 +2,7 @@ package jarrunner.jr;
 
 import org.teavm.interop.Address;
 
-/** Native memory that knows its size (PRP-35 phase 3). In a checks build (build-win.ps1 -Checks) every read, write and
+/** Native memory that knows its size (PRP-35 phase 3). In a checks build (mvn package -Dchecks) every read, write and
  *  slice is checked against that size and an overrun stops the program at once; in a release build Checks.ON is the
  *  constant false, javac drops the checks and what remains is the plain access. The OS gets the bare pointer, at the
  *  call, through ptr(). The checker treats a Buf like an Address: it is not kept in a field, returned out of a scope

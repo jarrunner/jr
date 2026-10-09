@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<!-- jr's application manifest: stamped into jr.exe by build-win.ps1 and into every exe this plugin builds.
+<!-- jr's application manifest: stamped into jr.exe by its own Maven build and into every exe this plugin builds.
      It declares what java.exe's own manifest declares, because an in-process JVM (jvm=dll) runs under jr's:
      Common Controls 6 (native-looking windows), per-monitor DPI awareness (no bitmap-stretched, blurry
      windows on a scaled display), the supported Windows versions (no Program Compatibility Assistant

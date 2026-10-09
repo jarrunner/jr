@@ -4,7 +4,7 @@ Builds a [jr](../jr) launcher exe for a Java app as part of its Maven build: `io
 
 It hashes the app's shaded jar (SHA-256 and CRC32), writes the jrc-json, and has jr itself check and bake that config, the icon and the version info into a copy of the jr exe bundled in the plugin. The result is one exe that carries everything it needs: its config cannot be overridden by a file beside it, and a release exe fetches its jar on first run, verifies it, and updates itself with `-Xjr:update`.
 
-Windows only for now: stamping uses Windows' own resource calls, so on another OS the goal logs a warning and does nothing. On Maven Central from 1.1.0 (`io.github.jarrunner:jr-maven-plugin:1.1.0`), versioned with jr: 1.1.0 bundles jr 1.1.0 (tag `v1.1.0`), built without the jr icon. To build it yourself, build jr first with `../jr/build-win.ps1 -NoIcon -DistDir dist-noicon`; the tests fail if those exes are missing.
+Windows only for now: stamping uses Windows' own resource calls, so on another OS the goal logs a warning and does nothing. On Maven Central from 1.1.0 (`io.github.jarrunner:jr-maven-plugin:1.1.0`), versioned with jr: 1.1.0 bundles jr 1.1.0 (tag `v1.1.0`), built without the jr icon. To build it yourself, build jr first with `../jr/mvn package "-Djr.noicon=true" "-Djr.dist=dist-noicon"` in `../jr`; the tests fail if those exes are missing.
 
 ## Use
 

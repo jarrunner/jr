@@ -39,7 +39,7 @@ Download, rename if desired, and start using immediately! Tested on Windows 11.
 
 ## Building from Source
 
-`powershell -File jr/build-win.ps1`, needing JDK 25, Maven and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw/releases) (the `msvcrt` build). Details are in [jr/README.md](jr/README.md). The release workflow (`.github/workflows/release.yml`) runs the same script on a clean Windows machine, so a release contains nothing built on a developer's machine.
+`mvn package` in `jr/`, needing JDK 25, Maven and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw/releases) (the `msvcrt` build) on PATH. Details are in [jr/README.md](jr/README.md). The release workflow (`.github/workflows/release.yml`) runs the same Maven build on a clean Windows machine, so a release contains nothing built on a developer's machine.
 
 jr began as a hand-written C launcher. That version lives on in its own repository, [jarrunner/jr_legacy_c](https://github.com/jarrunner/jr_legacy_c), but it has far fewer features than this one and is no longer developed.
 

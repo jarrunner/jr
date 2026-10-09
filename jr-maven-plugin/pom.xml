@@ -40,7 +40,7 @@
     <plugin-tools.version>3.16.0</plugin-tools.version>
     <datahelper.version>2.0</datahelper.version>
     <jackson.version>2.22.2</jackson.version>
-    <!-- The jr exes this plugin bundles: build-win.ps1 -NoIcon -DistDir dist-noicon. Icon-less on purpose:
+    <!-- The jr exes this plugin bundles: mvn package "-Djr.noicon=true" "-Djr.dist=dist-noicon". Icon-less on purpose:
          an app exe carries an icon only when its own pom names one, never jr's. -->
     <jr.dist>${project.basedir}/../jr/dist-noicon</jr.dist>
     <!-- The macOS jr binaries this plugin bundles (PRP-36): built on a Mac by ../jr/build-macos.sh, collected here by
@@ -154,7 +154,7 @@
   <!-- Release to Maven Central: Maven 3 only, never the default Maven 4 (under Maven 4 the
        central-publishing binding silently uploads nothing, and BUILD SUCCESS still prints):
          C:\user\Apps\cmdtools\maven\apache-maven\bin\mvn.cmd clean deploy -Dorg.name=jarrunner
-       Build the bundled exes first (../jr: build-win.ps1 -NoIcon -DistDir dist-noicon); the tests
+       Build the bundled exes first (../jr: mvn package "-Djr.noicon=true" "-Djr.dist=dist-noicon"); the tests
        fail when they are missing. Confirm a release by fetching it from repo1.maven.org. -->
   <profiles>
     <profile>

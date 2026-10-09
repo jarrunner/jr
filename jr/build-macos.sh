@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds jarrunner.jr.PosixJr for macOS, natively ON a Mac (unlike build-posix.sh, which cross-builds
+# Builds jarrunner.jr.PosixJr for macOS, natively ON a Mac (Linux is built by mvn package -Dlinux, which cross-builds
 # Linux from Windows with zig):
 #   stage src/main/java-posix + bindings/posix/gen/<target> + src/main/java-macos -> javac (with
 #   teavm-native-check) -> TeaVM C backend (BuildDriver) -> Apple clang, with -I bindings/posix: the

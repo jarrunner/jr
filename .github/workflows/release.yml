@@ -59,10 +59,10 @@ jobs:
         working-directory: jr
         run: |
           x86_64-w64-mingw32-clang --version | Select-Object -First 1
-          powershell -File build-win.ps1
-          if ($LASTEXITCODE -ne 0) { throw 'build-win.ps1 failed' }
-          powershell -File build-win.ps1 -NoIcon -DistDir dist-noicon
-          if ($LASTEXITCODE -ne 0) { throw 'build-win.ps1 -NoIcon failed' }
+          mvn -B clean package
+          if ($LASTEXITCODE -ne 0) { throw 'mvn package failed' }
+          mvn -B clean package "-Djr.noicon=true" "-Djr.dist=dist-noicon"
+          if ($LASTEXITCODE -ne 0) { throw 'mvn package (no icon) failed' }
 
       - name: Check the exes run
         shell: pwsh
@@ -85,8 +85,8 @@ jobs:
         shell: pwsh
         working-directory: jr
         run: |
-          powershell -File build-win.ps1 -Checks -Arch x86_64 -NoIcon
-          if ($LASTEXITCODE -ne 0) { throw 'build-win.ps1 -Checks failed' }
+          mvn -B clean package -Dchecks "-Djr.noicon=true" "-Dteavmc.targets=x86_64"
+          if ($LASTEXITCODE -ne 0) { throw 'mvn package -Dchecks failed' }
           $out = & .\dist-checks\jr-windows-x86_64.exe -Xjr:checks-selftest 2>&1 | Out-String
           if ($LASTEXITCODE -eq 0 -or $out -notmatch 'native buffer overrun: 4 bytes at offset 2 of a 4-byte buffer') { throw "the checks build did not catch the planted overrun (exit $LASTEXITCODE):`n$out" }
           $rel = & .\dist\jr-windows-x86_64.exe -Xjr:checks-selftest 2>&1 | Out-String
