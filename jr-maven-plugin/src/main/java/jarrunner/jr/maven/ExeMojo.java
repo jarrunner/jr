@@ -100,6 +100,10 @@ public final class ExeMojo extends AbstractMojo {
     @Parameter String macosDisplayName;
     /** CFBundleIdentifier. Default: appId with ':' as '.' (io.github.me:tool becomes io.github.me.tool). */
     @Parameter String macosBundleId;
+    /** Extra Info.plist entries, key to value; "true"/"false" become plist booleans, anything else a string.
+     *  E.g. NSMicrophoneUsageDescription (macOS refuses the microphone without it) or LSUIElement=true
+     *  (a menu-bar app with no Dock icon). An entry here replaces a built-in one of the same key. */
+    @Parameter Map<String, String> macosInfoPlist;
     /** For source=path, the jar inside the .app (Contents/Resources) instead of the build machine's path. */
     String jarPathOverride;
 
@@ -167,6 +171,7 @@ public final class ExeMojo extends AbstractMojo {
         mac.displayName = macosDisplayName != null ? macosDisplayName : productName != null ? productName : name;
         mac.bundleId = macosBundleId != null ? macosBundleId : appId.replace(':', '.');
         mac.icon = macosNoIcon ? null : macosIcon != null ? macosIcon : icon;
+        if (macosInfoPlist != null) mac.extraPlist.putAll(macosInfoPlist);
         var arch = macosArchitecture == null ? "universal" : macosArchitecture;
         var compact = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
         var files = new ArrayList<File>();
@@ -182,12 +187,14 @@ public final class ExeMojo extends AbstractMojo {
                 jarPathOverride = null;
                 files.add(mac.binary(arch, cfg));
             } else {
-                // A local jar travels inside the bundle; a maven or url jar is downloaded by jr as usual.
-                var bundled = javaArgs == null && source.equals("path") && jarPath == null;
-                jarPathOverride = bundled ? "../Resources/" + jar.getName() : null;
-                var cfg = compact.writeValueAsString(config());
-                jarPathOverride = null;
-                files.add(mac.app(arch, cfg, bundled ? jar : null));
+                // The jar never goes inside the app (user, 2026-10-09): as on Windows, source=path names the build's
+                // own jar (or jarPath), maven/url are downloaded by jr, so the jar is updated without the bundle.
+                var local = javaArgs == null && source.equals("path") && jarPath == null;
+                if (local && !System.getProperty("os.name", "").startsWith("Mac")) {
+                    getLog().warn("macOS app: source=path names " + jar.getAbsolutePath() + ", a path on this build machine;"
+                            + " for an app that runs on a Mac, use source maven or url, or set jarPath");
+                }
+                files.add(mac.app(arch, compact.writeValueAsString(config())));
             }
         }
         return files;

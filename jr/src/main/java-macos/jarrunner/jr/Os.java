@@ -50,6 +50,12 @@ final class Os {
         return text.isEmpty() ? null : text;
     }
 
+    /** The user's cache folder, ~/Library/Caches, or null without HOME. */
+    static String userCacheDir() {
+        var home = Cstr.readEnv("HOME");
+        return home == null || home.isEmpty() ? null : home + "/Library/Caches";
+    }
+
     /** Inside an .app (this binary in X.app/Contents/MacOS/), the Dock name and icon for the java child process,
      *  which would otherwise appear as "java" with Java's own icon. The icon is the one jr-maven-plugin puts in
      *  Contents/Resources/&lt;binary name&gt;.icns. Nothing outside a bundle. */

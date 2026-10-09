@@ -69,16 +69,35 @@ class MacOutputsTest {
         verifySignatures(Files.readAllBytes(bin));
     }
 
-    @Test void appFormWithIconCarriesTheJarThePlistAndAnIcnsAndZipsWithModes() throws Exception {
+    @Test void extraInfoPlistEntriesAreAddedAndReplaceBuiltIns() throws Exception {
         var m = mojo(TestApp.jar(dir));
+        m.macosForms = List.of("app");
+        m.macosNoIcon = true;
+        m.macosInfoPlist = new java.util.LinkedHashMap<>(java.util.Map.of(
+                "NSMicrophoneUsageDescription", "Voice Typing listens & transcribes", "LSUIElement", "true",
+                "LSMinimumSystemVersion", "14.0"));
+        m.execute();
+        var plist = Files.readString(dir.resolve("out/macos/hello.app/Contents/Info.plist"));
+        assertTrue(plist.contains("<key>NSMicrophoneUsageDescription</key>\n  <string>Voice Typing listens &amp; transcribes</string>"), plist);
+        assertTrue(plist.contains("<key>LSUIElement</key>\n  <true/>"), plist);
+        assertTrue(plist.contains("<string>14.0</string>") && !plist.contains("<string>13.0</string>"), plist);
+        assertEquals(1, plist.split("<key>LSMinimumSystemVersion</key>", -1).length - 1, plist);
+    }
+
+    @Test void appFormWithIconCarriesThePlistAndAnIcnsButNoJarAndZipsWithModes() throws Exception {
+        var jar = TestApp.jar(dir);
+        var m = mojo(jar);
         m.macosForms = List.of("app");
         m.icon = new File("../icon/jr-icon.ico");
         m.productName = "Hello World";
         m.execute();
         var app = dir.resolve("out/macos/Hello World.app/Contents");
         var cfg = MachOStamper.read(Files.readAllBytes(app.resolve("MacOS/hello")));
-        assertTrue(cfg.contains("\"path\":\"../Resources/hello.jar\""), cfg);
-        assertTrue(Files.isRegularFile(app.resolve("Resources/hello.jar")));
+        // as on Windows: the build's own jar by path, never a copy inside the bundle (user, 2026-10-09)
+        assertTrue(cfg.contains(jar.getAbsolutePath().replace("\\", "\\\\")), cfg);
+        try (var s = Files.walk(dir.resolve("out/macos/Hello World.app"))) {
+            assertTrue(s.noneMatch(p -> p.toString().endsWith(".jar")), "no jar in the bundle");
+        }
         var plist = Files.readString(app.resolve("Info.plist"));
         assertTrue(plist.contains("<string>io.github.example.hello</string>"), plist);
         assertTrue(plist.contains("<key>CFBundleShortVersionString</key>\n  <string>1.2.3</string>"), plist);

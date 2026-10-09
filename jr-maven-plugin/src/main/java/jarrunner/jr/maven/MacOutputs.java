@@ -7,7 +7,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -30,6 +32,7 @@ final class MacOutputs {
     String version;
     String minimumSystemVersion = "13.0";
     File icon;
+    final Map<String, String> extraPlist = new LinkedHashMap<>();
 
     MacOutputs(Log log, File outputDirectory, String name) {
         this.log = log;
@@ -65,9 +68,9 @@ final class MacOutputs {
         return out;
     }
 
-    /** The .app and its zip; returns the zip. jar, when not null, is copied into Contents/Resources (the config
-     *  then names it as ../Resources/<jar>, relative to the binary). */
-    File app(String arch, String config, File jar) throws Exception {
+    /** The .app and its zip; returns the zip. The app carries no jar: its config names the jar as on Windows (the
+     *  build's own path, or a maven/url download into jr's cache), so a new jar needs no new bundle. */
+    File app(String arch, String config) throws Exception {
         dir.mkdirs();
         var app = new File(dir, displayName + ".app");
         deleteTree(app.toPath());
@@ -78,7 +81,6 @@ final class MacOutputs {
         var exe = new File(macos, name);
         Files.write(exe.toPath(), MachOStamper.stamp(jr(arch), config));
         executable(exe.toPath());
-        if (jar != null) Files.copy(jar.toPath(), new File(resources, jar.getName()).toPath());
         String iconFile = null;
         if (icon != null) {
             iconFile = name + ".icns";
@@ -126,12 +128,18 @@ final class MacOutputs {
         entry(b, "LSMinimumSystemVersion", minimumSystemVersion);
         // PRP-11: without this, an Apple-silicon Mac may start the bundle under Rosetta, and everything it starts too
         b.append("  <key>LSArchitecturePriority</key>\n  <array>\n    <string>arm64</string>\n    <string>x86_64</string>\n  </array>\n");
-        b.append("  <key>NSHighResolutionCapable</key>\n  <true/>\n");
+        if (!extraPlist.containsKey("NSHighResolutionCapable")) b.append("  <key>NSHighResolutionCapable</key>\n  <true/>\n");
+        extraPlist.forEach((k, v) -> {
+            b.append("  <key>").append(xml(k)).append("</key>\n");
+            b.append(v.equals("true") || v.equals("false") ? "  <" + v + "/>\n" : "  <string>" + xml(v) + "</string>\n");
+        });
         b.append("</dict>\n</plist>\n");
         return b.toString();
     }
 
-    private static void entry(StringBuilder b, String key, String value) {
+    /** A built-in string entry, unless the build supplied the same key in macosInfoPlist. */
+    private void entry(StringBuilder b, String key, String value) {
+        if (extraPlist.containsKey(key)) return;
         b.append("  <key>").append(key).append("</key>\n  <string>").append(xml(value)).append("</string>\n");
     }
 

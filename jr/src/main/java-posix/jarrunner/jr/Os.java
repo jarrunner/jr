@@ -28,6 +28,14 @@ final class Os {
         return null;
     }
 
+    /** The user's cache folder ($XDG_CACHE_HOME, else ~/.cache), or null without HOME. */
+    static String userCacheDir() {
+        var xdg = Cstr.readEnv("XDG_CACHE_HOME");
+        if (xdg != null && xdg.startsWith("/")) return xdg;
+        var home = Cstr.readEnv("HOME");
+        return home == null || home.isEmpty() ? null : home + "/.cache";
+    }
+
     /** macOS only (the Dock name and icon inside an .app); nothing on Linux. */
     static void bundleVmArgs(java.util.List<String> out) {
     }
