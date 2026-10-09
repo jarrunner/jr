@@ -3,3 +3,7 @@
 # interpreter" (PRP-11 hit this on a Mac).
 *.sh text eol=lf
 *.h  text eol=lf
+
+# Files baked into the exes (the application manifest): one byte sequence on every machine, or the stamped exe
+# depends on how git checked the file out (PRP-37 found a CRLF checkout changing jr.exe).
+*.manifest text eol=lf
