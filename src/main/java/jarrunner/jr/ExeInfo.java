@@ -2,21 +2,16 @@ package jarrunner.jr;
 
 import static jarrunner.jr.N.*;
 
-/** This executable's own path/name via GetModuleFileNameW - used to find the sibling .jrc file
- *  and for display purposes, mirroring launcher.c's getExeBaseName/getExeFullPathWithoutExt. */
+/** This executable's own path/name via GetModuleFileNameW, for display, naming and reading its own
+ *  resources, mirroring launcher.c's getExeBaseName. */
 public final class ExeInfo {
     private ExeInfo() {}
-
-    public static String fullPathNoExt() {
-        return stripExeExt(fullPath());
-    }
 
     public static String baseNameNoExt() {
         return stripExeExt(Paths.fileNameOf(fullPath()));
     }
 
-    /** The full path, WITH its .exe extension - resedit.c's reRun (-Xjr:make) needs this one, unlike
-     *  every other caller here which wants the .jrc-sibling form without it. */
+    /** The full path, WITH its .exe extension. */
     public static String fullPath() {
         if (fullPath == null) {
             fullPath = memScoped(() -> {

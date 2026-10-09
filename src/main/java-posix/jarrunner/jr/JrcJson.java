@@ -70,7 +70,7 @@ public final class JrcJson {
         if (c.sources.isEmpty() && lastPath != null) c.applyKey("java.args", "-jar " + quote(lastPath));
     }
 
-    /** A string, number or boolean value as the text a .jrc line would carry. */
+    /** A string, number or boolean value as the text Config.applyKey takes. */
     private static void text(Config c, String key, JsonValue v) {
         if (v == null) return;
         var t = v.str() != null ? v.str() : v.num() != null ? v.num() : v.bool() == 1 ? "true" : v.bool() == 0 ? "false" : null;

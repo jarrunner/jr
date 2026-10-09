@@ -41,7 +41,7 @@ The packed exe unpacks itself in memory on every launch. That costs about 6 ms (
 Don't use a packed jr.exe as the template for `-Xjr:make` either. Keep the unpacked one for that.
 
 ```batch
-jr.exe -Xjr:make=myapp.exe -Xjr:icon=myapp.ico -Xjr:resource.RCDATA.JRC=myapp.jrc
+jr.exe -Xjr:make=myapp.exe -Xjr:icon=myapp.ico -Xjr:resource.RCDATA.JRC=myapp.jrc.json
 upx --best --lzma myapp.exe
 ```
 

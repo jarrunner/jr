@@ -23,7 +23,7 @@ final class Os {
     }
 
     /** The app config embedded in this binary (PRP-36), or null. Only the macOS build has an embedded config
-     *  so far (a __DATA,__jrc section); on Linux it is always null and a sibling .jrc is read. */
+     *  so far (a __DATA,__jrc section); on Linux it is always null, so jr runs only as jr <jar>. */
     static String embeddedConfig() {
         return null;
     }

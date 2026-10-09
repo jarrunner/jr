@@ -7,10 +7,9 @@ import java.util.List;
  * jr's own command-line options, in the style of java's -X options, mirroring launcher.c's
  * parseJrOptions/oldFlagReplacement:
  *
- *   -Xjr:&lt;key&gt;=&lt;value&gt;            any .jrc key, overriding the .jrc (-Xjr:jvm=dll)
+ *   -Xjr:&lt;key&gt;=&lt;value&gt;            any config key, overriding the baked-in config (-Xjr:jvm=dll)
  *   -Xjr:yes                      don't ask before auto-installing Java
  *   -Xjr:help                     show help
- *   -Xjr:create-config[=&lt;jar&gt;]    write a sample &lt;exe&gt;.jrc
  *
  * Only a LEADING run of -Xjr: tokens belongs to jr. Parsing stops at the first token that is not
  * one, and everything from there on goes to the app exactly as typed - unlike launcher.c, which had
@@ -20,8 +19,6 @@ import java.util.List;
 public final class JrOptions {
     public boolean assumeYes;
     public boolean help;
-    public boolean createConfig;
-    public String createConfigJar = "";
     public String jsonDump; // -Xjr:json-dump=<file>: parse with jr's own reader, print canonical JSON
     public String checkConfig; // -Xjr:check-config=<file>: the pre-bake jrc-json check, without baking
     public int update; // 1 = -Xjr:update-check, 2 = -Xjr:update (PRP-30)
@@ -66,24 +63,22 @@ public final class JrOptions {
             } else if (opt.equals("help")) {
                 opts.help = true;
             } else if (opt.equals("create-config") || opt.startsWith("create-config=")) {
-                opts.createConfig = true;
-                if (opt.startsWith("create-config=")) {
-                    opts.createConfigJar = opt.substring("create-config=".length());
-                }
+                opts.error = NO_CREATE_CONFIG;
+                break;
             } else {
                 var eq = opt.indexOf('=');
                 if (eq >= 0) {
                     var key = opt.substring(0, eq);
                     var value = opt.substring(eq + 1);
                     if (!config.applyKey(key, value)) {
-                        opts.error = "Unknown jr option: -Xjr:" + key + "=...\n\nThe keys are the same as in the "
-                                + ".jrc file (vm.args, java.args, app.args, aot, jvm, java.home, java.version, "
-                                + "java.autoinstall, log.file, log.level, log.overwrite).";
+                        opts.error = "Unknown jr option: -Xjr:" + key + "=...\n\nThe config keys include "
+                                + "vm.args, java.args, app.args, aot, jvm, java.home, java.version, "
+                                + "java.autoinstall, log.file, log.level and log.overwrite.";
                         break;
                     }
                 } else {
                     opts.error = "Unknown jr option: -Xjr:" + opt + "\n\nOptions: -Xjr:<key>=<value>, -Xjr:yes, "
-                            + "-Xjr:help, -Xjr:create-config[=<jar>]";
+                            + "-Xjr:help";
                     break;
                 }
             }
@@ -114,10 +109,14 @@ public final class JrOptions {
         return null;
     }
 
+    /** -Xjr:create-config wrote an old key=value .jrc beside the exe, which jr no longer reads (PRP-38). */
+    static final String NO_CREATE_CONFIG = "-Xjr:create-config is gone: jr no longer reads a .jrc file beside the exe.\n\n"
+            + "To give an app its own exe with its config baked in, build it with jr-maven-plugin:\n" + Config.GUIDE;
+
     private static final String[][] OLD_FLAGS = {
         {"--jvm-dll", "-Xjr:jvm=dll"}, {"--jvm-exe", "-Xjr:jvm=exe"},
         {"--enable-aot", "-Xjr:aot=true"}, {"--disable-aot", "-Xjr:aot=false"},
         {"--java-home", "-Xjr:java.home=PATH"}, {"--yes", "-Xjr:yes"},
-        {"--create-config", "-Xjr:create-config[=<jar>]"},
+        {"--create-config", "jr-maven-plugin (" + Config.GUIDE + ")"},
     };
 }

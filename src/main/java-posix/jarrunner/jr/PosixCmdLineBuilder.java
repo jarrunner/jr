@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Assembles the java argv (excluding the java binary itself, which ProcessLauncher.launch takes
- *  separately) - config mode (a .jrc was found and carries java.args) or traditional mode (first
+ *  separately) - config mode (the config carries java.args) or traditional mode (first
  *  arg is the jar), mirroring the Windows CmdLineBuilder. Builds a real token LIST rather than a
  *  quoted string - there is no WinQuote-style requoting step here, and none is needed: each
  *  argument keeps its own identity all the way to posix_spawn's argv[]. */
@@ -88,7 +88,7 @@ public final class PosixCmdLineBuilder {
         }
     }
 
-    /** Splits a raw .jrc string (vm.args/java.args/app.args) into arguments on whitespace, where double
+    /** Splits a raw config string (vm.args/java.args/app.args) into arguments on whitespace, where double
      *  quotes group (and are removed): java.args=-jar "/home/me/My Apps/app.jar" is two arguments, as on
      *  Windows. Before PRP-34 the quotes were passed on literally and the path was cut at its first space. */
     private static void addWhitespaceSplit(List<String> out, String s) {

@@ -26,14 +26,18 @@ public final class ReRawResource {
     }
 
     /** RCDATA/JRC is jr's own config: a jrc-json is sanity-checked before it is baked, and a
-     *  broken one is refused (PRP-30). A key=value .jrc is baked as before. */
+     *  broken one is refused (PRP-30). Anything else, such as an old key=value .jrc, is refused
+     *  too, since jr reads nothing else (PRP-38). */
     private static void checkJrcJson(ReStamp.RawResource raw, StringBuilder report) throws ReError {
         if (!AsciiStr.equalsIgnoreCase(raw.type(), "RCDATA") || !AsciiStr.equalsIgnoreCase(raw.name(), "JRC")) {
             return;
         }
         var text = FileIo.readAll(raw.file());
-        if (text == null || !JrcJson.looksLikeJson(text)) {
-            return;
+        if (text == null) {
+            return; // queue reports the unreadable file
+        }
+        if (!JrcJson.looksLikeJson(text)) {
+            throw new ReError("Not baking " + raw.file() + ": the config must be a jrc-json (see " + Config.GUIDE + ")");
         }
         var result = JrcCheck.check(text);
         if (JrcCheck.hasErrors(result)) {

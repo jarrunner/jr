@@ -35,7 +35,7 @@ public final class JavaInstall {
      *  check to "the newest cached &gt;= majorVersion" (java.version=NN+); reason, when non-null,
      *  is the "wrong version found" message shown ahead of the install prompt instead of the
      *  generic "Java was not found." packageType is "jdk" or "jre" (PRP-24: jre is the actual
-     *  default - most .jrc targets only ever RUN java and never need javac/jar/etc, and a JRE zip
+     *  default - most apps only ever RUN java and never need javac/jar/etc, and a JRE zip
      *  is roughly a third the size - see JrOptions/Config for where the default is applied). */
     public static String tryInstall(int majorVersion, boolean atLeast, String reason, boolean hasConsole,
             boolean guiMode, boolean assumeYes, String cacheRootOverride, String packageType) {

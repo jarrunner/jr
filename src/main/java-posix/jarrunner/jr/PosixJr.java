@@ -7,7 +7,7 @@ import static jarrunner.jr.N.*;
  * Deliberately NOT full parity with the Windows Jr.java: JDK auto-install, the jvm-dll in-process
  * launch mode (no POSIX equivalent - Windows-only trick), and PE resource-editing/signing
  * (-Xjr:make/edit/icon/...) are all out of scope here, per the platform decision recorded in
- * CLAUDE.md and PRP-21's scope note. What this covers: .jrc config, -Xjr: overrides, AOT cache
+ * CLAUDE.md and PRP-21's scope note. What this covers: the baked-in config, -Xjr: overrides, AOT cache
  * naming/reuse/cleanup, java.version matching, PATH/--java.home java lookup, and a real
  * posix_spawn launch with the exit code passed straight back - the same feature slice
  * launcher.c itself started from (see prp/01, prp/02) before AOT/config/auto-install were added
@@ -22,15 +22,14 @@ public final class PosixJr {
             Buf.alloc(4).getInt(2); // 4 bytes at offset 2 of a 4-byte buffer: must throw
         }
         var exeBaseName = ExeInfo.baseNameNoExt();
-        var configPath = ExeInfo.fullPathNoExt() + ".jrc";
 
-        var config = Config.load(configPath);
+        var config = Config.load();
         var opts = JrOptions.parse(args, config);
 
         if (!config.logFile.isBlank()) {
             Log.init(config.logFile, config.logOverwrite);
             Log.info("Launcher started: " + exeBaseName);
-            Log.info("Config file: " + configPath + " (" + (config.found ? "found" : "not found") + ")");
+            Log.info("Config: " + (config.embedded ? "embedded" : "none baked in"));
         }
 
         if (opts.error != null) {
@@ -40,23 +39,10 @@ public final class PosixJr {
             return;
         }
 
-        if (opts.createConfig) {
-            var ok = Config.createSample(configPath, opts.createConfigJar);
-            if (ok) {
-                Stderr.out("Wrote " + configPath + "\n");
-            } else {
-                Stderr.println("Could not write " + configPath);
-            }
-            Log.close();
-            PosixApi.exit(ok ? 0 : 1);
-            return;
-        }
-
         var javaExeName = "java";
         if (opts.help || (config.javaArgs.isBlank() && !config.hasRunTarget() && opts.appArgs.isEmpty())) {
             var displayJavaPath = JavaFinder.findInPath(javaExeName);
-            Help.show(exeBaseName, javaExeName, displayJavaPath,
-                    config.embedded ? "embedded in this binary (__DATA,__jrc)" : configPath, config.found);
+            Help.show(exeBaseName, javaExeName, displayJavaPath, config.embedded);
             Log.close();
             PosixApi.exit(opts.help ? 0 : 1);
             return;
@@ -73,7 +59,7 @@ public final class PosixJr {
         // anything else looks at java.args, as on Windows, so AOT naming etc. work unchanged.
         if (config.hasRunTarget()) {
             if (!config.javaArgs.isBlank()) {
-                Ui.error(true, "Invalid .jrc", "Set java.args or run.url/run.maven, not both.");
+                Ui.error(true, "Invalid jr Config", "Set java.args or run.url/run.maven, not both.");
                 Log.close();
                 PosixApi.exit(1);
                 return;

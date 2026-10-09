@@ -1,6 +1,6 @@
 package jarrunner.jr;
 
-/** The jrc-json form of the config (PRP-30): the same settings as a key=value .jrc, as JSON, so
+/** The jrc-json form of the config (PRP-30): jr's settings as JSON (once a key=value .jrc), so
  *  the maven plugin can write it and the JVM side can read it with the same classes. Detected by
  *  its first character; mapped onto Config.applyKey so every launch path is unchanged. Unknown
  *  keys are ignored here and reported by JrcCheck before baking. */
@@ -76,7 +76,7 @@ public final class JrcJson {
         text(c, "aot", r.get("aot"));
     }
 
-    /** A string, number or boolean value as the text a .jrc line would carry. */
+    /** A string, number or boolean value as the text Config.applyKey takes. */
     private static void text(Config c, String key, JsonValue v) {
         if (v == null) return;
         var t = v.str() != null ? v.str() : v.num() != null ? v.num() : v.bool() == 1 ? "true" : v.bool() == 0 ? "false" : null;

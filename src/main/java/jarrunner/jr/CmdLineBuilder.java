@@ -4,7 +4,7 @@ import java.util.List;
 
 import static jarrunner.jr.N.*;
 
-/** Assembles the final java invocation command line - config mode (a .jrc was found and carries
+/** Assembles the final java invocation command line - config mode (the config carries
  *  java.args) or traditional mode (first arg is the jar) - mirroring launcher.c's main() tail. */
 public final class CmdLineBuilder {
     private CmdLineBuilder() {}
@@ -32,7 +32,7 @@ public final class CmdLineBuilder {
         // extraArgs came through TeaVM's already-split args[], which has thrown away whatever
         // quoting the user originally typed - requote each token so an embedded space survives as
         // ONE argument on the far side too (the "two words" bug - see 20-prp-teavm_port_catches_up_
-        // with_the_c_launcher.md item 5). config.javaArgs/appArgs above are raw .jrc strings, never
+        // with_the_c_launcher.md item 5). config.javaArgs/appArgs above are raw config strings, never
         // split, so they are spliced in verbatim, exactly as launcher.c does.
         for (var a : extraArgs) {
             sb.append(' ').append(WinQuote.quote(a));

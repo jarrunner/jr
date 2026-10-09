@@ -3,15 +3,15 @@ package jarrunner.jr;
 import static jarrunner.jr.N.*;
 
 /**
- * PRP-24: a .jrc can name its jar remotely instead of by path - {@code run.url=<https url>} (a
+ * PRP-24: a config can name its jar remotely instead of by path - {@code run.url=<https url>} (a
  * GitHub release asset, or any direct link) or {@code run.maven=group:artifact:version[:classifier]}
- * (Maven Central) - pinned by a mandatory {@code run.sha256=<hex>}. Combined with an embedded .jrc
+ * (Maven Central) - pinned by a mandatory {@code run.sha256=<hex>}. Combined with an embedded config
  * (Config.loadEmbedded) and the JRE auto-install, a single exe carries nothing but itself and
  * fetches the app and a Java on first run.
  *
  * The hash is required rather than fetched from beside the artifact: this downloads code and runs
  * it, and a hash served by the same host as the jar proves nothing if that host is compromised.
- * The .jrc author pins what they built.
+ * The config author pins what they built.
  *
  * Where the jar lives: run.maven uses the standard ~/.m2/repository layout (PRP-26), run.url uses
  * jr's own %USERPROFILE%\.jr\cache\jars\&lt;sha256&gt;\ - see targetPath. Downloads go to a .part file
@@ -33,7 +33,7 @@ public final class RemoteJar {
     public static String resolve(Config config, boolean hasConsole, boolean guiMode) {
         if (config.sources.isEmpty()) {
             if (!config.runUrl.isEmpty() && !config.runMaven.isEmpty()) {
-                return fail(hasConsole, "Set run.url or run.maven in the .jrc, not both.");
+                return fail(hasConsole, "Set run.url or run.maven in the config, not both.");
             }
             var jar = one(config, config.runUrl, config.runMaven, hasConsole, guiMode);
             return jar != null ? jar : fail(hasConsole, error);

@@ -3,7 +3,7 @@ package jarrunner.jr;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Hand-rolled line splitter, shared by Config (.jrc parsing) and JavaFinder (JDK release-file
+/** Hand-rolled line splitter, shared by JavaFinder (JDK release-file
  *  parsing) - avoids String.split() pulling java.util.regex.Pattern into the TeaVM build (a real
  *  size contributor - see 11-prp.01.size-experiments.md) just for a literal "\n" separator. */
 public final class Lines {

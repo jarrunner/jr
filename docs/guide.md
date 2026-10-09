@@ -92,6 +92,6 @@ jr.exe -Xjr:make=myapp.exe -Xjr:icon=app.ico -Xjr:version=1.0.0.0 -Xjr:version.F
 
 The config is a jrc-json file. The easiest way to get a correct one is to let the plugin write it once (it keeps a copy as `target/jr/<name>.jrc.json`) and start from that.
 
-## The older way: a `.jrc` file beside the exe
+## Upgrading from a `.jrc` file
 
-Before configs were baked in, jr read its settings from a `key=value` file named after the exe (`myapp.jrc` beside `myapp.exe`), and `-Xjr:create-config` still writes one. jr reads such a file only when the exe has no config baked in, and that support will be removed. New apps should use the plugin.
+jr 1.2 and earlier also read a `key=value` file named after the exe (`myapp.jrc` beside `myapp.exe`), and `-Xjr:create-config` wrote one. jr 1.3.0 reads neither: a file beside the exe is ignored, and `-Xjr:create-config` is an error. Exes made from an older jr keep the behaviour of the jr they were made from. To move an app on, build its exe with the plugin (part 2 above) and give the `.jrc` keys to the plugin's parameters: `vm.args` becomes `vmArgs`, `java.version` becomes `javaVersion`, `jvm` becomes `jvmMode`, and so on.

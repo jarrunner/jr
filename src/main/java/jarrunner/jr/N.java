@@ -196,7 +196,7 @@ public final class N {
     }
 
     /** Text from bytes, as read from a file, a resource or the network: a UTF-8 BOM is dropped; valid UTF-8 is
-     *  read as UTF-8, and anything else in the ANSI code page (an older Notepad's "ANSI" .jrc, or what a JVM
+     *  read as UTF-8, and anything else in the ANSI code page (an older Notepad's "ANSI" file, or what a JVM
      *  printed to a redirected stderr), so a stray byte never turns a whole file into U+FFFD. */
     public static String text(Address p, int n) {
         if (n >= 3 && (p.getByte() & 0xFF) == 0xEF && (p.add(1).getByte() & 0xFF) == 0xBB && (p.add(2).getByte() & 0xFF) == 0xBF) {

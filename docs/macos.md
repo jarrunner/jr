@@ -12,13 +12,14 @@ Use the installer (or `curl`) rather than a browser download. jr is signed ad ho
 
 ## Use
 
-Same as on Linux: copy `jr` to the name of your app and put `<name>.jrc` beside it:
+Run any jar with it, the same as on Windows:
 
 ```sh
-cp ~/.local/bin/jr myapp
-printf 'java.args=-jar /path/to/myapp.jar\n' > myapp.jrc
-./myapp args...
+jr /path/to/myapp.jar args...
+jr -Xjr:java.home=/Library/Java/JavaVirtualMachines/jdk-25.jdk/Contents/Home myapp.jar
 ```
+
+To give an app its own binary, with its config embedded, build it with jr-maven-plugin (below). jr reads nothing from a file beside the binary.
 
 The release assets are `jr-macos` (universal), `jr-macos-arm64` and `jr-macos-x86_64` (thin), and `install.sh`.
 

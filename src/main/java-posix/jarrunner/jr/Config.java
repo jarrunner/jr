@@ -1,10 +1,8 @@
 package jarrunner.jr;
 
-/** The .jrc config file (WinRun4J/jpackage-style key=value), mirroring launcher.c's LauncherConfig.
- *  Always returned non-null from load() (defaults apply whether or not a .jrc exists), matching
- *  launcher.c's initConfig/useConfig split - the "found" field carries what useConfig used to. */
+/** jr's settings: the jrc-json embedded in this binary (PRP-36), with -Xjr:key=value overrides on top.
+ *  Always returned non-null from load(); with nothing embedded, the defaults apply. */
 public class Config {
-    boolean found = false;
     String vmArgs = "";
     String javaArgs = "";
     String appArgs = "";
@@ -19,7 +17,7 @@ public class Config {
     String javaRangeError;
     int javaAutoInstall = -1; // -1 = not specified, use built-in default (enabled)
     // PRP-36: the jrc-json the maven plugin embeds, the same keys as the Windows Config
-    boolean embedded = false; // found, but read from this binary's own __DATA,__jrc section, not a file
+    boolean embedded = false; // a config is embedded in this binary (its __DATA,__jrc section)
     String loadError;         // a config that could not be read; reported before anything runs
     String javaType = "";     // read for parity; this build does not download Java
     String runUrl = "";       // run.url / run.maven / run.sha256 - a remote jar, see RemoteJar
@@ -40,47 +38,26 @@ public class Config {
         return !runUrl.isEmpty() || !runMaven.isEmpty() || !sources.isEmpty();
     }
 
-    /** As on Windows (PRP-30): an embedded config wins and a file beside the binary is then ignored, so
-     *  nobody can change an app's behaviour by planting a file next to it; a jrc-json is read only when
-     *  embedded; a key=value .jrc on disk is still read for a binary with nothing embedded. */
-    public static Config load(String path) {
+    /** Where to send someone who needs a config: jr-maven-plugin, which bakes one in. */
+    static final String GUIDE = "https://github.com/jarrunner/jr/blob/main/docs/guide.md";
+
+    /** The config embedded in this binary, or the defaults when there is none. As on Windows, jr reads
+     *  nothing from disk (PRP-38): nobody can change an app's behaviour by planting a file next to it. */
+    public static Config load() {
         var config = new Config();
         var text = Os.embeddedConfig();
-        config.embedded = text != null;
-        if (text == null) {
-            text = FileIo.readAll(path);
-        }
         if (text == null) {
             return config;
         }
-        config.found = true;
-        Log.info("Loading config: " + (config.embedded ? "embedded __DATA,__jrc section" : path));
-        if (JrcJson.looksLikeJson(text)) {
-            config.loadError = config.embedded ? JrcJson.load(text, config)
-                    : "A jrc-json is read only when it is embedded in the binary; build the app with jr-maven-plugin.";
-            return config;
-        }
-        for (var rawLine : Lines.split(text)) {
-            var line = rawLine.strip();
-            if (line.isEmpty() || line.startsWith("#")) {
-                continue;
-            }
-            var eq = line.indexOf('=');
-            if (eq < 0) {
-                continue;
-            }
-            var key = line.substring(0, eq).strip();
-            var value = line.substring(eq + 1).strip();
-            // Unknown keys are ignored here (a .jrc may be shared with a newer jr); on the
-            // command line (-Xjr:key=value) they are an error - see JrOptions.parse.
-            config.applyKey(key, value);
-        }
+        config.embedded = true;
+        Log.info("Loading config: embedded __DATA,__jrc section");
+        config.loadError = JrcJson.looksLikeJson(text) ? JrcJson.load(text, config)
+                : "The config embedded in this binary is not a jrc-json. Rebuild it with jr-maven-plugin:\n" + GUIDE;
         return config;
     }
 
-    /** Applies one setting - the .jrc file and -Xjr:key=value command-line overrides both come
-     *  through here, so every .jrc key can also be given on the command line. Returns false for an
-     *  unknown key, which JrOptions.parse turns into a command-line error (a .jrc simply ignores it). */
+    /** Applies one setting from the jrc-json or a -Xjr:key=value command-line override. Returns false
+     *  for an unknown key, which JrOptions.parse turns into a command-line error. */
     boolean applyKey(String key, String value) {
         switch (AsciiStr.lower(key)) {
             case "vm.args" -> { vmArgs = value; Log.info("vm.args=" + value); }
@@ -145,43 +122,5 @@ public class Config {
             case "exe", "javaexe", "java.exe", "process", "external" -> 0;
             default -> -1;
         };
-    }
-
-    public static boolean createSample(String configPath, String jarPath) {
-        var sb = new StringBuilder();
-        sb.append("# Java Runner Configuration (.jrc format)\n");
-        sb.append("# Lines starting with # are comments\n");
-        sb.append("# Format follows WinRun4J/jpackage conventions\n");
-        sb.append("# Any key can also be overridden for one run on the command line, before\n");
-        sb.append("# the app's own arguments: myapp.exe -Xjr:jvm=dll -Xjr:aot=false [app args]\n\n");
-        sb.append("# VM arguments (passed before -jar, launcher auto-injects AOT flags here)\n");
-        sb.append("#vm.args=-Xmx512m -Xms128m -Dapp.mode=production\n\n");
-        sb.append("# Java arguments (everything after VM args: -jar, -cp, class name, etc.)\n");
-        if (jarPath != null && !jarPath.isEmpty()) {
-            sb.append("java.args=-jar ").append(jarPath).append("\n\n");
-        } else {
-            sb.append("#java.args=-jar yourapp.jar\n");
-            sb.append("# Or for classpath: java.args=-cp lib/*:app.jar com.example.Main\n\n");
-        }
-        sb.append("# Application arguments (passed to your main method)\n");
-        sb.append("#app.args=--config myconfig.xml --verbose\n\n");
-        sb.append("# AOT cache control (optional, default: true)\n");
-        sb.append("#aot=true\n\n");
-        sb.append("# How the JVM is started (optional, default: exe)\n");
-        sb.append("#   exe - spawn java.exe/javaw.exe as a child process\n");
-        sb.append("#   dll - load jvm.dll into this process, so the app runs under\n");
-        sb.append("#         this executable's own name and can be killed on its own\n");
-        sb.append("#jvm=dll\n\n");
-        sb.append("# Debug logging (optional, only used when specified)\n");
-        sb.append("#log.file=launcher.log\n");
-        sb.append("#log.level=info\n");
-        sb.append("#log.overwrite=false\n\n");
-        sb.append("# Java version: java.version=21 (or 21+) means at least 21, 21 preferred; or java.min / java.preferred /\n");
-        sb.append("# java.max. jr uses an installed Java of exactly the preferred version, else the nearest within\n");
-        sb.append("# min/max (no download on this build). AOT (on unless aot=false) needs Java 25.\n");
-        sb.append("#java.version=25\n\n");
-        sb.append("# Use this JDK and nothing else (no PATH lookup, no version check, no install)\n");
-        sb.append("#java.home=C:\\Java\\jdk-25\n");
-        return FileIo.writeAll(configPath, sb.toString());
     }
 }

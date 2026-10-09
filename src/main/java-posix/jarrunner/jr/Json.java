@@ -1,7 +1,7 @@
 package jarrunner.jr;
 
 /** Tiny targeted JSON field extraction for the two Foojay Disco API responses JavaInstall reads -
- *  not a general parser, matches Config's own hand-rolled key=value parsing style. Pure Java
+ *  not a general parser. Pure Java
  *  string logic, no native interop needed at all. */
 public final class Json {
     private Json() {}

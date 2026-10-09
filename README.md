@@ -9,7 +9,7 @@ A small Windows launcher (about 610 KB, nothing to install) that makes JAR files
 1. **Execute JARs like native .exe files** - Set up Windows file association and PATHEXT, double-click JARs or run them by name from command line
 2. **Automatic AOT cache (JDK 25+)** - 90% faster startup (20-30ms vs 200-300ms) with zero configuration
 3. **Smart console detection** - Automatically uses java.exe (console) or javaw.exe (GUI) based on how you launch it
-4. **Two modes**: Works as generic JAR launcher (no config needed) OR as dedicated app launcher with .jrc config files
+4. **Two modes**: Works as generic JAR launcher (no config needed) OR as your app's own exe, its config baked in by [jr-maven-plugin](docs/guide.md)
 5. **Your app gets its own process name** - with `jvm=dll` the JVM runs inside the launcher, so Task Manager shows `myapp.exe` instead of another anonymous `java.exe`
 6. **Small, nothing to install** - about 610 KB (about 160 KB if you pack it with UPX, see [docs/upx.md](docs/upx.md)), no VC++ Redistributable, no bundled JRE, vs 50+ MB (jpackage)
 
@@ -17,14 +17,14 @@ A small Windows launcher (about 610 KB, nothing to install) that makes JAR files
 - Automatic console/GUI detection (no manual configuration like Launch4j/WinRun4J)
 - JDK 25 AOT cache support out of box (creates, uses, and cleans up cache automatically)
 - Optional in-process JVM (`jvm=dll`) so each app is its own killable, nameable process
-- Works without any config file (traditional mode) or with simple .jrc config (config mode)
+- Works without any config (traditional mode) or with a config baked into the app's own exe (config mode)
 - Command-line arguments override config settings
 - Debug logging (opt-in only)
-- Finds Java from PATH or set `java.home` (`.jrc`, or `-Xjr:java.home=` for one run) to use a specific JDK
+- Finds Java from PATH or set `java.home` (in the app's config, or `-Xjr:java.home=` for one run) to use a specific JDK
 
 ## macOS and Linux
 
-The Java code that makes up jr also compiles for POSIX systems. The Linux build runs end to end (tested under WSL, with a real JDK), and a macOS build links but has not yet run on a Mac. Neither is released yet: making jr work properly on the Mac is the current focus (see [What comes next](#what-comes-next)). Linux is built and tested mainly because it is the closest thing to a Mac that can be run on the development machine. The `.jrc` format is the same on every platform.
+The Java code that makes up jr also compiles for POSIX systems. The Linux build runs end to end (tested under WSL, with a real JDK), and a macOS build links but has not yet run on a Mac. Neither is released yet: making jr work properly on the Mac is the current focus (see [What comes next](#what-comes-next)). Linux is built and tested mainly because it is the closest thing to a Mac that can be run on the development machine. The baked-in config (a jrc-json) is the same on every platform.
 
 ## Download
 
@@ -166,7 +166,6 @@ myapp.exe [-Xjr:options] [app args...]          (an app's own exe, its config ba
 
 - `-Xjr:<key>=<value>` sets any config key for this run, overriding the config: `-Xjr:jvm=dll`, `-Xjr:aot=false`, `-Xjr:java.home=C:\Java\jdk-25`, `-Xjr:java.version=25+`. Quote values with spaces either way: `"-Xjr:java.home=C:\Program Files\Java\jdk-25"` or `-Xjr:java.home="C:\Program Files\Java\jdk-25"`.
 - `-Xjr:yes` don't ask before auto-installing Java.
-- `-Xjr:create-config[=<jar>]` write an old-style `<exe>.jrc` file (see Mode 2 below).
 - `-Xjr:help` show help.
 
 jr reads only the leading run of `-Xjr:` tokens and stops at the first token that is not one. Everything from there on goes to the app exactly as typed, so an app's own `--yes`, `-jar` or even `-Xjr:...` argument is never taken for a jr option and never removed. An unknown `-Xjr:` option is an error, not silently ignored.
@@ -205,125 +204,49 @@ jr.exe -Xjr:aot=false -Xjr:java.home=C:\Java\jdk-25 myapp.jar --verbose
 - When run from terminal → runs with `java.exe` (console output visible)
 - AOT cache enabled by default for faster subsequent launches
 
-### Mode 2 (older): a .jrc Configuration File beside the exe
+### Mode 2: Your App's Own exe, Its Config Baked In
 
-**For a new app, use [jr-maven-plugin](docs/guide.md) instead:** it bakes the config into the app's own exe, which a file beside it cannot override. jr reads a `.jrc` file only when the exe has no config baked in, and that support will be removed. This section stays for exes already set up this way.
-
-For applications you run frequently, create a configuration file:
-
-#### Step 1: Create Configuration
+For an app you ship or run often, [jr-maven-plugin](docs/guide.md) builds `myapp.exe`: a copy of jr with your app's name, icon and version, and the app's config baked into it as a jrc-json. Every `mvn package` builds it again, on your machine or in CI.
 
 ```batch
-# Generate template config file
-jr.exe -Xjr:create-config=myapp.jar
-
-# This creates jr.jrc in the same directory
-```
-
-#### Step 2: Rename Executable (Optional)
-
-```batch
-# Rename jr.exe to match your application
-copy jr.exe myapp.exe
-```
-
-#### Step 3: Customize Configuration
-
-The generated `myapp.jrc` file (or `jr.jrc` if not renamed):
-
-```properties
-# Java Runner Configuration (.jrc format)
-# Lines starting with # are comments
-# Format follows WinRun4J/jpackage conventions
-
-# VM arguments (passed before -jar, launcher auto-injects AOT flags here)
-vm.args=-Xmx512m -Xms128m -Dapp.mode=production
-
-# Java arguments (everything after VM args: -jar, -cp, class name, etc.)
-java.args=-jar myapp.jar
-
-# Application arguments (passed to your main method)
-app.args=--config myconfig.xml --verbose
-
-# AOT cache control (optional, default: true)
-aot=true
-
-# How the JVM is started (optional, default: exe)
-#   exe - spawn java.exe/javaw.exe as a child process
-#   dll - load jvm.dll into this process, so the app runs under this
-#         executable's own name and can be killed on its own
-jvm=dll
-
-# Debug logging (optional, only used when specified)
-log.file=myapp.log
-log.level=info
-log.overwrite=false
-```
-
-#### Step 4: Run
-
-```batch
-# Simply run the renamed executable
+# Simply run the app's exe
 myapp.exe
 
-# Command-line arguments are appended to config settings
+# Command-line arguments are appended to the config's app.args
 myapp.exe --extra-arg value
 ```
 
-### Configuration File Details
+The config cannot be overridden by a file placed beside the exe. jr 1.2 and earlier also read a `key=value` file named after the exe (`myapp.jrc`); jr 1.3.0 and later do not. An exe built with an older jr keeps the behaviour of the jr it was built from, so existing exes are unaffected until they are rebuilt.
 
-#### Supported Keys
+### Config Keys
+
+These are the settings an app's config carries. In jr-maven-plugin each has a parameter of its own (see [its README](https://github.com/jarrunner/jr-maven-plugin#parameters)), and any of them can be set for one run with `-Xjr:<key>=<value>`.
 
 | Key | Description | Example |
 |-----|-------------|---------|
 | `vm.args` | JVM arguments (before `-jar`) | `-Xmx512m -Xms128m -Dkey=value` |
-| `java.args` | Java arguments (`-jar`, `-cp`, main class) | `-jar myapp.jar` or `-cp lib/*:app.jar com.Main` |
+| `java.args` | Java arguments (`-jar`, `-cp`, main class) | `-jar myapp.jar` or `-cp lib/*;app.jar com.Main` |
 | `app.args` | Application arguments (after jar/class) | `--config app.xml --verbose` |
 | `aot` | Enable/disable AOT cache | `true` or `false` |
 | `jvm` | How the JVM is started | `exe` (default) or `dll` |
 | `log.file` | Debug log file path | `myapp.log` |
 | `log.level` | Log verbosity | `info`, `warning`, `error`, `none` |
 | `log.overwrite` | Overwrite log on each run | `true` or `false` (default: append) |
-| `java.version` | Required Java: `NN` = exactly NN, `NN+` = NN or newer (jbang's convention). A Java in PATH that doesn't match is treated as missing | `25`, `21+` (default: any Java; installs 25 if none) |
+| `java.version` | Required Java: `NN` and `NN+` both mean at least NN, with NN preferred | `25`, `21+` (default: any Java; installs 25 if none) |
+| `java.min`, `java.preferred`, `java.max` | The same, set separately (not together with `java.version`) | `21`, `25`, `25` |
+| `java.type` | What auto-install downloads | `jre` (default) or `jdk` |
 | `java.autoinstall` | Enable/disable auto-installing a missing JDK | `true` (default) or `false` |
 | `java.home` | Use exactly this JDK: no PATH lookup, no version check, no install | `C:\Java\jdk-25` |
-
-#### Complex Java Arguments Examples
-
-**With classpath:**
-```properties
-java.args=-cp lib/*;app.jar com.example.Main
-```
-
-**With module system:**
-```properties
-java.args=-p mods -m com.example.myapp/com.example.Main
-```
-
-**Multiple JARs:**
-```properties
-java.args=-cp app.jar;lib/dep1.jar;lib/dep2.jar com.example.Main
-```
 
 #### Priority System
 
 Settings are applied in this order (later overrides earlier):
-1. Config file defaults
-2. `.jrc` file settings
-3. Command-line arguments
+1. Built-in defaults
+2. The config baked into the exe
+3. Environment variables (`JR_JAVA_AUTOINSTALL`, `JR_ASSUME_YES`)
+4. `-Xjr:` options on the command line
 
-Example:
-```properties
-# In myapp.jrc
-app.args=--mode production
-```
-
-```batch
-# Running with additional args
-myapp.exe --debug
-
-# Final command will have: --mode production --debug
-```
+The app's own arguments are not overridden but appended: with `app.args` set to `--mode production` in the config, `myapp.exe --debug` runs the app with `--mode production --debug`.
 
 ### Launch Mode: One Process Per App (`jvm=dll`)
 
@@ -363,7 +286,7 @@ the real JDK launcher does the work, every `java.exe` feature is preserved:
 `--module`, `@argfiles`, `JDK_JAVA_OPTIONS`, AOT cache flags, exit codes,
 stdin/stdout/stderr and redirection.
 
-**Enable it per-application** in the `.jrc`, or per-invocation on the command
+**Enable it per-application** in the app's config (jr-maven-plugin's `jvmMode`), or per-invocation on the command
 line:
 
 ```batch
@@ -371,7 +294,7 @@ jr.exe -Xjr:jvm=dll myapp.jar        # force in-process
 jr.exe -Xjr:jvm=exe myapp.jar        # force child process (default)
 ```
 
-`-Xjr:` options override the `.jrc` setting.
+`-Xjr:` options override the app's config.
 
 **Notes:**
 - `jli.dll` is located next to the `java.exe`/`javaw.exe` that was resolved from
@@ -415,17 +338,13 @@ The launcher automatically manages AOT (Ahead-of-Time) cache files for JDK 25+:
 ```batch
 # Disable for a single run (command-line)
 jr.exe -Xjr:aot=false myapp.jar
-
-# Disable permanently (config file)
-aot=false
-
-# Enable explicitly (config file, overrides default)
-aot=true
 ```
+
+To disable it for good, set `aot=false` in the app's config (jr-maven-plugin's `<aot>false</aot>`).
 
 ### Automatic Java Installation
 
-If no Java is found (not on PATH, no `java.home`, no matching config), or the Java on PATH doesn't satisfy the `.jrc`'s `java.version`, jr offers to download one instead of just failing:
+If no Java is found (not on PATH, no `java.home`, no matching config), or the Java on PATH doesn't satisfy the config's `java.version`, jr offers to download one instead of just failing:
 
 ```batch
 # Normal use - asks first (console: Y/n prompt, GUI: Yes/No dialog)
@@ -442,23 +361,12 @@ jr.exe -Xjr:yes myapp.jar
 4. Extracts with the `tar.exe` already bundled with Windows (10 1803+) - no bundled archive library.
 5. Shows progress matching how jr was launched: a text progress bar in console mode, a small native progress window in GUI mode.
 
-This makes a shipped `jr.exe` + shaded jar + `.jrc` a genuinely standalone distributable - it works even on a machine with no JDK installed at all.
+This makes an app's own exe + its shaded jar a genuinely standalone distributable - it works even on a machine with no JDK installed at all.
 
-**Control it (`.jrc` file):**
-```properties
-# Required Java version (optional). Same convention as jbang's //JAVA line:
-#   25   exactly 25 - Java 23 or 26 on PATH is not accepted
-#   25+  25 or newer - Java 26 on PATH is accepted, 23 is not
-# When the Java on PATH doesn't satisfy it, jr looks in the jbang cache first
-# (for 25+, the newest cached version >= 25), and only then offers to download.
-# The version is read from the JDK's own "release" file, so the check costs no
-# extra JVM start. Not set: any Java on PATH is used, and 25 is installed if none.
-# java.home is an explicit choice and is never version-checked.
-java.version=25+
+**Control it** with config keys (see [Config Keys](#config-keys)), baked in by jr-maven-plugin (`javaVersion`, `javaMin` / `javaPreferred` / `javaMax`, `javaType`, `javaAutoinstall`) or given for one run as `-Xjr:` options:
 
-# Turn the whole feature off - fail immediately like before (optional, default: true)
-java.autoinstall=false
-```
+- `java.version=25` (or `25+`) means at least 25, with 25 preferred; `java.min` / `java.preferred` / `java.max` set the three separately. jr uses an installed Java of exactly the preferred version; if there is none it offers to download one; only then does it take an installed newer (or older, down to the minimum) Java. The version is read from the JDK's own `release` file, so the check costs no extra JVM start. `java.home` is an explicit choice and is never version-checked.
+- `java.autoinstall=false` turns the whole feature off: jr fails immediately instead of downloading.
 
 ### Branding a Launcher: Icon, Version Info, Signing
 
@@ -481,7 +389,7 @@ jr.exe -Xjr:edit=myapp.exe -Xjr:version=1.4.1.0
 jr.exe -Xjr:list-resources=myapp.exe
 ```
 
-Then put `myapp.jrc` next to `myapp.exe` as usual. With `jvm=dll`, Task Manager shows the app under its own description and icon.
+Then bake the config in with `-Xjr:resource.RCDATA.JRC=myapp.jrc.json` (see the [guide](docs/guide.md#without-maven); jr-maven-plugin does all of this for you). With `jvm=dll`, Task Manager shows the app under its own description and icon.
 
 | Option | What it does |
 |--------|--------------|
@@ -505,11 +413,10 @@ The order is always copy, remove any old signature, resources, sign. Signing com
 
 Logging is **opt-in only** and never happens automatically:
 
-```properties
-# Enable logging in .jrc file
-log.file=myapp.log
-log.level=info
-log.overwrite=false
+Set `log.file` (and optionally `log.level`, `log.overwrite`) in the app's config, or for one run:
+
+```batch
+jr.exe -Xjr:log.file=myapp.log -Xjr:log.level=info myapp.jar
 ```
 
 **Log Content:**
@@ -543,9 +450,9 @@ Java Runner Log - 2025-11-21 17:05:06
 1. **System-wide JAR execution** - Set up file association + PATHEXT, make ALL jars executable like .exe files (with automatic AOT!)
 
 **Other Use Cases:**
-2. **Branded Application Launchers** - Rename `jr.exe` to `yourapp.exe`, add `.jrc` config, distribute together
+2. **Branded Application Launchers** - Build `yourapp.exe` with jr-maven-plugin (name, icon, version, config baked in) and distribute it with the jar, or let it download the jar
 3. **Multi-Java Environments** - Test JARs with different Java versions using `-Xjr:java.home=`
-4. **Complex Launch Configurations** - Use `.jrc` files for applications requiring specific JVM settings
+4. **Complex Launch Configurations** - Bake JVM settings, Java version and arguments into the app's exe
 5. **Desktop Shortcuts** - Create shortcuts that work both ways (console and GUI)
 6. **Batch Scripts** - Use in automation where you need proper exit codes
 7. **Individually manageable services/apps** - Set `jvm=dll` so each app is its own named process you can kill, monitor or firewall on its own
@@ -574,8 +481,6 @@ TestJvmMode.bat
 This tests:
 - Help display
 - Traditional JAR launch
-- Config file creation
-- Config-based mode
 - Logging functionality
 - AOT disable flag
 
@@ -586,15 +491,6 @@ jr.exe
 
 # Test traditional mode
 jr.exe test-scripts\TestStartupTiming.jar
-
-# Test config creation
-jr.exe -Xjr:create-config=test-scripts\TestStartupTiming.jar
-
-# Test config mode
-copy jr.exe mytest.exe
-copy test-scripts\TestStartupTiming.jar mytest.jar
-# (edit mytest.jrc)
-mytest.exe
 ```
 
 ## Technical Details
@@ -602,23 +498,13 @@ mytest.exe
 - **Language**: Java, compiled to C by TeaVM and to a native exe by llvm-mingw (see [Java compiled to a native exe](#java-compiled-to-a-native-exe))
 - **Size**: about 610 KB (x64)
 - **Dependencies**: only DLLs that ship with Windows (kernel32, user32, msvcrt, winhttp, bcrypt and a few more)
-- **Config Format**: Simple key=value properties format with comment support
-- **File Extension**: `.jrc` (Java Runner Config)
+- **Config**: a jrc-json baked into the exe (an `RCDATA/JRC` resource; a `__DATA,__jrc` section on macOS), written by jr-maven-plugin
 - **Behavior** (`jvm=exe`, default):
   - Console mode: Waits for process, returns exit code
   - GUI mode: Launches and exits immediately
 - **Behavior** (`jvm=dll`):
   - Both modes: the JVM runs in the launcher process, which returns the
     application's exit code when the JVM is done
-- **Config File Naming**: Must match executable name (e.g., `myapp.exe` → `myapp.jrc`)
-- **Config Discovery**: Checks for `<exename>.jrc` in same directory as executable
-
-## Configuration Format Compatibility
-
-The `.jrc` format follows industry standards:
-- Similar to **WinRun4J** INI format (but simplified)
-- Compatible with **jpackage** launcher properties file conventions
-- The same format on Windows, Linux and macOS
 
 ## How It Works
 
@@ -631,13 +517,12 @@ The `.jrc` format follows industry standards:
    - No console → uses `javaw.exe`
 
 3. **Java Location**:
-   - If `java.home` is set (`.jrc` or `-Xjr:java.home=`) → uses `<java.home>\bin\java[w].exe`
+   - If `java.home` is set (in the config or `-Xjr:java.home=`) → uses `<java.home>\bin\java[w].exe`
    - Otherwise → searches PATH environment variable
 
-4. **Config File Loading**:
-   - Checks for `<exename>.jrc` in same directory
-   - If found: parses configuration
-   - If not found: falls back to traditional mode
+4. **Config Loading**:
+   - Reads the jrc-json baked into its own exe; a file beside the exe is never read
+   - If there is none: traditional mode (the first argument is the jar)
 
 5. **AOT Cache Management** (if enabled):
    - Calculates AOT cache filename: `<jarname>.<size_base52>.<modtime_base52>.aot`
@@ -664,51 +549,46 @@ The `.jrc` format follows industry standards:
 
 ## Examples
 
+Each example is jr-maven-plugin configuration in the app's `pom.xml` (see the [guide](docs/guide.md) for the whole plugin block). `mvn package` then builds `target/jr/<name>.exe` with these settings baked in.
+
 ### Example 1: Simple Web Server
 
+```xml
+<configuration>
+  <name>webserver</name>
+  <vmArgs><vmArg>-Xmx1g</vmArg><vmArg>-Xms256m</vmArg></vmArgs>
+  <appArgs><appArg>--port</appArg><appArg>8080</appArg><appArg>--host</appArg><appArg>0.0.0.0</appArg></appArgs>
+  <javaVersion>25</javaVersion>
+</configuration>
+```
+
 ```batch
-# Create launcher
-copy jr.exe webserver.exe
-
-# Create webserver.jrc
-vm.args=-Xmx1g -Xms256m
-java.args=-jar webserver.jar
-app.args=--port 8080 --host 0.0.0.0
-aot=true
-log.file=webserver.log
-log.level=info
-
-# Run
 webserver.exe
 ```
 
 ### Example 2: Development Tool with Custom JDK
 
-```batch
-# Create launcher
-copy jr.exe devtool.exe
-
-# Create devtool.jrc
-vm.args=-Xmx512m -Ddev.mode=true
-java.args=-jar devtool.jar
-aot=false
-log.file=devtool-debug.log
-log.level=info
-log.overwrite=true
+```xml
+<configuration>
+  <name>devtool</name>
+  <vmArgs><vmArg>-Xmx512m</vmArg><vmArg>-Ddev.mode=true</vmArg></vmArgs>
+  <aot>false</aot>
+</configuration>
 ```
 
-Run with custom JDK:
+Run with a custom JDK and a debug log, for one run:
 ```batch
-devtool.exe -Xjr:java.home=C:\Java\jdk-21
+devtool.exe -Xjr:java.home=C:\Java\jdk-21 -Xjr:log.file=devtool-debug.log -Xjr:log.overwrite=true
 ```
 
 ### Example 3: Classpath-Based Application
 
-```batch
-# Create myapp.jrc
-vm.args=-Xmx2g
-java.args=-cp lib/*;app.jar com.example.Main
-app.args=--config production.xml
+```xml
+<configuration>
+  <vmArgs><vmArg>-Xmx2g</vmArg></vmArgs>
+  <javaArgs>-cp lib/*;app.jar com.example.Main</javaArgs>
+  <appArgs><appArg>--config</appArg><appArg>production.xml</appArg></appArgs>
+</configuration>
 ```
 
 ## Comparison with Other Tools
@@ -785,7 +665,7 @@ Contributions welcome! Please ensure:
 
 ## aot — making the cache worth having (companion library)
 
-`aot=true` in a `.jrc` tells jr to build an AOT cache, but jr cannot decide *what goes in it*: the JVM
+`aot=true` in an app's config tells jr to build an AOT cache, but jr cannot decide *what goes in it*: the JVM
 assembles the cache from whatever the training run happened to load. A cache trained on `mytool --help` is
 worse than no cache at all, because naming a cache also switches off the default CDS archive.
 
@@ -798,7 +678,7 @@ load (measured: bigger is *not* automatically better), how to record method prof
 Two things documented there that bite in `jr` itself:
 
 - **jr's AOT is jar-only, and that is a JVM restriction, not a jr one.** The JVM refuses to dump a cache
-  when the classpath holds a non-empty directory (`Cannot have non-empty directory in paths`). So a `.jrc`
+  when the classpath holds a non-empty directory (`Cannot have non-empty directory in paths`). So a config
   with `aot=true` that launches `-cp target\classes;lib\*` has never had a cache. Worth surfacing in jr:
   today it silently does nothing.
 - The cache is keyed on the jar's size and mtime (`<name>.<size>.<mtime>.aot`), which is why it retrains

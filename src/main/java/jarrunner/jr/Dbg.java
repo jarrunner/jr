@@ -2,8 +2,8 @@ package jarrunner.jr;
 
 import static jarrunner.jr.N.*;
 
-/** Developer tracing, independent of any .jrc: with JR_DEBUG=1 set, appends one line per call to
- *  %TEMP%\jr-debug.log. Log.java can't cover this - its file path comes from the .jrc, so it is
+/** Developer tracing, independent of any config: with JR_DEBUG=1 set, appends one line per call to
+ *  %TEMP%\jr-debug.log. Log.java can't cover this - its file path comes from the config, so it is
  *  silent for anything that runs before (or goes wrong while) the config loads. Safe to leave
  *  calls in shipped code: without JR_DEBUG it costs one cached env lookup. */
 public final class Dbg {

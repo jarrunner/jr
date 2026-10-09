@@ -25,7 +25,7 @@ public final class RemoteJar {
     public static String resolve(Config config) {
         if (config.sources.isEmpty()) {
             if (!config.runUrl.isEmpty() && !config.runMaven.isEmpty()) {
-                return fail("Set run.url or run.maven in the .jrc, not both.");
+                return fail("Set run.url or run.maven in the config, not both.");
             }
             var jar = one(config, config.runUrl, config.runMaven);
             return jar != null ? jar : fail(error);

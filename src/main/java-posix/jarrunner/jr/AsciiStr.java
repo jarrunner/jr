@@ -1,6 +1,6 @@
 package jarrunner.jr;
 
-/** ASCII-only case-folding, for the handful of places that only ever compare ASCII tokens (.jrc
+/** ASCII-only case-folding, for the handful of places that only ever compare ASCII tokens (config
  *  keys/values, "true"/"false", hex checksums, ".exe", env var values). String.toLowerCase()/
  *  equalsIgnoreCase() are Unicode-aware and drag in full case-folding tables regardless of which
  *  branch runs at runtime - TeaVM's dependency analysis can't tell "this call site only ever sees

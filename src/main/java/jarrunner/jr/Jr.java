@@ -33,12 +33,10 @@ public final class Jr {
             WinApi.deleteFileW(replaced);
         }
         var exeBaseName = ExeInfo.baseNameNoExt();
-        var configPath = ExeInfo.fullPathNoExt() + ".jrc";
 
-        // Settings, lowest priority first: defaults < .jrc < env vars < -Xjr: options. config.found
-        // only records whether a .jrc exists; every setting is read from config, whichever of those
-        // it came from - config.load() always returns a non-null object with defaults applied.
-        var config = Config.load(configPath);
+        // Settings, lowest priority first: defaults < the baked-in jrc-json < env vars < -Xjr: options.
+        // Every setting is read from config, whichever of those it came from.
+        var config = Config.load();
 
         var envAutoInstall = Cstr.readEnv("JR_JAVA_AUTOINSTALL");
         if (envAutoInstall != null) {
@@ -53,7 +51,7 @@ public final class Jr {
         if (!config.logFile.isBlank()) {
             Log.init(config.logFile, config.logOverwrite);
             Log.info("Launcher started: " + exeBaseName + ".exe");
-            Log.info("Config: " + configLabel(configPath, config));
+            Log.info("Config: " + configLabel(config));
             Log.info("vm.args=" + config.vmArgs);
             Log.info("java.args=" + config.javaArgs);
             Log.info("app.args=" + config.appArgs);
@@ -127,7 +125,7 @@ public final class Jr {
         }
 
         if (opts.doctor != 0) {
-            var text = opts.doctor == 1 ? Doctor.report(config, configLabel(configPath, config), javaExeName)
+            var text = opts.doctor == 1 ? Doctor.report(config, configLabel(config), javaExeName)
                     : Repair.run(config, javaExeName, hasConsole, guiMode);
             if (hasConsole) {
                 Stderr.out(text);
@@ -141,7 +139,7 @@ public final class Jr {
         }
 
         if (config.loadError != null) {
-            var msg = "The config could not be read (" + configLabel(configPath, config) + "):\n" + config.loadError;
+            var msg = "The config could not be read (" + configLabel(config) + "):\n" + config.loadError;
             Log.error(msg);
             Ui.error(hasConsole, "Invalid jr Config", msg);
             Log.close();
@@ -167,17 +165,17 @@ public final class Jr {
         // Nothing to run (or help asked for): show help before any Java lookup, so a bare `jr` on a
         // machine without Java never triggers the install prompt. The Java path shown here is a
         // plain PATH lookup for display only - no version check, no auto-install.
-        if (opts.help || (!opts.createConfig && config.javaArgs.isBlank() && !config.hasRunTarget()
+        if (opts.help || (config.javaArgs.isBlank() && !config.hasRunTarget()
                 && opts.appArgs.isEmpty())) {
             var displayJavaPath = JavaFinder.findInPath(javaExeName);
-            Help.show(hasConsole, exeBaseName, javaExeName, displayJavaPath, configLabel(configPath, config),
+            Help.show(hasConsole, exeBaseName, javaExeName, displayJavaPath, configLabel(config),
                     useJvmDll ? 1 : 0);
             Log.close();
             WinApi.exit(opts.help ? 0 : 1);
             return;
         }
 
-        if (config.javaArgs.isBlank() && !config.hasRunTarget() && !opts.createConfig) {
+        if (config.javaArgs.isBlank() && !config.hasRunTarget()) {
             var replacement = JrOptions.oldFlagReplacement(opts.appArgs);
             if (replacement != null) {
                 var msg = "jr's --flags have been replaced by -Xjr: options, which must come before the jar.\n\n"
@@ -189,17 +187,12 @@ public final class Jr {
             }
         }
 
-        if (opts.createConfig) {
-            handleCreateConfig(opts, configPath, hasConsole);
-            return;
-        }
-
         // A remote jar (run.url / run.maven) becomes an ordinary "-jar <cached path>" before anything
         // else looks at java.args, so AOT naming etc. work unchanged. Resolved before the Java lookup
         // so a bad hash fails before any JRE download.
         if (config.hasRunTarget()) {
             if (!config.javaArgs.isBlank()) {
-                Ui.error(hasConsole, "Invalid .jrc", "Set java.args or run.url/run.maven, not both.");
+                Ui.error(hasConsole, "Invalid jr Config", "Set java.args or run.url/run.maven, not both.");
                 Log.close();
                 WinApi.exit(1);
                 return;
@@ -250,25 +243,7 @@ public final class Jr {
         });
     }
 
-    private static String configLabel(String configPath, Config config) {
-        if (config.embedded) {
-            return "embedded in this exe (RCDATA/JRC resource)";
-        }
-        return config.found ? configPath + " (an old-style .jrc file)" : "none baked in";
+    private static String configLabel(Config config) {
+        return config.embedded ? "embedded in this exe (RCDATA/JRC resource)" : "none baked in";
     }
-
-    private static void handleCreateConfig(JrOptions opts, String configPath, boolean hasConsole) {
-        var jarPath = opts.createConfigJar.isEmpty() ? null : opts.createConfigJar;
-        if (Config.createSample(configPath, jarPath)) {
-            Ui.info(hasConsole, "Config Created",
-                    "Created config file: " + configPath + "\n\nEdit this file to customize launcher behavior.");
-            Log.close();
-            WinApi.exit(0);
-        } else {
-            Ui.error(hasConsole, "Error", "Failed to create config file: " + configPath);
-            Log.close();
-            WinApi.exit(1);
-        }
-    }
-
 }

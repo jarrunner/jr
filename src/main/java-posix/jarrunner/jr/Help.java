@@ -5,12 +5,11 @@ package jarrunner.jr;
 public final class Help {
     private Help() {}
 
-    public static void show(String exeBaseName, String javaExeName, String javaPath, String configPath,
-            boolean configFound) {
+    public static void show(String exeBaseName, String javaExeName, String javaPath, boolean configEmbedded) {
         var info = "Java Runner (jr) - Smart Java Launcher [Linux/macOS]\n\n"
                 + "Java Executable: " + javaExeName + "\n"
                 + "Java Location: " + (javaPath != null ? javaPath : "(none in PATH)") + "\n"
-                + "Config: " + (configFound ? configPath : "none baked in") + "\n\n"
+                + "Config: " + (configEmbedded ? "embedded in this binary (__DATA,__jrc)" : "none baked in") + "\n\n"
                 + "Usage:\n"
                 + "  " + exeBaseName + " [-Xjr:options] <jar-file> [args...]\n"
                 + "  <app> [-Xjr:options] [args...]      an app's own binary, its config baked in\n\n"
@@ -20,7 +19,6 @@ public final class Help {
                 + "jr options must come first; everything after them goes to the app untouched.\n"
                 + "  -Xjr:<key>=<value>          set a config key for this run\n"
                 + "                              e.g. -Xjr:aot=false  -Xjr:java.home=PATH\n"
-                + "  -Xjr:create-config[=<jar>]  write an old-style " + exeBaseName + ".jrc file (see the guide)\n"
                 + "  -Xjr:help                   this help\n\n"
                 + "Not in this build:\n"
                 + "  JDK auto-install - point java.home at one, or put a matching java on PATH.\n"

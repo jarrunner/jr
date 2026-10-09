@@ -30,7 +30,7 @@ public final class JsonDump {
             return 1;
         }
         if (!JrcJson.looksLikeJson(raw)) {
-            Stderr.println(path + ": not a jrc-json (a key=value .jrc is not checked)");
+            Stderr.println(path + ": not a jrc-json");
             return 1;
         }
         var report = JrcCheck.check(raw);
