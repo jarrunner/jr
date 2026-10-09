@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.github.jarrunner</groupId>
   <artifactId>jr</artifactId>
-  <version>1.2.1</version>
+  <version>1.3.0</version>
   <packaging>jar</packaging>
 
   <description>jr, a Java/TeaVM launcher that picks java.exe/javaw.exe (or posix_spawn's java on Linux/macOS), reads the config baked into its exe, manages an AOT cache, and auto-installs a matching JDK on Windows. Supersedes jr_legacy_c, the original C implementation, as the primary implementation - see this repo's CLAUDE.md for the platform decision.</description>
