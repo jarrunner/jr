@@ -188,13 +188,13 @@ public final class PosixApi {
     /** {@code int uname(struct utsname *)} - utsname.h:83 */
     @Import(name = "uname") public static native int uname(@CType("struct utsname") Address arg0);
 
-    /** {@code int jx_wexitstatus(int status)} - jr-posix.h:24 */
+    /** {@code int jx_wexitstatus(int status)} - jr-posix.h:25 */
     @Import(name = "jx_wexitstatus") public static native int wexitstatus(int status);
 
-    /** {@code int jx_wifexited(int status)} - jr-posix.h:25 */
+    /** {@code int jx_wifexited(int status)} - jr-posix.h:26 */
     @Import(name = "jx_wifexited") public static native int wifexited(int status);
 
-    /** {@code char **jx_environ()} - jr-posix.h:32 */
+    /** {@code char **jx_environ()} - jr-posix.h:33 */
     @Import(name = "jx_environ") @CType("pointer") public static native Address getEnviron();
 
     public static final int O_RDONLY = 0; // int, fcntl.h:96

@@ -45,7 +45,7 @@ jr began as a hand-written C launcher. That version lives on in its own reposito
 
 ## Java compiled to a native exe
 
-jr is written in Java. [TeaVM](https://teavm.org) compiles it to C, and an LLVM toolchain compiles that C to a native exe: llvm-mingw on Windows (x64 and ARM64), zig cc on Linux and macOS. The Windows API bindings (functions, constants, struct layouts) are not written by hand: [jextract-teavm](https://github.com/jarrunner/jextract-teavm) generates them from the real system headers, and the C compiler checks every size and offset again on each build.
+jr is written in Java. [TeaVM](https://teavm.org) compiles it to C, and an LLVM toolchain compiles that C to a native exe: llvm-mingw on Windows (x64 and ARM64), zig cc on Linux and macOS. The Windows API bindings (functions, constants, struct layouts) are not written by hand: [jextract-teavm](https://github.com/jarrunner/jextract/tree/teavm/teavm) generates them from the real system headers, and the C compiler checks every size and offset again on each build.
 
 The result, measured rather than claimed:
 

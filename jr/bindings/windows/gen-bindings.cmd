@@ -2,10 +2,11 @@
 rem Regenerates jarrunner.jr.WinApi and jarrunner.jr.WinOffsets from winapi.symbols against the real mingw
 rem headers (jr-winapi.h lists them), then has llvm-mingw's clang re-check every size, offset, width and value the
 rem generator wrote (verify-win.c). One command, run from anywhere: bindings\windows\gen-bindings.cmd
-rem Needs jextract-teavm (github.com/jarrunner/jextract-teavm) checked out beside jr and built once (see its README).
+rem Needs the jextract-teavm image: the jextract fork (github.com/jarrunner/jextract, branch teavm, see teavm/README.md)
+rem checked out beside jr and built with gradlew createJextractTeavmImage, or a release image (set JEXTRACT_TEAVM).
 rem JEXTRACT_TEAVM and LLVM_MINGW override where they are.
 setlocal
-if "%JEXTRACT_TEAVM%"=="" set "JEXTRACT_TEAVM=%~dp0..\..\..\..\jextract-teavm\jextract-teavm.cmd"
+if "%JEXTRACT_TEAVM%"=="" set "JEXTRACT_TEAVM=%~dp0..\..\..\..\jextract\build\jextract-teavm\bin\jextract-teavm.bat"
 if "%LLVM_MINGW%"=="" set "LLVM_MINGW=C:\user\Apps\cmdtools\llvm-mingw-msvcrt-x86_64"
 rem Run from this folder so the generated javadoc names jr-winapi.h, not an absolute path on this machine.
 pushd "%~dp0"
