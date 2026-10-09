@@ -6,3 +6,4 @@ build-macos_*/
 cp-macos.txt
 # sync-to-mac.ps1 -Fetch: the macOS binaries jr-maven-plugin bundles
 dist-macos/
+cp.txt
