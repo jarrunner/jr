@@ -101,13 +101,13 @@ foreach ($a in $Arch) {
     # an unquoted comma (as in -Wl,--gc-sections) as the comma OPERATOR, silently building an
     # array instead of passing one literal token, which is what broke this the first time round.
     $optFlags = @('-Oz', '-flto', '-ffunction-sections', '-fdata-sections', '-Wl,--gc-sections', '-Wl,--no-insert-timestamp', '-s',
-        '-Wno-error=incompatible-function-pointer-types', '-o', $optOut, 'target/c/all.c') + $libs
+        '-I', 'bindings/windows', '-Wno-error=incompatible-function-pointer-types', '-o', $optOut, 'target/c/all.c') + $libs
     & $clang @optFlags
     if ($LASTEXITCODE -ne 0) { throw "clang link failed for $a (optimized)" }
     $builtOptimized[$a] = $optOut
 
     Write-Host "  $a (fat, -O2, kept aside) -> $fatOut"
-    $fatFlags = @('-O2', '-Wl,--no-insert-timestamp', '-Wno-error=incompatible-function-pointer-types', '-o', $fatOut, 'target/c/all.c') + $libs
+    $fatFlags = @('-O2', '-Wl,--no-insert-timestamp', '-I', 'bindings/windows', '-Wno-error=incompatible-function-pointer-types', '-o', $fatOut, 'target/c/all.c') + $libs
     & $clang @fatFlags
     if ($LASTEXITCODE -ne 0) { throw "clang link failed for $a (fat)" }
 }

@@ -17,45 +17,12 @@ param(
 $definitionsPath = Join-Path $Dir "definitions.h"
 $definitions = (Get-Content -Raw $definitionsPath) -replace "`r`n", "`n"
 
-# Force system Windows.h/time.h to be seen before ANY generated code uses a WinAPI or CRT
-# symbol via @Import, angle-bracket form (searches ONLY -I/system dirs, never the local
-# directory) rather than a command-line `-include <bare-name>` flag (which clang/gcc treat as
-# quote-form - local-dir-first). This matters concretely: TeaVM itself generates its OWN
-# time.h/time.c in this same directory for its date/time runtime support, so `-include time.h`
-# silently shadows the real CRT header with TeaVM's unrelated one, and the compile fails with
-# a bogus "conflicting types for 'time'" pointing at core.c - see 07-prp.02.step1-findings.md.
-# definitions.h is the right place because core.h -> definitions.h is the first thing every
-# single generated per-class header transitively includes.
-#
-# winhttp.h/bcrypt.h/commctrl.h are added the same way for the same reason (PRP-09, java
-# auto-install): windows.h alone does NOT pull these in (they are separate SDK headers), so
-# without them WinHttpOpen/BCryptOpenAlgorithmProvider/InitCommonControlsEx etc. are undeclared.
-#
-# stdio.h (PRP-21 reorg rebuild, 2026-09-28): fopen/fclose/fflush/fputs/fread/fwrite came up as
-# "call to undeclared function" on this machine's current llvm-mingw clang (23.1.1) - modern clang
-# defaults to treating an implicit function declaration as a hard ERROR in C, not a warning
-# (the same drift already documented for -Wno-error=incompatible-function-pointer-types below, and
-# for -Wincompatible-pointer-types on real gcc 15 - see PRP-21's status file). This presumably
-# built clean before on an older clang; add stdio.h explicitly rather than depend on a compiler
-# version's leniency.
-#
-# mssign.h (PRP-20 phase 2, resource editing/signing) is the same story but for a header that does
-# not exist anywhere: mssign32.dll has no SDK header at all, so SignerSignEx2/SignerFreeSignerContext
-# and the SIGNER_* structs are declared in bindings/windows/mssign.h, which jr.h already includes
-# for jextract_teavm's own parsing - this copies that same file next to the generated all.c and
-# includes it here too, or the real build has no declaration for those two functions ("implicit
-# function declaration"). wincrypt.h needs no such treatment: windows.h already pulls it in
-# transitively.
-$oldTop = "#pragma once`n#include " + '"config.h"'
-$newTop = "#pragma once`n#include <Windows.h>`n#include <time.h>`n#include <stdio.h>`n#include <string.h>`n#include <winhttp.h>`n#include <bcrypt.h>`n#include <commctrl.h>`n#include " + '"mssign.h"' + "`n#include " + '"jr-shims.h"' + "`n#include " + '"config.h"'
-if ($definitions -notmatch [regex]::Escape($oldTop)) {
-    throw "definitions.h's opening lines did not match the expected TeaVM-generated content - TeaVM version may have changed this file, check manually."
-}
-$definitions = $definitions.Replace($oldTop, $newTop)
-
-Copy-Item -Path (Join-Path $PSScriptRoot "bindings\windows\mssign.h") -Destination (Join-Path $Dir "mssign.h") -Force
-# jr-shims.h (PRP-31): one-line macros for Win32 functions taking a struct by value; see the file.
-Copy-Item -Path (Join-Path $PSScriptRoot "bindings\windows\jr-shims.h") -Destination (Join-Path $Dir "jr-shims.h") -Force
+# Headers for jr's own @Import calls are NOT patched in here any more (PRP-37, 2026-10-09). The
+# generated WinApi carries @Include("jr-winapi.h"), so TeaVM writes that #include at the top of every
+# C file that calls Win32, and build-win.ps1 passes -I bindings/windows. That replaced a forced
+# include block in definitions.h (Windows.h, time.h, stdio.h, string.h, winhttp.h, bcrypt.h,
+# commctrl.h, mssign.h, jr-shims.h) with a byte-identical exe. What is left below are fixes to TeaVM's
+# own generated runtime, which move into the jarrunner/teavm fork as source fixes.
 
 $oldPlatformBlock = @'
 #ifdef _MSC_VER

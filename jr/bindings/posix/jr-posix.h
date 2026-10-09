@@ -1,5 +1,6 @@
+#pragma once
 /* The POSIX surface jr's Linux/macOS port binds - files, dirs, env, processes, time, buffered I/O.
-   Mirrors jr.h's role for the Windows side; posix.symbols lists exactly what jextract-teavm reads
+   Mirrors jr-winapi.h's role for the Windows side; posix.symbols lists exactly what jextract-teavm reads
    off this header. See posix/posix.h (PRP-12/19's demo) for the WEXITSTATUS/WIFEXITED wrapper
    rationale - repeated here rather than shared because this header also needs stdio.h/string.h/
    sys/utsname.h that the demo's posix.h does not. */

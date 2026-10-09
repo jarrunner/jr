@@ -1,7 +1,7 @@
 #!/bin/sh
 # Builds jarrunner.jr.PosixJr for one Linux/macOS target, entirely on this Windows machine:
 #   javac (src/main/java-posix) -> TeaVM C backend (BuildDriver, same driver as the Windows build)
-#   -> zig cc for the target, with jr-posix.h force-included so every @Import call is prototyped.
+#   -> zig cc for the target, with -I bindings/posix: the generated PosixApi carries @Include("jr-posix.h"), so every C file calling it includes the prototypes (PRP-37).
 # javac runs teavm_native_check (PRP-35) with the pom's <nativecheck> configuration, so a native-memory
 # rule broken in the POSIX tree fails this build just as it fails the Windows one.
 # Real-gcc verification (not just zig's bundled clang) is a separate step - see PRP-21's status
@@ -29,5 +29,5 @@ rm -rf "$B" && mkdir -p "$B/classes"
 CHK=src/checks-off/java; [ -n "$CHECKS" ] && CHK=src/checks-on/java  # PRP-35 phase 3: CHECKS=1 sh build-posix.sh for a checks build
 javac -d "$B/classes" -cp "$CP" -processorpath "$NC" "-Xplugin:NativeCheck $NCARGS" $(find src/main/java-posix $CHK -name '*.java') || exit 1
 java -cp "$CP;$B/classes" jarrunner.jr.build.BuildDriver "$B/classes" "$B/c" jarrunner.jr.PosixJr "$CLASSLIB" > "$B/teavm.log" 2>&1 || { tail -30 "$B/teavm.log"; exit 1; }
-"$ZIG" cc -target $ZT -O2 -w -D_GNU_SOURCE -include "$(cygpath -w "$PWD/bindings/posix/jr-posix.h")" -o "$B/jr-posix" "$B/c/all.c" > "$B/zig.log" 2>&1 || { grep -m20 error "$B/zig.log"; exit 1; }
+"$ZIG" cc -target $ZT -O2 -w -D_GNU_SOURCE -I "$(cygpath -w "$PWD/bindings/posix")" -o "$B/jr-posix" "$B/c/all.c" > "$B/zig.log" 2>&1 || { grep -m20 error "$B/zig.log"; exit 1; }
 echo "$T: built $B/jr-posix ($(wc -c < "$B/jr-posix") bytes)"

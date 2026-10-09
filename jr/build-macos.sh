@@ -2,8 +2,8 @@
 # Builds jarrunner.jr.PosixJr for macOS, natively ON a Mac (unlike build-posix.sh, which cross-builds
 # Linux from Windows with zig):
 #   stage src/main/java-posix + bindings/posix/gen/<target> + src/main/java-macos -> javac (with
-#   teavm_native_check) -> TeaVM C backend (BuildDriver) -> Apple clang, with jr-posix-macos.h
-#   force-included so every @Import call is prototyped.
+#   teavm_native_check) -> TeaVM C backend (BuildDriver) -> Apple clang, with -I bindings/posix: the
+#   generated PosixApi carries @Include("jr-posix-macos.h"), so every C file calling it is prototyped (PRP-37).
 # Before compiling, Apple clang re-checks the generated bindings' _Static_asserts against the real
 # macOS SDK (they were generated from zig's bundled darwin headers).
 # Size flags match the Windows build's intent (-Oz, LTO, dead code stripped, no symbols). The
@@ -43,7 +43,7 @@ build() { # $1 target dir name, $2 clang -arch
   # the plugin can find it by name, write the config in place and re-sign, without changing the file's layout.
   dd if=/dev/zero of="$B/jrc-slot" bs=16384 count=1 2>/dev/null
   clang -arch $ARCH -mmacosx-version-min=$MINOS -Oz -flto -w -I "$S" -include "$S/teavm-timers.h" \
-      -include "$PWD/bindings/posix/jr-posix-macos.h" -Wl,-dead_strip -Wl,-S -Wl,-x \
+      -I "$PWD/bindings/posix" -Wl,-dead_strip -Wl,-S -Wl,-x \
       -Wl,-sectcreate,__DATA,__jrc,"$B/jrc-slot" \
       -o "$B/jr-posix" "$B/c/all.c" > "$B/clang.log" 2>&1 || { grep -m20 error "$B/clang.log"; return 1; }
   # the linker signs arm64 ad hoc by itself; x86_64 gets the same so both slices match

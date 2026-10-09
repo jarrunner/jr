@@ -14,6 +14,7 @@ What comes out:
 - Constants use clang's evaluated value, typed by width. Pointer-typed macros like `INVALID_HANDLE_VALUE` become `Address.fromLong(..)`. Wide `L"..."` macros come out correctly: jextract itself truncates these, and `WideStrings` recovers them by asking clang for each code unit.
 - Structs become `SIZE` plus field offsets, in the same shape as the old `WinOffsets` (so it is a drop-in replacement), plus typed accessors (`STARTUPINFOA.dwFlags(addr, v)`), so a wrong-width read cannot be written.
 - `--verify-c` writes every size, offset, width and value back out as C `_Static_assert`s. Compile that file with a *different* compiler for the same target and headers (`clang --target=<t> -fsyntax-only`). A disagreement fails the build and names the symbol.
+- `--include HEADER` puts `@Include(HEADER)` on the api class. TeaVM then writes `#include "HEADER"` at the top of every C file that calls one of its functions, so each call is prototyped by the real header with no forced includes and no patching of TeaVM's output; give the C compiler `-I` for the header's folder. Write `"<name.h>"` for a system header. TeaVM takes one `@Include` per class, so name a header that includes the rest (usually the one passed as HEADER above). Avoid a name a Java class also has: on a case-insensitive filesystem `jr.h` finds TeaVM's own `Jr.h`. The header needs `#pragma once`, because TeaVM's single `all.c` includes it once per calling file.
 
 ## Symbol file
 One C name per line, `#` comments, optionally followed by the Java name: `SendMessageA sendMessageA`.

@@ -31,6 +31,7 @@ public class Main implements Callable<Integer> {
     @Option(names = "--escapes-annotation", paramLabel = "NAME", description = "write @NAME on the parameters a symbols line marks escapes=N (1-based): the C function keeps that pointer after it returns, which no header says") String escapesAnnotation;
     @Option(names = "--acquires-annotation", paramLabel = "NAME", description = "write @NAME(\"close1,close2\") on a function whose symbols line says releases=close1,close2 (the Java names of the calls that close what it returns), and on its String overload (teavm_native_check NC8)") String acquiresAnnotation;
     @Option(names = "--fails-annotation", paramLabel = "NAME", description = "write @NAME(\"VALUE\") on a function whose symbols line says fails=VALUE (NULL, or a constant such as INVALID_HANDLE_VALUE): the value it returns on failure, which callers must test before using the result (teavm_native_check NC10)") String failsAnnotation;
+    @Option(names = "--include", paramLabel = "HEADER", description = "write @Include(HEADER) on the api class, so TeaVM puts #include \"HEADER\" (or <HEADER>, written \"<HEADER>\") at the top of every C file that calls one of its functions; give the C compiler -I for its folder. One header: TeaVM takes one @Include per class, so name a header that includes the rest. Pick a name no Java class shares: on a case-insensitive filesystem \"jr.h\" finds TeaVM's own Jr.h") String include;
     @Option(names = "--verify-c", description = "also write a C file of _Static_asserts restating every size, offset, width and value, for an independent compiler to check") Path verifyC;
 
     public static void main(String[] args) {
@@ -61,8 +62,8 @@ public class Main implements Callable<Integer> {
         }
         var provenance = "from %s, target %s (%s). Symbols: %s".formatted(String.join(" ", headers), target, gen.dm,
                 symbols.stream().map(p -> p.getFileName().toString()).collect(Collectors.joining(" + ")));
-        if (!gen.api.isEmpty()) System.err.println("wrote " + JavaFile.write(out, pkg, apiClass, provenance, gen.api, gen.callbacks > 0 ? List.of("Address", "Function", "Import") : List.of("Address", "Import")));
-        if (!gen.structs.isEmpty()) System.err.println("wrote " + JavaFile.write(out, pkg, structsClass, provenance, gen.structs, List.of("Address")));
+        if (!gen.api.isEmpty()) System.err.println("wrote " + JavaFile.write(out, pkg, apiClass, provenance, gen.api, gen.callbacks > 0 ? List.of("Address", "Function", "Import") : List.of("Address", "Import"), include));
+        if (!gen.structs.isEmpty()) System.err.println("wrote " + JavaFile.write(out, pkg, structsClass, provenance, gen.structs, List.of("Address"), null));
         System.err.printf("%d functions, %d constants, %d structs, %d callback types, %d macros in %d ms (clang: %d warnings, %d errors)%n",
                 gen.functions, gen.constants, gen.structCount, gen.callbacks, gen.macros, (System.nanoTime() - t0) / 1_000_000, parser.warnings, parser.errors);
         if (verifyC != null) {
