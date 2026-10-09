@@ -20,6 +20,7 @@
     <jr.zig>zig</jr.zig>
     <jr.dist>dist</jr.dist>
     <jr.noicon>false</jr.noicon>
+    <jr.nostamp>false</jr.nostamp>
     <jr.icon>${project.basedir}/../icon/jr-icon.ico</jr.icon>
     <jr.manifest>${project.basedir}/../jr-maven-plugin/src/main/resources/jarrunner/jr/maven/app.manifest</jr.manifest>
     <!-- Version information stamped into jr's own Windows exes: an exe with none (no company, product or
@@ -51,6 +52,7 @@
       <properties>
         <jr.checks.src>src/checks-on/java</jr.checks.src>
         <jr.dist>dist-checks</jr.dist>
+        <jr.nostamp>true</jr.nostamp>
       </properties>
     </profile>
     <!-- mvn package on Windows: TeaVM -> target/c/all.c -> llvm-mingw clang (on PATH) -> ${jr.dist}/jr-windows-<arch>.exe,
@@ -155,7 +157,7 @@
                 <phase>package</phase>
                 <goals><goal>exec</goal></goals>
                 <configuration>
-                  <skip>false</skip>
+                  <skip>${jr.nostamp}</skip>
                   <arguments><argument>-Xjr:edit=${jr.dist}/jr-windows-x86_64.exe</argument><argument>-Xjr:version=${jr.version.quad}</argument><argument>-Xjr:version.CompanyName=${jr.version.company}</argument><argument>-Xjr:version.ProductName=${jr.version.product}</argument><argument>-Xjr:version.FileDescription=${jr.version.description}</argument><argument>-Xjr:version.LegalCopyright=${jr.version.copyright}</argument><argument>-Xjr:version.InternalName=jr</argument><argument>-Xjr:version.OriginalFilename=jr.exe</argument></arguments>
                 </configuration>
               </execution>
@@ -164,7 +166,7 @@
                 <phase>package</phase>
                 <goals><goal>exec</goal></goals>
                 <configuration>
-                  <skip>false</skip>
+                  <skip>${jr.nostamp}</skip>
                   <arguments><argument>-Xjr:edit=${jr.dist}/jr-windows-arm64.exe</argument><argument>-Xjr:version=${jr.version.quad}</argument><argument>-Xjr:version.CompanyName=${jr.version.company}</argument><argument>-Xjr:version.ProductName=${jr.version.product}</argument><argument>-Xjr:version.FileDescription=${jr.version.description}</argument><argument>-Xjr:version.LegalCopyright=${jr.version.copyright}</argument><argument>-Xjr:version.InternalName=jr</argument><argument>-Xjr:version.OriginalFilename=jr.exe</argument></arguments>
                 </configuration>
               </execution>
