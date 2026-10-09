@@ -7,7 +7,7 @@ rem checked out beside jr and built with gradlew createJextractTeavmImage, or a 
 rem JEXTRACT_TEAVM and LLVM_MINGW override where they are.
 setlocal
 if "%JEXTRACT_TEAVM%"=="" set "JEXTRACT_TEAVM=%~dp0..\..\..\jextract\build\jextract-teavm\bin\jextract-teavm.bat"
-if "%LLVM_MINGW%"=="" set "LLVM_MINGW=C:\user\Apps\cmdtools\llvm-mingw-msvcrt-x86_64"
+if "%LLVM_MINGW%"=="" set "LLVM_MINGW=C:\user\Apps\cmdtools\llvm-mingw-ucrt-x86_64"
 rem Run from this folder so the generated javadoc names jr-winapi.h, not an absolute path on this machine.
 pushd "%~dp0"
 call "%JEXTRACT_TEAVM%" jr-winapi.h --symbols winapi.symbols --include jr-winapi.h ^

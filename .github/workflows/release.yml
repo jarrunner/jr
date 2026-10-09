@@ -4,7 +4,7 @@
 # as workflow artifacts, which is how a change to this file is tested.
 #
 # Inputs, all fetched by this workflow, nothing from the maintainer's machine: JDK 25 (Temurin),
-# Maven, TeaVM from Maven Central, llvm-mingw (msvcrt, x86_64 host) pinned to the release the
+# Maven, TeaVM from Maven Central, llvm-mingw (UCRT, x86_64 host) pinned to the release the
 # local builds use, and the runner's own Xcode on macOS. Outputs: jr.exe (= jr-windows-x86_64.exe,
 # the 1.0.0 asset name), the arm64 cross-build, the same two without jr's icon (what
 # jr-maven-plugin bundles), jr-macos (universal) with its two thin slices, install.sh (the macOS
@@ -32,7 +32,7 @@ permissions:
   actions: read
 
 env:
-  LLVM_MINGW: llvm-mingw-20260908-msvcrt-x86_64
+  LLVM_MINGW: llvm-mingw-20260908-ucrt-x86_64
 
 jobs:
   build:
@@ -82,6 +82,22 @@ jobs:
           Copy-Item dist-noicon\jr-windows-x86_64.exe unsigned\jr-noicon-windows-x86_64.exe
           Copy-Item dist-noicon\jr-windows-arm64.exe unsigned\jr-noicon-windows-arm64.exe
           Get-ChildItem unsigned | ForEach-Object { '{0,-34} {1,9:N0}' -f $_.Name, $_.Length }
+
+      # 1.3.0 and earlier (msvcrt) hung for ever, one core at 100%, on an argument like café: TeaVM's UTF-8
+      # fallback for mbrtoc16 never ends on a byte that starts an incomplete sequence. Built on the UCRT, jr
+      # must start the app and pass the argument through.
+      - name: Non-ASCII argument
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force t\src | Out-Null
+          Set-Content t\src\H.java 'public class H { public static void main(String[] a) { System.out.println("hello " + String.join(",", a)); } }'
+          javac -d t\cls t\src\H.java
+          jar --create --file t\h.jar --main-class H -C t\cls .
+          $p = Start-Process dist\jr-windows-x86_64.exe -ArgumentList '-Xjr:aot=false', '-Xjr:yes', 't\h.jar', 'café', 'éa' -NoNewWindow -PassThru -RedirectStandardOutput t\o.txt -RedirectStandardError t\e.txt
+          if (-not $p.WaitForExit(60000)) { Stop-Process -Id $p.Id -Force; throw 'jr hung on a non-ASCII argument' }
+          $out = Get-Content t\o.txt -Raw
+          if ($out -notmatch '^hello caf') { throw "unexpected output: $out $(Get-Content t\e.txt -Raw)" }
+          "non-ASCII argument: $out"
 
       # PRP-35: the checks build (every Buf access checked) is never shipped, so nothing else would
       # notice it breaking. Built after the release exes were copied out; it only writes dist-checks.

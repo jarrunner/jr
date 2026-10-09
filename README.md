@@ -47,7 +47,7 @@ Download, rename if desired, and start using immediately! Tested on Windows 11.
 
 ## Building from Source
 
-`mvn package` in this folder, needing JDK 25, Maven and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw/releases) (the `msvcrt` build) on PATH. Details are in [docs/development.md](docs/development.md). The release workflow (`.github/workflows/release.yml`) runs the same Maven build on a clean Windows machine, so a release contains nothing built on a developer's machine.
+`mvn package` in this folder, needing JDK 25, Maven and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw/releases) (the `ucrt` build) on PATH. Details are in [docs/development.md](docs/development.md). The release workflow (`.github/workflows/release.yml`) runs the same Maven build on a clean Windows machine, so a release contains nothing built on a developer's machine.
 
 jr began as a hand-written C launcher. That version lives on in its own repository, [jarrunner/jr_legacy_c](https://github.com/jarrunner/jr_legacy_c), but it has far fewer features than this one and is no longer developed.
 
@@ -497,7 +497,7 @@ jr.exe test-scripts\TestStartupTiming.jar
 
 - **Language**: Java, compiled to C by TeaVM and to a native exe by llvm-mingw (see [Java compiled to a native exe](#java-compiled-to-a-native-exe))
 - **Size**: about 610 KB (x64)
-- **Dependencies**: only DLLs that ship with Windows (kernel32, user32, msvcrt, winhttp, bcrypt and a few more)
+- **Dependencies**: only DLLs that ship with Windows (kernel32, user32, the Universal C Runtime that is part of Windows 10 and 11, winhttp, bcrypt and a few more)
 - **Config**: a jrc-json baked into the exe (an `RCDATA/JRC` resource; a `__DATA,__jrc` section on macOS), written by jr-maven-plugin
 - **Behavior** (`jvm=exe`, default):
   - Console mode: Waits for process, returns exit code
