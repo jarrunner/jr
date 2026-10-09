@@ -2,7 +2,7 @@
 # Builds jarrunner.jr.PosixJr for one Linux/macOS target, entirely on this Windows machine:
 #   javac (src/main/java-posix) -> TeaVM C backend (BuildDriver, same driver as the Windows build)
 #   -> zig cc for the target, with -I bindings/posix: the generated PosixApi carries @Include("jr-posix.h"), so every C file calling it includes the prototypes (PRP-37).
-# javac runs teavm_native_check (PRP-35) with the pom's <nativecheck> configuration, so a native-memory
+# javac runs teavm-native-check (PRP-35) with the pom's <nativecheck> configuration, so a native-memory
 # rule broken in the POSIX tree fails this build just as it fails the Windows one.
 # Real-gcc verification (not just zig's bundled clang) is a separate step - see PRP-21's status
 # file for why that mattered and how it's checked on WSL.
@@ -18,8 +18,9 @@ cd "$(dirname "$0")" || exit 1
 ZIG=/c/user/Apps/zig-x86_64-windows-0.16.0/zig
 [ -f cp.txt ] || mvn -q dependency:build-classpath -Dmdep.outputFile=cp.txt || exit 1
 CP=$(cat cp.txt)
-NC=$(cygpath -w ~/.m2/repository/io/github/jarrunner/teavm_native_check/1.0/teavm_native_check-1.0.jar)
-[ -f "$NC" ] || (cd ../teavm_native_check && mvn -q install) || exit 1
+NCV=$(sed -n 's:.*<nativecheck.version>\(.*\)</nativecheck.version>.*:\1:p' pom.xml)  # teavm-native-check, from Maven Central
+NC=$(cygpath -w ~/.m2/repository/io/github/jarrunner/teavm-native-check/$NCV/teavm-native-check-$NCV.jar)
+[ -f "$NC" ] || mvn -q dependency:get -Dartifact=io.github.jarrunner:teavm-native-check:$NCV || exit 1
 NCARGS=$(sed -n 's:.*<nativecheck>\(.*\)</nativecheck>.*:\1:p' pom.xml)
 TG=$(sed -n 's:.*<teavm.groupId>\(.*\)</teavm.groupId>.*:\1:p' pom.xml)  # TeaVM's coordinates come from the pom (PRP-37)
 V=$(sed -n 's:.*<teavm.version>\(.*\)</teavm.version>.*:\1:p' pom.xml)

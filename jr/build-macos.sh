@@ -2,7 +2,7 @@
 # Builds jarrunner.jr.PosixJr for macOS, natively ON a Mac (unlike build-posix.sh, which cross-builds
 # Linux from Windows with zig):
 #   stage src/main/java-posix + bindings/posix/gen/<target> + src/main/java-macos -> javac (with
-#   teavm_native_check) -> TeaVM C backend (BuildDriver) -> Apple clang, with -I bindings/posix: the
+#   teavm-native-check) -> TeaVM C backend (BuildDriver) -> Apple clang, with -I bindings/posix: the
 #   generated PosixApi carries @Include("jr-posix-macos.h"), so every C file calling it is prototyped (PRP-37).
 # Before compiling, Apple clang re-checks the generated bindings' _Static_asserts against the real
 # macOS SDK (they were generated from zig's bundled darwin headers).
@@ -52,15 +52,9 @@ build() { # $1 target dir name, $2 clang -arch
 # classpath, shared by every target
 [ -f cp-macos.txt ] || mvn -q dependency:build-classpath -Dmdep.outputFile=cp-macos.txt || exit 1
 CP=$(cat cp-macos.txt)
-NC=$HOME/.m2/repository/io/github/jarrunner/teavm_native_check/1.0/teavm_native_check-1.0.jar
-# reinstalled whenever its sources are newer than the installed jar: the checker changes alongside jr (PRP-35)
-if [ ! -f "$NC" ] || [ -n "$(find ../teavm_native_check/src ../teavm_native_check/pom.xml -newer "$NC" 2>/dev/null | head -1)" ]; then
-  # with its tests: a checker mid-change elsewhere must never be installed half-written (this is the Mac's ~/.m2)
-  if ! (cd ../teavm_native_check && mvn -q install > /dev/null 2>&1); then
-    [ -f "$NC" ] || { echo "teavm_native_check does not build, and none is installed"; exit 1; }
-    echo "warning: teavm_native_check's current sources do not build; using the installed one"
-  fi
-fi
+NCV=$(sed -n 's:.*<nativecheck.version>\(.*\)</nativecheck.version>.*:\1:p' pom.xml)  # teavm-native-check, from Maven Central
+NC=$HOME/.m2/repository/io/github/jarrunner/teavm-native-check/$NCV/teavm-native-check-$NCV.jar
+[ -f "$NC" ] || mvn -q dependency:get -Dartifact=io.github.jarrunner:teavm-native-check:$NCV || exit 1
 NCARGS=$(sed -n 's:.*<nativecheck>\(.*\)</nativecheck>.*:\1:p' pom.xml)
 TG=$(sed -n 's:.*<teavm.groupId>\(.*\)</teavm.groupId>.*:\1:p' pom.xml)  # TeaVM's coordinates come from the pom (PRP-37)
 V=$(sed -n 's:.*<teavm.version>\(.*\)</teavm.version>.*:\1:p' pom.xml)

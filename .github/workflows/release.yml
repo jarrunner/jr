@@ -54,14 +54,6 @@ jobs:
           Expand-Archive "$env:RUNNER_TEMP\llvm-mingw.zip" -DestinationPath $env:RUNNER_TEMP
           "$env:RUNNER_TEMP\$env:LLVM_MINGW\bin" >> $env:GITHUB_PATH
 
-      # jr's javac runs this plugin (PRP-35): a broken native-memory rule fails the build below.
-      - name: Native-memory checker
-        shell: pwsh
-        working-directory: teavm_native_check
-        run: |
-          mvn -B -q install
-          if ($LASTEXITCODE -ne 0) { throw 'teavm_native_check build or tests failed' }
-
       - name: Build
         shell: pwsh
         working-directory: jr
@@ -122,10 +114,6 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-
-      - name: Native-memory checker
-        working-directory: teavm_native_check
-        run: mvn -B -q install
 
       - name: Build
         working-directory: jr

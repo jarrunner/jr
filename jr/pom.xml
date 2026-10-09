@@ -14,10 +14,12 @@
          postprocess.ps1 used to patch into the generated C (PRP-37). Built with -Pteavm.publish.groupId. -->
     <teavm.groupId>io.github.jarrunner.teavm</teavm.groupId>
     <teavm.version>0.16.0-jr.1</teavm.version>
-    <!-- teavm_native_check (PRP-35): the native-memory rules, enforced by javac. build-posix.sh reads this same
+    <!-- teavm-native-check (PRP-35): the native-memory rules, enforced by javac. build-posix.sh reads this same
          line, so both source trees are checked against one configuration. -->
     <!-- PRP-35 phase 3: the Checks.ON constant comes from src/checks-off (release) or, with -Dchecks, src/checks-on. -->
     <jr.checks.src>src/checks-off/java</jr.checks.src>
+    <!-- teavm-native-check comes from Maven Central (repo jarrunner/teavm-native-check, split out of jr by PRP-37). -->
+    <nativecheck.version>1.0.0</nativecheck.version>
     <nativecheck>tracked=jarrunner.jr.ReError takes=jarrunner.jr.N.handOver wrappers=jarrunner.jr.Buf trust=jarrunner.jr.Buf.wrap scope=jarrunner.jr.N.memScoped alloc=jarrunner.jr.N.alloc raw=jarrunner.jr.N,jarrunner.jr.Arena,jarrunner.jr.Buf,jarrunner.jr.WinApi,jarrunner.jr.WinOffsets,jarrunner.jr.PosixApi,jarrunner.jr.PosixOffsets</nativecheck>
   </properties>
   <dependencies>
@@ -62,8 +64,8 @@
           <annotationProcessorPaths>
             <path>
               <groupId>io.github.jarrunner</groupId>
-              <artifactId>teavm_native_check</artifactId>
-              <version>1.0</version>
+              <artifactId>teavm-native-check</artifactId>
+              <version>${nativecheck.version}</version>
             </path>
           </annotationProcessorPaths>
           <compilerArgs>

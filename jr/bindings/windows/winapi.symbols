@@ -6,7 +6,7 @@
 # `escapes=N[,M]` after a function's Java name: the C function keeps parameter N (1-based) after it
 # returns, which no header says (PRP-35 phase 4); it becomes @Escapes, and never a String overload.
 # `releases=a[,b]` after a function's Java name: the Java names of the calls that close what it returns (PRP-35
-# phase 5); it becomes @Acquires("a,b") and teavm_native_check NC8 checks every caller closes it on every path.
+# phase 5); it becomes @Acquires("a,b") and teavm-native-check NC8 checks every caller closes it on every path.
 # Not covered: resources returned through an out-parameter (CreateProcessW, BCryptOpenAlgorithmProvider), child
 # windows (their parent destroys them), CertEnumCertificatesInStore (each call frees the previous context).
 # `fails=V` after a function's Java name: the value it returns on failure (NULL, or a constant such as

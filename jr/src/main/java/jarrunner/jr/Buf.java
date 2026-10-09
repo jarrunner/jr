@@ -22,7 +22,7 @@ public final class Buf {
     }
 
     /** Memory the caller vouches holds size bytes (an array the OS returned, a header read from a file). Every later
-     *  check trusts that number, so only {@code @Unsafe} code may call this (teavm_native_check, trust=). */
+     *  check trusts that number, so only {@code @Unsafe} code may call this (teavm-native-check, trust=). */
     public static Buf wrap(@Returned Address base, int size) {
         return new Buf(base, size);
     }

@@ -19,7 +19,7 @@ public final class TypeMap {
     }
 
     /** {@code @CType("...") } when --ctype-annotation is on and t is a pointer whose target is known, else "", so a
-     *  checker can tell one kind of pointer from another (teavm_native_check NC6): "struct _X" or "union _X", "char" or
+     *  checker can tell one kind of pointer from another (teavm-native-check NC6): "struct _X" or "union _X", "char" or
      *  "wchar_t" for text, "int16".."int64" / "float" / "double" for a scalar by width, "pointer" for a pointer; nothing
      *  for void* or a byte buffer (unsigned char*), which take any memory. */
     public String ctype(Type t) {
