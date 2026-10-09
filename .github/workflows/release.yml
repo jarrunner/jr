@@ -1,4 +1,4 @@
-# Builds jr (the Java/TeaVM launcher under jr/) from source on clean Windows and macOS machines and
+# Builds jr (the Java/TeaVM launcher) from source on clean Windows and macOS machines and
 # publishes it as a GitHub release with SHA256SUMS. Run by pushing a tag vX.Y.Z,
 # or by hand from the Actions tab: with publish unticked it only builds, and the binaries are kept
 # as workflow artifacts, which is how a change to this file is tested.
@@ -56,7 +56,6 @@ jobs:
 
       - name: Build
         shell: pwsh
-        working-directory: jr
         run: |
           x86_64-w64-mingw32-clang --version | Select-Object -First 1
           mvn -B clean package
@@ -66,7 +65,6 @@ jobs:
 
       - name: Check the exes run
         shell: pwsh
-        working-directory: jr
         run: |
           $help = & .\dist\jr-windows-x86_64.exe -Xjr:help 2>&1 | Out-String
           if ($help -notmatch 'Java Runner') { throw "jr -Xjr:help did not answer:`n$help" }
@@ -78,18 +76,17 @@ jobs:
             if ($vi.CompanyName -ne 'jarrunner' -or -not $vi.FileDescription -or -not $vi.FileVersion) { throw "$exe carries no version information" }
             '{0}: {1} {2}' -f $exe, $vi.FileDescription, $vi.FileVersion
           }
-          New-Item -ItemType Directory -Force ..\unsigned | Out-Null
-          Copy-Item dist\jr-windows-x86_64.exe ..\unsigned\jr.exe
-          Copy-Item dist\jr-windows-arm64.exe ..\unsigned\jr-windows-arm64.exe
-          Copy-Item dist-noicon\jr-windows-x86_64.exe ..\unsigned\jr-noicon-windows-x86_64.exe
-          Copy-Item dist-noicon\jr-windows-arm64.exe ..\unsigned\jr-noicon-windows-arm64.exe
-          Get-ChildItem ..\unsigned | ForEach-Object { '{0,-34} {1,9:N0}' -f $_.Name, $_.Length }
+          New-Item -ItemType Directory -Force unsigned | Out-Null
+          Copy-Item dist\jr-windows-x86_64.exe unsigned\jr.exe
+          Copy-Item dist\jr-windows-arm64.exe unsigned\jr-windows-arm64.exe
+          Copy-Item dist-noicon\jr-windows-x86_64.exe unsigned\jr-noicon-windows-x86_64.exe
+          Copy-Item dist-noicon\jr-windows-arm64.exe unsigned\jr-noicon-windows-arm64.exe
+          Get-ChildItem unsigned | ForEach-Object { '{0,-34} {1,9:N0}' -f $_.Name, $_.Length }
 
       # PRP-35: the checks build (every Buf access checked) is never shipped, so nothing else would
       # notice it breaking. Built after the release exes were copied out; it only writes dist-checks.
       - name: Checks build
         shell: pwsh
-        working-directory: jr
         run: |
           mvn -B clean package -Dchecks "-Djr.noicon=true" "-Dteavmc.targets=x86_64"
           if ($LASTEXITCODE -ne 0) { throw 'mvn package -Dchecks failed' }
@@ -109,7 +106,7 @@ jobs:
 
   # macOS: built natively with Apple clang by mvn package (profile macos): arm64, x86_64 and a universal binary,
   # each signed ad hoc (arm64 macOS runs no unsigned code). Ad hoc is not
-  # Gatekeeper-approved, so the supported install is jr/install.sh (curl sets no quarantine flag).
+  # Gatekeeper-approved, so the supported install is install.sh (curl sets no quarantine flag).
   macos:
     runs-on: macos-latest
     steps:
@@ -122,31 +119,28 @@ jobs:
           cache: maven
 
       - name: Build
-        working-directory: jr
         run: |
           clang --version | head -1
           mvn -B clean package
 
       - name: Check the binaries run
-        working-directory: jr
         run: |
-          mkdir -p ../macos
-          cp dist/jr-macos dist/jr-macos-arm64 dist/jr-macos-x86_64 ../macos/
-          for f in ../macos/*; do
+          mkdir -p macos
+          cp dist/jr-macos dist/jr-macos-arm64 dist/jr-macos-x86_64 macos/
+          for f in macos/*; do
             codesign -v "$f" || { echo "$f is not signed"; exit 1; }
             echo "$(basename $f): $(lipo -archs $f), $(wc -c < $f | tr -d ' ') bytes"
           done
-          ../macos/jr-macos -Xjr:help 2>&1 | grep -q 'Java Runner' || { echo 'jr -Xjr:help did not answer'; exit 1; }
-          arch -x86_64 ../macos/jr-macos -Xjr:help 2>&1 | grep -q 'Java Runner' || { echo 'the x86_64 slice did not answer under Rosetta'; exit 1; }
+          macos/jr-macos -Xjr:help 2>&1 | grep -q 'Java Runner' || { echo 'jr -Xjr:help did not answer'; exit 1; }
+          arch -x86_64 macos/jr-macos -Xjr:help 2>&1 | grep -q 'Java Runner' || { echo 'the x86_64 slice did not answer under Rosetta'; exit 1; }
 
       # PRP-35: the checks build (into dist-checks/), after the release binaries were copied out.
       - name: Checks build
-        working-directory: jr
         run: |
           mvn -B clean package -Dchecks
           out=$(dist-checks/jr-macos-arm64 -Xjr:checks-selftest 2>&1) && { echo "the checks build exited 0"; exit 1; }
           echo "$out" | grep -q 'native buffer overrun: 4 bytes at offset 2 of a 4-byte buffer' || { echo "the checks build did not catch the planted overrun:"; echo "$out"; exit 1; }
-          ../macos/jr-macos -Xjr:checks-selftest 2>&1 | grep -q 'Unknown jr option' || { echo 'the release binary knows -Xjr:checks-selftest'; exit 1; }
+          macos/jr-macos -Xjr:checks-selftest 2>&1 | grep -q 'Unknown jr option' || { echo 'the release binary knows -Xjr:checks-selftest'; exit 1; }
           echo 'checks build: overrun caught; release binary has no checks'
 
       - name: Upload build
@@ -181,7 +175,7 @@ jobs:
         if: steps.ver.outputs.publish == 'true'
         run: |
           mkdir -p out
-          cp in/jr-unsigned/*.exe in/jr-macos/* jr/install.sh out/
+          cp in/jr-unsigned/*.exe in/jr-macos/* install.sh out/
           cp out/jr.exe out/jr-windows-x86_64.exe
           (cd out && sha256sum $(ls | sort) > SHA256SUMS)
           cat out/SHA256SUMS

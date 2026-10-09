@@ -33,13 +33,19 @@ The Java code that makes up jr also compiles for POSIX systems. The Linux build 
 - **`jr.exe`** (about 610 KB) - Windows x64. Nothing to install: it needs only DLLs that ship with Windows.
 - **`jr-windows-arm64.exe`** - Windows on ARM64. Built and linked for ARM64, not yet run on ARM64 hardware.
 - **`jr-noicon-*.exe`** - the same without jr's icon, for tools that stamp their own (this is what `jr-maven-plugin` bundles).
-- **`SHA256SUMS`** - check a download against it. The release exes are not code-signed.
+- **`jr-macos`** - macOS, one binary for Apple Silicon and Intel (also as `jr-macos-arm64` and `jr-macos-x86_64`), signed ad hoc. Install with `curl -fsSL https://github.com/jarrunner/jr/releases/latest/download/install.sh | sh`; see [docs/macos.md](docs/macos.md).
+- **`SHA256SUMS`** - check a download against it. The release binaries are not code-signed.
 
 Download, rename if desired, and start using immediately! Tested on Windows 11.
 
+## Related repositories
+
+- [jr-maven-plugin](https://github.com/jarrunner/jr-maven-plugin) builds a jr launcher for your own app in its Maven build: your icon, your version, your config baked in. It bundles the jr binaries of a jr release.
+- [jr-runtime](https://github.com/jarrunner/jr-runtime) is an optional library for an app launched by jr: typed access to what jr passes it, and an update check.
+
 ## Building from Source
 
-`mvn package` in `jr/`, needing JDK 25, Maven and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw/releases) (the `msvcrt` build) on PATH. Details are in [jr/README.md](jr/README.md). The release workflow (`.github/workflows/release.yml`) runs the same Maven build on a clean Windows machine, so a release contains nothing built on a developer's machine.
+`mvn package` in this folder, needing JDK 25, Maven and [llvm-mingw](https://github.com/mstorsjo/llvm-mingw/releases) (the `msvcrt` build) on PATH. Details are in [docs/development.md](docs/development.md). The release workflow (`.github/workflows/release.yml`) runs the same Maven build on a clean Windows machine, so a release contains nothing built on a developer's machine.
 
 jr began as a hand-written C launcher. That version lives on in its own repository, [jarrunner/jr_legacy_c](https://github.com/jarrunner/jr_legacy_c), but it has far fewer features than this one and is no longer developed.
 

@@ -1,4 +1,0 @@
-# build output
-cp.txt
-# the macOS binaries jr-maven-plugin bundles, fetched from a CI run or a release
-dist-macos/

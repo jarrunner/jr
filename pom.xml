@@ -21,8 +21,8 @@
     <jr.dist>dist</jr.dist>
     <jr.noicon>false</jr.noicon>
     <jr.nostamp>false</jr.nostamp>
-    <jr.icon>${project.basedir}/../icon/jr-icon.ico</jr.icon>
-    <jr.manifest>${project.basedir}/../jr-maven-plugin/src/main/resources/jarrunner/jr/maven/app.manifest</jr.manifest>
+    <jr.icon>${project.basedir}/icon/jr-icon.ico</jr.icon>
+    <jr.manifest>${project.basedir}/src/main/windows/app.manifest</jr.manifest>
     <!-- Version information stamped into jr's own Windows exes: an exe with none (no company, product or
          description) is what antivirus heuristics distrust; 1.2.0 shipped without it and Defender flagged it. -->
     <jr.version.quad>${project.version}.0</jr.version.quad>
