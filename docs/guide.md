@@ -82,6 +82,8 @@ The plugin is ordinary Maven, so CI needs nothing beyond `mvn package` on a Wind
 
 Every parameter is listed in the [plugin's README](https://github.com/jarrunner/jr-maven-plugin#parameters). For apps that want to know they were launched by jr, or to check for updates themselves, there is [jr-runtime](https://github.com/jarrunner/jr-runtime).
 
+How an app gives its users one-file install and update (its own `install` and `update` commands, `-Xjr:batch`, betas on a channel, what a user types): [apps.md](apps.md).
+
 ## Without Maven
 
 jr can stamp an exe directly, which is what the plugin does for you:

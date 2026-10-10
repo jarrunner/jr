@@ -44,6 +44,7 @@ Download, rename if desired, and start using immediately! Tested on Windows 11.
 
 - [jr-maven-plugin](https://github.com/jarrunner/jr-maven-plugin) builds a jr launcher for your own app in its Maven build: your icon, your version, your config baked in. It bundles the jr binaries of a jr release.
 - [jr-runtime](https://github.com/jarrunner/jr-runtime) is an optional library for an app launched by jr: typed access to what jr passes it, and an update check.
+- [updateutils](https://github.com/jarrunner/updateutils) gives an app its own `install` and `update` commands on top of jr: the standard per-OS folders, the Windows PATH and shortcuts, and a receipt for uninstall. The convention is in [docs/apps.md](docs/apps.md).
 
 ## Building from Source
 
