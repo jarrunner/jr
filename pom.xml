@@ -34,10 +34,20 @@
          line, so both source trees are checked against one configuration. -->
     <!-- PRP-35 phase 3: the Checks.ON constant comes from src/checks-off (release) or, with -Dchecks, src/checks-on. -->
     <jr.checks.src>src/checks-off/java</jr.checks.src>
-    <!-- teavm-native-check comes from Maven Central (repo jarrunner/teavm-native-check, split out of jr by PRP-37). -->
-    <nativecheck.version>1.0.0</nativecheck.version>
+    <!-- teavm-native-check (repo jarrunner/teavm-native-check, split out of jr by PRP-37). 1.1.0-SNAPSHOT is on the
+         Central snapshot repository below; it becomes 1.1.0 on Maven Central when release quota allows. -->
+    <nativecheck.version>1.1.0-SNAPSHOT</nativecheck.version>
     <nativecheck>tracked=jarrunner.jr.ReError takes=jarrunner.jr.N.handOver wrappers=jarrunner.jr.Buf trust=jarrunner.jr.Buf.wrap scope=jarrunner.jr.N.memScoped alloc=jarrunner.jr.N.alloc raw=jarrunner.jr.N,jarrunner.jr.Arena,jarrunner.jr.Buf,jarrunner.jr.WinApi,jarrunner.jr.WinOffsets,jarrunner.jr.PosixApi,jarrunner.jr.PosixOffsets</nativecheck>
   </properties>
+  <repositories>
+    <!-- Central's snapshot repository, for our own -SNAPSHOT dependencies; releases still come from Maven Central. -->
+    <repository>
+      <id>central-portal-snapshots</id>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+      <releases><enabled>false</enabled></releases>
+      <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+  </repositories>
   <dependencies>
     <dependency>
       <groupId>${teavm.groupId}</groupId>
