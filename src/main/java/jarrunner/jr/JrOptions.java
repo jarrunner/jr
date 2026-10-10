@@ -22,6 +22,7 @@ public final class JrOptions {
     public String jsonDump; // -Xjr:json-dump=<file>: parse with jr's own reader, print canonical JSON
     public String checkConfig; // -Xjr:check-config=<file>: the pre-bake jrc-json check, without baking
     public int update; // 1 = -Xjr:update-check, 2 = -Xjr:update (PRP-30)
+    public boolean batch; // -Xjr:batch: no dialogs, one JSON line on stdout (UpdateResult, PRP-42)
     public int doctor; // 1 = -Xjr:doctor, 2 = -Xjr:repair (PRP-31)
     public String error; // non-null = a bad option, message for the user
     public List<String> appArgs = new ArrayList<>();
@@ -58,6 +59,8 @@ public final class JrOptions {
                 opts.checkConfig = opt.substring("check-config=".length());
             } else if (opt.startsWith("json-dump=")) {
                 opts.jsonDump = opt.substring("json-dump=".length());
+            } else if (opt.equals("batch")) {
+                opts.batch = true;
             } else if (opt.equals("yes")) {
                 opts.assumeYes = true;
             } else if (opt.equals("help")) {

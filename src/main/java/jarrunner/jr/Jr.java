@@ -47,6 +47,7 @@ public final class Jr {
         // The app's arguments, verbatim, after jr's leading -Xjr: options. Mutates config for any
         // -Xjr:key=value along the way.
         var opts = JrOptions.parse(args, config);
+        Ui.batch = opts.batch;
 
         if (!config.logFile.isBlank()) {
             Log.init(config.logFile, config.logOverwrite);
@@ -149,14 +150,22 @@ public final class Jr {
 
         if (opts.update != 0) {
             int code;
+            String status, latest, said;
             if (opts.update == 2) {
-                code = SelfUpdate.run(config, hasConsole, guiMode);
+                code = opts.batch ? SelfUpdate.run(config, true, false) : SelfUpdate.run(config, hasConsole, guiMode);
+                status = SelfUpdate.status;
+                latest = SelfUpdate.latest;
+                said = SelfUpdate.said;
             } else {
                 var check = UpdateCheck.run(config);
                 if (check.status == UpdateCheck.ERROR) Ui.error(hasConsole, "Update check", check.message);
                 else Ui.info(hasConsole, "Update check", check.message);
                 code = check.status;
+                status = code == UpdateCheck.NEWER ? UpdateResult.NEWER : code == UpdateCheck.CURRENT ? UpdateResult.CURRENT : UpdateResult.ERROR;
+                latest = check.release == null ? null : check.release.get("version").str();
+                said = check.message;
             }
+            if (opts.batch) Stderr.out(UpdateResult.json(status, config.appVersion, latest, said));
             Log.close();
             WinApi.exit(code);
             return;

@@ -20,6 +20,7 @@ public final class JrOptions {
     public boolean assumeYes;
     public boolean help;
     public int update; // 1 = -Xjr:update-check, 2 = -Xjr:update (PRP-30 on Windows, PRP-42 here)
+    public boolean batch; // -Xjr:batch: no dialogs, one JSON line on stdout (UpdateResult, PRP-42)
     public boolean install; // -Xjr:install (macOS: the .app and the command link, PRP-42)
     public String error; // non-null = a bad option, message for the user
     public List<String> appArgs = new ArrayList<>();
@@ -54,6 +55,8 @@ public final class JrOptions {
                 opts.help = true;
             } else if (opt.equals("update-check") || opt.equals("update")) {
                 opts.update = opt.equals("update") ? 2 : 1;
+            } else if (opt.equals("batch")) {
+                opts.batch = true;
             } else if (opt.equals("install")) {
                 opts.install = true;
             } else if (opt.equals("create-config") || opt.startsWith("create-config=")) {
@@ -72,7 +75,7 @@ public final class JrOptions {
                     }
                 } else {
                     opts.error = "Unknown jr option: -Xjr:" + opt + "\n\nOptions: -Xjr:<key>=<value>, -Xjr:yes, "
-                            + "-Xjr:update-check, -Xjr:update, -Xjr:install, -Xjr:help";
+                            + "-Xjr:update-check, -Xjr:update, -Xjr:batch, -Xjr:install, -Xjr:help";
                     break;
                 }
             }

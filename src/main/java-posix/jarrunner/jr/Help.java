@@ -21,6 +21,7 @@ public final class Help {
                 + "                              e.g. -Xjr:aot=false  -Xjr:java.home=PATH\n"
                 + "  -Xjr:update-check           is a newer release out? (the app's update.url)\n"
                 + "  -Xjr:update                 replace this binary (or its .app) with the newest release\n"
+                + "  -Xjr:batch                  with either: no prompts, one JSON line on stdout (for apps)\n"
                 + "  -Xjr:install                macOS: put the app in ~/Applications and a link in ~/.local/bin\n"
                 + "  -Xjr:help                   this help\n\n"
                 + "Not in this build:\n"

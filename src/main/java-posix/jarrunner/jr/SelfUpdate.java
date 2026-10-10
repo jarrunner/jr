@@ -20,13 +20,19 @@ import static jarrunner.jr.N.*;
  *  </ul>
  *  The update file's entries: "exe" for bare binaries, "app" for .app zips, keyed by platform (Os.updateKeys). */
 public final class SelfUpdate {
+    /** What the last run did, for -Xjr:batch (UpdateResult): its status, the version it updated to or found, and what it said. */
+    public static String status, latest, said;
+
     private SelfUpdate() {}
 
     public static int run(Config c) {
         var check = UpdateCheck.run(c);
         if (check.status != UpdateCheck.NEWER) {
-            return report(check.status == UpdateCheck.ERROR, check.message);
+            var code = report(check.status == UpdateCheck.ERROR, check.message);
+            if (check.status == UpdateCheck.CURRENT) status = UpdateResult.CURRENT;
+            return code;
         }
+        latest = check.release.get("version").str();
         var exe = ExeInfo.fullPath();
         if (exe.isEmpty()) return report(true, "Could not find this binary's own path, so it cannot be replaced.");
         var at = exe.lastIndexOf(".app/Contents/MacOS/");
@@ -173,6 +179,8 @@ public final class SelfUpdate {
     }
 
     private static int report(boolean error, String message) {
+        status = error ? UpdateResult.ERROR : UpdateResult.UPDATED;
+        said = message;
         if (error) {
             Ui.error(true, "Update", message);
             return 1;

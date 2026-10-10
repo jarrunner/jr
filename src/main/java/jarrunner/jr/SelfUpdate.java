@@ -11,13 +11,19 @@ public final class SelfUpdate {
     private static final int MOVEFILE_REPLACE_EXISTING = 1; // winbase.h
     public static final String REPLACED = ".jr-replaced";
 
+    /** What the last run did, for -Xjr:batch (UpdateResult): its status, the version it updated to or found, and what it said. */
+    public static String status, latest, said;
+
     private SelfUpdate() {}
 
     public static int run(Config c, boolean hasConsole, boolean guiMode) {
         var check = UpdateCheck.run(c);
         if (check.status != UpdateCheck.NEWER) {
-            return report(hasConsole, check.status == UpdateCheck.ERROR, check.message);
+            var code = report(hasConsole, check.status == UpdateCheck.ERROR, check.message);
+            if (check.status == UpdateCheck.CURRENT) status = UpdateResult.CURRENT;
+            return code;
         }
+        latest = check.release.get("version").str();
         var key = "aarch64".equals(NativeArch.foojayName()) ? "windows-aarch64" : "windows-x86_64";
         var entry = check.release.path("exe", key);
         if (entry == null && key.equals("windows-aarch64")) entry = check.release.path("exe", "windows-x86_64");
@@ -61,6 +67,8 @@ public final class SelfUpdate {
     }
 
     private static int report(boolean hasConsole, boolean error, String message) {
+        status = error ? UpdateResult.ERROR : UpdateResult.UPDATED;
+        said = message;
         if (error) {
             Log.error(message);
             Ui.error(hasConsole, "Update", message);

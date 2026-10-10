@@ -7,6 +7,9 @@ import static jarrunner.jr.N.*;
 public final class Ui {
     private Ui() {}
 
+    /** -Xjr:batch (PRP-42): no dialogs and nothing on stdout; every message goes to stderr, because stdout carries the one JSON line an app reads. */
+    public static boolean batch;
+
     public static void info(boolean hasConsole, String title, String message) {
         show(hasConsole, title, message, WinApi.MB_ICONINFORMATION);
     }
@@ -16,6 +19,11 @@ public final class Ui {
     }
 
     private static void show(boolean hasConsole, String title, String message, int type) {
+        if (batch) {
+            Stderr.print((type == WinApi.MB_ICONERROR ? "[ERROR] " : "[INFO] ") + title + ": " + message + "\n");
+            Log.write(type == WinApi.MB_ICONERROR ? "ERROR" : "INFO", title + ": " + message);
+            return;
+        }
         if (type == WinApi.MB_ICONERROR) {
             // PRP-31: every error becomes a saved, redacted report; GUI mode shows it in ErrorDialog.
             var report = ErrorReport.build(title, message);

@@ -6,6 +6,9 @@ package jarrunner.jr;
 public final class Ui {
     private Ui() {}
 
+    /** -Xjr:batch (PRP-42): no dialogs and nothing on stdout; every message goes to stderr, because stdout carries the one JSON line an app reads. */
+    public static boolean batch;
+
     public static void info(boolean hasConsole, String title, String message) {
         show(title, message, false);
     }
@@ -16,7 +19,7 @@ public final class Ui {
 
     private static void show(String title, String message, boolean isError) {
         var text = "\n" + (isError ? "[ERROR] " : "[INFO] ") + title + "\n" + message + "\n\n";
-        if (isError) {
+        if (isError || batch) {
             Stderr.print(text);
         } else {
             Stderr.out(text);

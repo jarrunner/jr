@@ -25,6 +25,7 @@ public final class PosixJr {
 
         var config = Config.load();
         var opts = JrOptions.parse(args, config);
+        Ui.batch = opts.batch;
 
         if (!config.logFile.isBlank()) {
             Log.init(config.logFile, config.logOverwrite);
@@ -41,14 +42,22 @@ public final class PosixJr {
 
         if (opts.update != 0) { // PRP-42: before help and the config check, so a broken jar can still be updated away
             int code;
+            String status, latest, said;
             if (opts.update == 2) {
                 code = SelfUpdate.run(config);
+                status = SelfUpdate.status;
+                latest = SelfUpdate.latest;
+                said = SelfUpdate.said;
             } else {
                 var check = UpdateCheck.run(config);
                 if (check.status == UpdateCheck.ERROR) Ui.error(true, "Update check", check.message);
                 else Ui.info(true, "Update check", check.message);
                 code = check.status;
+                status = code == UpdateCheck.NEWER ? UpdateResult.NEWER : code == UpdateCheck.CURRENT ? UpdateResult.CURRENT : UpdateResult.ERROR;
+                latest = check.release == null ? null : check.release.get("version").str();
+                said = check.message;
             }
+            if (opts.batch) Stderr.out(UpdateResult.json(status, config.appVersion, latest, said));
             Log.close();
             PosixApi.exit(code);
             return;
