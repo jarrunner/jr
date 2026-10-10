@@ -28,6 +28,14 @@ final class Os {
         return null;
     }
 
+    /** Nothing is embedded on Linux (see embeddedConfig). */
+    static Buf embeddedSlot() {
+        return null;
+    }
+
+    /** -Xjr:install and the bundle refresh are macOS only (AppBundle). */
+    static final boolean APP_BUNDLES = false;
+
     /** The user's cache folder ($XDG_CACHE_HOME, else ~/.cache), or null without HOME. */
     static String userCacheDir() {
         var xdg = Cstr.readEnv("XDG_CACHE_HOME");
@@ -38,5 +46,11 @@ final class Os {
 
     /** macOS only (the Dock name and icon inside an .app); nothing on Linux. */
     static void bundleVmArgs(java.util.List<String> out) {
+    }
+
+    /** The update file's platform key for this machine (SelfUpdate): linux-x86_64 or linux-aarch64. */
+    static String[] updateKeys() {
+        var arch = NativeArch.machine();
+        return new String[] {"linux-" + (arch.equals("aarch64") || arch.equals("arm64") ? "aarch64" : "x86_64")};
     }
 }

@@ -37,18 +37,29 @@ final class Os {
      *  links an empty (all-zero) __DATA,__jrc section into every jr; the plugin fills it with the config text,
      *  NUL-terminated, and re-signs. dyld maps it with the rest of the image, so this reads memory, not the file. */
     static String embeddedConfig() {
+        var slot = embeddedSlot();
+        if (slot == null) {
+            return null;
+        }
+        var text = string(slot.ptr(), slot.size());
+        return text.isEmpty() ? null : text;
+    }
+
+    /** The whole __DATA,__jrc section: the config, a NUL, then the app's bundle files if the plugin added them
+     *  (AppBundle, PRP-42). Null when there is none. */
+    @Unsafe("getsectiondata returns the section's address and stores its size; dyld maps exactly that many bytes")
+    static Buf embeddedSlot() {
         var header = PosixApi.dyldGetImageHeader(0);
         if (header.toLong() == 0) {
             return null;
         }
         var size = longVar();
         var data = PosixApi.getsectiondata(header64(header), utf8("__DATA"), utf8("__jrc"), size);
-        if (data.toLong() == 0 || longOf(size) <= 0) {
-            return null;
-        }
-        var text = string(data, (int) longOf(size));
-        return text.isEmpty() ? null : text;
+        return data.toLong() == 0 || longOf(size) <= 0 ? null : Buf.wrap(data, (int) longOf(size));
     }
+
+    /** -Xjr:install and the bundle refresh are for macOS app bundles (AppBundle). */
+    static final boolean APP_BUNDLES = true;
 
     /** The user's cache folder, ~/Library/Caches, or null without HOME. */
     static String userCacheDir() {
@@ -71,6 +82,13 @@ final class Os {
         if (FileIo.exists(icns)) {
             out.add("-Xdock:icon=" + icns);
         }
+    }
+
+    /** The update file's platform keys for this Mac, in the order -Xjr:update tries them (SelfUpdate): the universal
+     *  build, which runs on every Mac, then this machine's own architecture. */
+    static String[] updateKeys() {
+        var arch = NativeArch.machine();
+        return new String[] {"macos-universal", "macos-" + (arch.equals("arm64") || arch.equals("aarch64") ? "arm64" : "x86_64")};
     }
 
     @Unsafe("dyld declares every image header as struct mach_header; jr is built only as 64-bit, where the main "

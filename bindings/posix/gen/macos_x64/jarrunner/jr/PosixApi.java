@@ -123,6 +123,39 @@ public final class PosixApi {
         return result_;
     }
 
+    /** {@code int chmod(const char *, mode_t)} - stat.h:381 */
+    @Import(name = "chmod") public static native int chmod(@CType("char") Address arg0, short mode_t);
+
+    /** {@code chmod} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int chmod(String arg0, short mode_t) {
+        var scope_ = N.mark();
+        var result_ = chmod(N.utf8(arg0), mode_t);
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code int symlink(const char *, const char *)} - unistd.h:644 */
+    @Import(name = "symlink") public static native int symlink(@CType("char") Address arg0, @CType("char") Address arg1);
+
+    /** {@code symlink} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int symlink(String arg0, String arg1) {
+        var scope_ = N.mark();
+        var result_ = symlink(N.utf8(arg0), N.utf8(arg1));
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code ssize_t readlink(const char *restrict, char *restrict, size_t __bufsize)} - unistd.h:641 */
+    @Import(name = "readlink") public static native long readlink(@CType("char") Address arg0, @CType("char") Address arg1, long __bufsize);
+
+    /** {@code readlink} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static long readlink(String arg0, @CType("char") Address arg1, long __bufsize) {
+        var scope_ = N.mark();
+        var result_ = readlink(N.utf8(arg0), arg1, __bufsize);
+        N.release(scope_);
+        return result_;
+    }
+
     /** {@code int mkdir(const char *, mode_t)} - stat.h:385 */
     @Import(name = "mkdir") public static native int mkdir(@CType("char") Address arg0, short mode_t);
 
@@ -200,6 +233,7 @@ public final class PosixApi {
     public static final int O_RDONLY = 0; // int, fcntl.h:96
     public static final int F_OK = 0; // int, unistd.h:89
     public static final int X_OK = 1; // int, unistd.h:90
+    public static final int W_OK = 2; // int, unistd.h:91
     public static final int CLOCK_MONOTONIC = 6; // int, _time.h:160
     public static final int PATH_MAX = 1024; // int, syslimits.h:103
     public static final int EINTR = 4; // int, errno.h:91

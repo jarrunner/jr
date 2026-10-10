@@ -26,6 +26,7 @@ public class Config {
     String runVerify = "";    // per-run jar check: "" = crc32 (default), "sha256", "none" - see JarCheck
     String runCrc32 = "";
     String appId = "";
+    String appName = "";  // app.name: the binary's name inside an .app it installs (AppBundle, PRP-42)
     String appVersion = "";
     String updateUrl = "";
     String updateChannel = "";

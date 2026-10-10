@@ -39,6 +39,28 @@ public final class PosixJr {
             return;
         }
 
+        if (opts.update != 0) { // PRP-42: before help and the config check, so a broken jar can still be updated away
+            int code;
+            if (opts.update == 2) {
+                code = SelfUpdate.run(config);
+            } else {
+                var check = UpdateCheck.run(config);
+                if (check.status == UpdateCheck.ERROR) Ui.error(true, "Update check", check.message);
+                else Ui.info(true, "Update check", check.message);
+                code = check.status;
+            }
+            Log.close();
+            PosixApi.exit(code);
+            return;
+        }
+
+        if (opts.install) { // PRP-42: the .app and the command link, from what this binary carries
+            var code = AppBundle.install(config);
+            Log.close();
+            PosixApi.exit(code);
+            return;
+        }
+
         var javaExeName = "java";
         if (opts.help || (config.javaArgs.isBlank() && !config.hasRunTarget() && opts.appArgs.isEmpty())) {
             var displayJavaPath = JavaFinder.findInPath(javaExeName);
@@ -72,6 +94,8 @@ public final class PosixJr {
             }
             config.javaArgs = "-jar " + JrcJson.quote(jar);
         }
+
+        AppBundle.refresh(); // inside an .app: its files follow this binary after an update (PRP-42)
 
         var resolved = resolveJava(config, javaExeName);
         if (resolved == null) {

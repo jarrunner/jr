@@ -23,6 +23,14 @@ To give an app its own binary, with its config embedded, build it with jr-maven-
 
 The release assets are `jr-macos` (universal), `jr-macos-arm64` and `jr-macos-x86_64` (thin), and `install.sh`.
 
+## One file: the app and the command
+
+A binary built by jr-maven-plugin carries its own app (Info.plist and icon). `myapp -Xjr:install` puts `My App.app` in `~/Applications` (no admin rights) and makes the command `~/.local/bin/myapp` a link to the binary inside it, so the same file opens from the Dock, Finder and Launchpad and runs in a terminal. Install once with curl, run `-Xjr:install`, and from then on update with `myapp -Xjr:update`; the app follows the binary.
+
+## Updating an app
+
+An app's binary (or `.app`) built by jr-maven-plugin with an `updateUrl` updates itself, as on Windows: `myapp -Xjr:update-check`, `myapp -Xjr:update`. A bare binary is replaced in place; an `.app` is replaced as a whole bundle. jr needs write access to the folder the binary or app sits in, so keep a binary in `~/.local/bin` rather than a root-owned folder. Details: `development.md`, self-update.
+
 ## Making a macOS app with jr-maven-plugin
 
 Add `macos` to the plugin's `platforms` to get, from the same `mvn package` (on Windows too): a single-file binary with the app's config embedded, and/or an `.app` with its icon plus a zip of it to download. You choose arm64, x86_64 or universal. Details are in the plugin's README, under "macOS".

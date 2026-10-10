@@ -1,14 +1,12 @@
 package jarrunner.jr;
 
-import java.util.ArrayList;
-
 /**
  * The POSIX twin of the Windows RemoteJar (PRP-24, PRP-30; ported in PRP-36): a config can name its jar by
  * {@code run.url} / {@code run.maven}, or by jar.sources in a jrc-json, pinned by a mandatory SHA-256. Same
  * rules, same cache layout (~/.m2/repository for maven, ~/.jr/cache/jars/&lt;sha256&gt;/ for a url), same
  * .jr-sha256 sidecar, so a jar is hashed once and then checked cheaply each launch (JarCheck).
  *
- * The download runs curl (in /usr/bin on macOS and on every common Linux), which also shows its own progress
+ * The download runs curl (see Curl), which also shows its own progress
  * bar and resumes a .part file left by a dropped connection (-C -). The finished file is hashed before it is
  * moved into place.
  */
@@ -91,7 +89,7 @@ public final class RemoteJar {
         var part = target + ".part";
         Log.info("run target: downloading " + url);
         Stderr.println("Downloading " + url);
-        if (!download(url, part)) {
+        if (!Curl.download(url, part, true)) {
             // The .part stays: the next run resumes it rather than starting over.
             return err("Could not download the application (the next run will resume):\n" + url);
         }
@@ -109,31 +107,6 @@ public final class RemoteJar {
         markVerified(target, sha);
         Log.info("run target verified: " + target);
         return target;
-    }
-
-    /** curl -f (an HTTP error is a failure, not a saved error page), -L (follow GitHub's redirect to its CDN),
-     *  -C - (resume the .part). A server that refuses to resume (curl exit 33) gets one fresh start. */
-    private static boolean download(String url, String part) {
-        var curl = JavaFinder.findInPath("curl");
-        if (curl == null || curl.isEmpty()) curl = "/usr/bin/curl";
-        var progress = PosixApi.isatty(2) != 0 ? "-#" : "-sS";
-        var args = new ArrayList<String>();
-        args.add("-fL");
-        args.add(progress);
-        args.add("--retry");
-        args.add("2");
-        args.add("-C");
-        args.add("-");
-        args.add("-o");
-        args.add(part);
-        args.add(url);
-        var r = ProcessLauncher.launch(curl, args);
-        if (r.started && r.exitCode == 33) {
-            PosixApi.unlink(part);
-            r = ProcessLauncher.launch(curl, args);
-        }
-        if (!r.started) Log.error("could not start " + curl);
-        return r.started && r.exitCode == 0;
     }
 
     /** run.maven: the standard local repository layout, so a jar Maven already has is reused (JR_M2_REPO

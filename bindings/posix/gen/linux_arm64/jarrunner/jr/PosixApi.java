@@ -123,6 +123,39 @@ public final class PosixApi {
         return result_;
     }
 
+    /** {@code extern int chmod(const char *__file, __mode_t __mode)} - stat.h:352 */
+    @Import(name = "chmod") public static native int chmod(@CType("char") Address __file, int __mode);
+
+    /** {@code chmod} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int chmod(String __file, int __mode) {
+        var scope_ = N.mark();
+        var result_ = chmod(N.utf8(__file), __mode);
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code extern int symlink(const char *__from, const char *__to)} - unistd.h:832 */
+    @Import(name = "symlink") public static native int symlink(@CType("char") Address __from, @CType("char") Address __to);
+
+    /** {@code symlink} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static int symlink(String __from, String __to) {
+        var scope_ = N.mark();
+        var result_ = symlink(N.utf8(__from), N.utf8(__to));
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code extern ssize_t readlink(const char *restrict __path, char *restrict __buf, size_t __len)} - unistd.h:838 */
+    @Import(name = "readlink") public static native long readlink(@CType("char") Address __path, @CType("char") Address __buf, long __len);
+
+    /** {@code readlink} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    public static long readlink(String __path, @CType("char") Address __buf, long __len) {
+        var scope_ = N.mark();
+        var result_ = readlink(N.utf8(__path), __buf, __len);
+        N.release(scope_);
+        return result_;
+    }
+
     /** {@code extern int mkdir(const char *__path, __mode_t __mode)} - stat.h:389 */
     @Import(name = "mkdir") public static native int mkdir(@CType("char") Address __path, int __mode);
 
@@ -200,6 +233,7 @@ public final class PosixApi {
     public static final int O_RDONLY = 0; // int, fcntl-linux.h:43
     public static final int F_OK = 0; // int, unistd.h:284
     public static final int X_OK = 1; // int, unistd.h:283
+    public static final int W_OK = 2; // int, unistd.h:282
     public static final int CLOCK_MONOTONIC = 1; // int, time.h:48
     public static final int PATH_MAX = 4096; // int, limits.h:13
     public static final int EINTR = 4; // int, errno-base.h:8

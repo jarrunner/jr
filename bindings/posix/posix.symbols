@@ -23,6 +23,9 @@ stat stat
 access access
 unlink unlink
 rename rename
+chmod chmod
+symlink symlink
+readlink readlink
 mkdir mkdir
 rmdir rmdir
 opendir opendir releases=closedir fails=NULL
@@ -41,6 +44,7 @@ jx_environ getEnviron
 O_RDONLY
 F_OK
 X_OK
+W_OK
 CLOCK_MONOTONIC
 PATH_MAX
 EINTR

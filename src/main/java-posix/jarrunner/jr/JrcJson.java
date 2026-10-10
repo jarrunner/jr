@@ -42,6 +42,7 @@ public final class JrcJson {
         text(c, "log.level", r.path("log", "level"));
         text(c, "log.overwrite", r.path("log", "overwrite"));
         c.appId = str(r.path("app", "id"));
+        c.appName = str(r.path("app", "name"));
         c.appVersion = str(r.path("app", "version"));
         c.updateUrl = str(r.path("update", "url"));
         c.updateChannel = str(r.path("update", "channel"));

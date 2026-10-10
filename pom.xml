@@ -239,7 +239,7 @@
       </build>
     </profile>
     <!-- mvn package on a Mac (Apple clang, Xcode command line tools): the POSIX tree with the macOS Os and bindings ->
-         TeaVM -> ${jr.dist}/jr-macos-arm64, jr-macos-x86_64 and jr-macos (universal), each with an empty 16 KB __DATA,__jrc
+         TeaVM -> ${jr.dist}/jr-macos-arm64, jr-macos-x86_64 and jr-macos (universal), each with an empty 32 KB __DATA,__jrc
          section that jr-maven-plugin fills with an app's config, each signed ad hoc. Built by CI on a macOS runner. -->
     <profile>
       <id>macos</id>
