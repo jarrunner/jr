@@ -6,7 +6,7 @@
 # hangs, so every run here has a time limit.
 set -u
 . "$(dirname "$0")/lib.sh"
-JR="$1"; J="$2"
+JR="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"; J="$2"
 W="$(cd /tmp && pwd -P)/jr42j"
 rm -rf "$W"; mkdir -p "$W"; cd "$W" || exit 1
 cp "$JR" "$W/jr"; chmod 755 "$W/jr"; JR="$W/jr"
