@@ -63,6 +63,11 @@ public final class Launch {
             ExitHook.install();
             var code = JliLauncher.tryLaunch(java.jli, cmdLine, javaPath, guiMode && StartCapture.file.isEmpty());
             ExitHook.armed = false;
+            if (ExitHook.handedBack) {
+                // PRP-43: the JVM failed to start and ExitHook ended jli's thread instead of the process.
+                Log.warn("The in-process JVM failed to start (handed back by the exit hook)");
+                heal(StartCapture.end(hasConsole));
+            }
             if (code != null) {
                 Log.info("In-process JVM exited with code: " + code);
                 return new LaunchResult(true, code);
@@ -93,7 +98,8 @@ public final class Launch {
         return ProcessLauncher.launch(cmdLine, hasConsole, stderr, GUI_WAIT_MS);
     }
 
-    /** Called through ExitHook when jli.dll (or the app) calls exit() during an in-process run. */
+    /** Called through ExitHook when jli.dll calls exit() on jr's own thread during an in-process run. */
+    @SameThread("ExitHook.onExit, only when exit() was called on jr's thread")
     static void onJvmExit() {
         var text = StartCapture.end(hasConsole);
         if (!jvmWasCreated()) {

@@ -274,6 +274,9 @@ macro:JX_ReadConsoleOutputCharacterW readConsoleOutputCharacterW (Address, Addre
 COORD
 atexit atexit escapes=1
 ExitProcess exitProcess
+# PRP-43: the exit hook hands a failed in-process start back to jr's thread without running managed code on the JVM's
+ExitThread exitThread
+GetCurrentThreadId getCurrentThreadId
 # --- PRP-31 step 5: the standard error dialog (a #32770 window and a message loop; no WNDPROC) ---
 ShellExecuteW shellExecuteW
 SetWindowTextW setWindowTextW

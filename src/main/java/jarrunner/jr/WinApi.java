@@ -832,6 +832,12 @@ public final class WinApi {
     /** {@code void ExitProcess(UINT uExitCode)} - processthreadsapi.h:28 */
     @Import(name = "ExitProcess") public static native void exitProcess(int uExitCode);
 
+    /** {@code void ExitThread(DWORD dwExitCode)} - processthreadsapi.h:313 */
+    @Import(name = "ExitThread") public static native void exitThread(int dwExitCode);
+
+    /** {@code DWORD GetCurrentThreadId()} - processthreadsapi.h:305 */
+    @Import(name = "GetCurrentThreadId") public static native int getCurrentThreadId();
+
     /** {@code HINSTANCE ShellExecuteW(HWND hwnd, LPCWSTR lpOperation, LPCWSTR lpFile, LPCWSTR lpParameters, LPCWSTR lpDirectory, INT nShowCmd)} - shellapi.h:76 */
     @Import(name = "ShellExecuteW") @CType("struct HINSTANCE__") public static native Address shellExecuteW(@CType("struct HWND__") Address hwnd, @CType("wchar_t") Address lpOperation, @CType("wchar_t") Address lpFile, @CType("wchar_t") Address lpParameters, @CType("wchar_t") Address lpDirectory, int nShowCmd);
 
