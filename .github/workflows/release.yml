@@ -159,6 +159,16 @@ jobs:
           macos/jr-macos -Xjr:checks-selftest 2>&1 | grep -q 'Unknown jr option' || { echo 'the release binary knows -Xjr:checks-selftest'; exit 1; }
           echo 'checks build: overrun caught; release binary has no checks'
 
+      # PRP-42: the JVM in jr's process (jvm=dll through libjli, including the second entry into main that libjli makes
+      # on macOS), self-update of a bare binary, and the binary that is also its own .app. The last two run on a
+      # throwaway build whose config comes from /tmp (tests/posix/test-build.sh), never on a release binary.
+      - name: jvm=dll, self-update and install tests
+        run: |
+          bash tests/posix/jli-test.sh macos/jr-macos-arm64 "$JAVA_HOME"
+          bash tests/posix/test-build.sh "$RUNNER_TEMP/jrtest"
+          bash tests/posix/selfupdate-test.sh "$RUNNER_TEMP/jrtest"
+          bash tests/posix/install-test.sh "$RUNNER_TEMP/jrtest" tests/posix/fixtures/slot-1.0.bin tests/posix/fixtures/slot-1.1.bin
+
       - name: Upload build
         uses: actions/upload-artifact@v6
         with:
