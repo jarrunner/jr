@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version, X.Y.Z'
+        description: 'Version, X.Y.Z (or X.Y.Z-label for a pre-release)'
         required: true
       publish:
         description: 'Publish a GitHub release vX.Y.Z (unticked: build only)'
@@ -186,7 +186,7 @@ jobs:
         id: ver
         run: |
           if [ '${{ github.event_name }}' = workflow_dispatch ]; then v='${{ inputs.version }}'; else v='${{ github.ref_name }}'; v=${v#v}; fi
-          echo "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "version must be X.Y.Z, got '$v'"; exit 1; }
+          echo "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' || { echo "version must be X.Y.Z or X.Y.Z-label, got '$v'"; exit 1; }
           publish=false
           if [ '${{ github.event_name }}' = push ] || [ '${{ inputs.publish }}' = true ]; then publish=true; fi
           echo "version=$v" >> $GITHUB_OUTPUT
@@ -215,5 +215,7 @@ jobs:
           if gh release view "$tag" > /dev/null 2>&1; then
             gh release upload "$tag" out/* --clobber
           else
-            gh release create "$tag" out/* --title "jr ${{ steps.ver.outputs.version }}" --generate-notes --target "$GITHUB_SHA"
+            # X.Y.Z-label (1.4.0-beta.1) is a pre-release: never "latest", so install.sh and releases/latest keep the last X.Y.Z.
+            pre=""; case '${{ steps.ver.outputs.version }}' in *-*) pre="--prerelease --latest=false" ;; esac
+            gh release create "$tag" out/* --title "jr ${{ steps.ver.outputs.version }}" --generate-notes --target "$GITHUB_SHA" $pre
           fi
