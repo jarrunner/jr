@@ -31,3 +31,32 @@ int jx_wifexited(int status) { return WIFEXITED(status); }
    rather than an empty or hand-curated one. */
 extern char **environ;
 char **jx_environ(void) { return environ; }
+
+/* jvm=dll: the JVM inside this process through the JDK's libjli (JliLauncher, PRP-42). This is C because it is
+   about which function is called main, which no binding can express. On macOS JLI_Launch keeps the first thread
+   for the Cocoa run loop and calls the executable's main() again on a new thread (java_md_macosx.c, apple_main:
+   dlsym(RTLD_DEFAULT, "main")). In jr, main() is TeaVM's, and running it a second time would start the TeaVM
+   runtime again on a second OS thread, which it does not support (one global shadow stack, no locks). So TeaVM's
+   main is renamed below, and this main sends the second entry straight back into JLI_Launch with the arguments
+   jr prepared, without touching TeaVM. On Linux JLI_Launch does not call main again; the hand-off is the same. */
+#include <dlfcn.h>
+typedef int (*jx_jli_launch_fn)(int, char **, int, const char **, int, const char **, const char *, const char *,
+        const char *, const char *, unsigned char, unsigned char, unsigned char, int);
+static jx_jli_launch_fn jx_jli_fn;
+static int jx_jli_argc;
+static char **jx_jli_argv;
+static int jx_jli_call(void) {
+    return jx_jli_fn(jx_jli_argc, jx_jli_argv, 0, NULL, 0, NULL, "jr", "jr", "java", "java", 0, 1, 0, 0);
+}
+/* Calls JLI_Launch (fn, from dlsym) with argv (NULL-terminated), keeping both for the second entry into main. */
+int jx_jli_start(void *fn, int argc, char **argv) {
+    jx_jli_fn = (jx_jli_launch_fn) fn;
+    jx_jli_argc = argc;
+    jx_jli_argv = argv;
+    return jx_jli_call();
+}
+int jr_teavm_main(int argc, char **argv);
+int main(int argc, char **argv) {
+    return jx_jli_fn != NULL ? jx_jli_call() : jr_teavm_main(argc, argv);
+}
+#define main jr_teavm_main

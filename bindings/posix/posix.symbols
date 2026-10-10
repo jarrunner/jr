@@ -40,6 +40,9 @@ uname uname
 jx_wexitstatus wexitstatus
 jx_wifexited wifexited
 jx_environ getEnviron
+dlopen dlopen fails=NULL
+dlsym dlsym fails=NULL
+jx_jli_start jliStart
 # --- constants ---
 O_RDONLY
 F_OK
@@ -49,6 +52,7 @@ CLOCK_MONOTONIC
 PATH_MAX
 EINTR
 DT_DIR
+RTLD_NOW
 # --- structs ---
 struct:stat stat_t
 struct:timespec timespec

@@ -230,6 +230,31 @@ public final class PosixApi {
     /** {@code char **jx_environ()} - jr-posix.h:33 */
     @Import(name = "jx_environ") @CType("pointer") public static native Address getEnviron();
 
+    /** {@code extern void *dlopen(const char *__path, int __mode)} - dlfcn.h:75 */
+    @Import(name = "dlopen") @Fails("NULL") public static native Address dlopen(@CType("char") Address __path, int __mode);
+
+    /** {@code dlopen} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    @Fails("NULL") public static Address dlopen(String __path, int __mode) {
+        var scope_ = N.mark();
+        var result_ = dlopen(N.utf8(__path), __mode);
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code extern void *dlsym(void *__handle, const char *__symbol)} - dlfcn.h:76 */
+    @Import(name = "dlsym") @Fails("NULL") public static native Address dlsym(Address __handle, @CType("char") Address __symbol);
+
+    /** {@code dlsym} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    @Fails("NULL") public static Address dlsym(Address __handle, String __symbol) {
+        var scope_ = N.mark();
+        var result_ = dlsym(__handle, N.utf8(__symbol));
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code int jx_jli_start(void *fn, int argc, char **argv)} - jr-posix.h:52 */
+    @Import(name = "jx_jli_start") public static native int jliStart(Address fn, int argc, @CType("pointer") Address argv);
+
     public static final int O_RDONLY = 0; // int, fcntl.h:96
     public static final int F_OK = 0; // int, unistd.h:89
     public static final int X_OK = 1; // int, unistd.h:90
@@ -238,6 +263,7 @@ public final class PosixApi {
     public static final int PATH_MAX = 1024; // int, syslimits.h:103
     public static final int EINTR = 4; // int, errno.h:91
     public static final int DT_DIR = 4; // int, dirent.h:126
+    public static final int RTLD_NOW = 2; // int, dlfcn.h:84
     /** {@code extern int _NSGetExecutablePath(char *buf, uint32_t *bufsize)} - dyld.h:105 */
     @Import(name = "_NSGetExecutablePath") public static native int nsGetExecutablePath(@CType("char") Address buf, @CType("int32") Address bufsize);
 

@@ -230,6 +230,31 @@ public final class PosixApi {
     /** {@code char **jx_environ()} - jr-posix.h:33 */
     @Import(name = "jx_environ") @CType("pointer") public static native Address getEnviron();
 
+    /** {@code extern void *dlopen(const char *__file, int __mode)} - dlfcn.h:56 */
+    @Import(name = "dlopen") @Fails("NULL") public static native Address dlopen(@CType("char") Address __file, int __mode);
+
+    /** {@code dlopen} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    @Fails("NULL") public static Address dlopen(String __file, int __mode) {
+        var scope_ = N.mark();
+        var result_ = dlopen(N.utf8(__file), __mode);
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code extern void *dlsym(void *restrict __handle, const char *restrict __name)} - dlfcn.h:64 */
+    @Import(name = "dlsym") @Fails("NULL") public static native Address dlsym(Address __handle, @CType("char") Address __name);
+
+    /** {@code dlsym} with its read-only text as Strings (N.utf8), freed when the call returns. */
+    @Fails("NULL") public static Address dlsym(Address __handle, String __name) {
+        var scope_ = N.mark();
+        var result_ = dlsym(__handle, N.utf8(__name));
+        N.release(scope_);
+        return result_;
+    }
+
+    /** {@code int jx_jli_start(void *fn, int argc, char **argv)} - jr-posix.h:52 */
+    @Import(name = "jx_jli_start") public static native int jliStart(Address fn, int argc, @CType("pointer") Address argv);
+
     public static final int O_RDONLY = 0; // int, fcntl-linux.h:43
     public static final int F_OK = 0; // int, unistd.h:284
     public static final int X_OK = 1; // int, unistd.h:283
@@ -238,4 +263,5 @@ public final class PosixApi {
     public static final int PATH_MAX = 4096; // int, limits.h:13
     public static final int EINTR = 4; // int, errno-base.h:8
     public static final int DT_DIR = 4; // int, dirent.h:105
+    public static final int RTLD_NOW = 2; // int, dlfcn.h:25
 }

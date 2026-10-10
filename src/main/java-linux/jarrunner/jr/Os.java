@@ -36,6 +36,10 @@ final class Os {
     /** -Xjr:install and the bundle refresh are macOS only (AppBundle). */
     static final boolean APP_BUNDLES = false;
 
+    /** jvm=dll (JliLauncher): where libjli sits in a Java home, and that this is Linux, whose libjli re-executes the program when LD_LIBRARY_PATH needs changing. */
+    static final String JLI_LIBRARY = "/lib/libjli.so";
+    static final boolean LINUX = true;
+
     /** The user's cache folder ($XDG_CACHE_HOME, else ~/.cache), or null without HOME. */
     static String userCacheDir() {
         var xdg = Cstr.readEnv("XDG_CACHE_HOME");

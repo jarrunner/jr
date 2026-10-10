@@ -4,7 +4,7 @@ import static jarrunner.jr.N.*;
 
 /**
  * Java Runner (jr) for Linux/macOS - PRP-21's first real (non-demo) milestone on the POSIX side.
- * Deliberately NOT full parity with the Windows Jr.java: JDK auto-install, the jvm-dll in-process
+ * Deliberately NOT full parity with the Windows Jr.java: JDK auto-install, the jvm-dll in-process (since PRP-42: JliLauncher, opt-in)
  * launch mode (no POSIX equivalent - Windows-only trick), and PE resource-editing/signing
  * (-Xjr:make/edit/icon/...) are all out of scope here, per the platform decision recorded in
  * CLAUDE.md and PRP-21's scope note. What this covers: the baked-in config, -Xjr: overrides, AOT cache
@@ -120,6 +120,14 @@ public final class PosixJr {
                 ? PosixCmdLineBuilder.buildTraditionalMode(opts.appArgs, enableAOT, javaMajor)
                 : PosixCmdLineBuilder.buildConfigMode(config, opts.appArgs, enableAOT, javaMajor);
 
+        if (config.useJvmDll == 1) { // PRP-42: in-process through libjli, only when asked for until it is proven on a Mac
+            var code = JliLauncher.tryLaunch(javaPath, jvmArgs);
+            if (code != null) {
+                Log.close();
+                PosixApi.exit(code);
+                return;
+            }
+        }
         var result = ProcessLauncher.launch(javaPath, jvmArgs);
         Log.close();
         PosixApi.exit(result.started ? result.exitCode : 1);

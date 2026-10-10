@@ -61,6 +61,10 @@ final class Os {
     /** -Xjr:install and the bundle refresh are for macOS app bundles (AppBundle). */
     static final boolean APP_BUNDLES = true;
 
+    /** jvm=dll (JliLauncher): where libjli sits in a Java home (Contents/Home in a JDK bundle). */
+    static final String JLI_LIBRARY = "/lib/libjli.dylib";
+    static final boolean LINUX = false;
+
     /** The user's cache folder, ~/Library/Caches, or null without HOME. */
     static String userCacheDir() {
         var home = Cstr.readEnv("HOME");

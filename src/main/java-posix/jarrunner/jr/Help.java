@@ -1,6 +1,6 @@
 package jarrunner.jr;
 
-/** The diagnostic/help text for PosixJr - trimmed to this build's actual feature set (no jvm-dll,
+/** The diagnostic/help text for PosixJr - trimmed to this build's actual feature set (jvm=dll opt-in since PRP-42,
  *  no resource editing/signing, no auto-install - see PosixJr's class comment for why). */
 public final class Help {
     private Help() {}
@@ -23,10 +23,10 @@ public final class Help {
                 + "  -Xjr:update                 replace this binary (or its .app) with the newest release\n"
                 + "  -Xjr:batch                  with either: no prompts, one JSON line on stdout (for apps)\n"
                 + "  -Xjr:install                macOS: put the app in ~/Applications and a link in ~/.local/bin\n"
+                + "  -Xjr:jvm=dll                run Java inside this process (libjli); off by default for now\n"
                 + "  -Xjr:help                   this help\n\n"
                 + "Not in this build:\n"
                 + "  JDK auto-install - point java.home at one, or put a matching java on PATH.\n"
-                + "  jvm=dll in-process launch - Windows-only, no POSIX equivalent.\n"
                 + "  -Xjr:make/edit/icon/sign/... - Windows exe editing; jr-maven-plugin builds macOS apps.\n\n"
                 + "If the config's java.version (NN = exactly NN, NN+ = NN or newer) doesn't match\n"
                 + "the java found, jr reports the mismatch and stops rather than picking one for you.\n\n"
