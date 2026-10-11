@@ -13,6 +13,12 @@ echo '{"java":{"version":"25"},"jvm":{"javaArgs":"-version"},"aot":false}' > /tm
 out=$("$JR" < /dev/null 2>&1); code=$?
 ok "no terminal and no -Xjr:yes: refused, says how, nothing downloaded" '[ $code = 1 ] && echo "$out" | grep -q "Run it again with -Xjr:yes" && [ ! -e "$W/jdks/25-jre" ]'
 
+# The same from inside an .app, stderr captured, not opened by macOS (a script, a CI runner): no dialog to wait on.
+A="$W/Fake.app/Contents"; mkdir -p "$A/MacOS"; cp "$JR" "$A/MacOS/fake"
+echo '<?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>t.fake</string></dict></plist>' > "$A/Info.plist"
+out=$(limit 20 "$A/MacOS/fake" < /dev/null 2>&1); code=$?
+ok "inside an .app but not opened by macOS: no dialog, refused within 20 s" '[ $code = 1 ] && echo "$out" | grep -q "Run it again with -Xjr:yes"'
+
 out=$("$JR" -Xjr:yes < /dev/null 2>&1); code=$?
 ok "-Xjr:yes: downloads, checks and unpacks JRE 25, then runs it" '[ $code = 0 ] && [ -x "$W/jdks/25-jre/bin/java" ] && echo "$out" | grep -q "version \"25"'
 ok "no install leftovers" '[ ! -e "$W/jdks/.jr-install" ]'

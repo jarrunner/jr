@@ -12,11 +12,21 @@ public final class Ui {
     /** -Xjr:batch (PRP-42): no dialogs and nothing on stdout; every message goes to stderr, because stdout carries the one JSON line an app reads. */
     public static boolean batch;
 
-    /** macOS, inside an .app, with no terminal on stderr: opened by the system, so messages also go to a dialog. Set by PosixJr. */
+    /** macOS, opened by the system: messages also go to a dialog. Set by PosixJr. */
     public static boolean gui;
 
+    /** Launch Services sets __CFBundleIdentifier to the bundle id of the app it opens (measured on macOS 26); a shell
+     *  has none, or its terminal's. So: no terminal on stderr, this binary inside an .app, and that variable naming
+     *  this .app's own id. Only "inside an .app with stderr redirected" was not enough: a script or a CI runner
+     *  running the binary got a dialog nobody could answer, and waited for it. */
     static boolean detectGui() {
-        return !Os.LINUX && !batch && PosixApi.isatty(2) == 0 && ExeInfo.fullPath().contains(".app/Contents/MacOS/");
+        if (Os.LINUX || batch || PosixApi.isatty(2) != 0) return false;
+        var exe = ExeInfo.fullPath();
+        var at = exe.lastIndexOf(".app/Contents/MacOS/");
+        var id = Cstr.readEnv("__CFBundleIdentifier");
+        if (at < 0 || id == null || id.isEmpty()) return false;
+        var plist = FileIo.readAll(exe.substring(0, at + 4) + "/Contents/Info.plist");
+        return plist != null && plist.contains(">" + id + "<");
     }
 
     public static void info(boolean hasConsole, String title, String message) {
