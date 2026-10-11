@@ -81,8 +81,11 @@ public final class CmdLineBuilder {
         Log.info("Creating new AOT cache: " + cachePath);
         // JDK 25 reports the one-step cache creation with five unconditional lines (no -Xlog
         // setting silences them) on stdout, where they would land in a CLI's output. Moved to
-        // stderr, on this one run only (PRP-30).
-        return "-XX:AOTCacheOutput=\"" + forJava(cachePath) + "\" -XX:+DisplayVMOutputToStderr";
+        // stderr, on this one run only (PRP-30). Its unified-log warnings ("[warning][aot] Skipping
+        // jdk/internal/event/...", seen when the app starts a process) go to stdout by default:
+        // off there, and errors to stderr instead (PRP-42, measured on macOS). Quoted, because
+        // java on Windows expands an unquoted * as a file wildcard.
+        return "-XX:AOTCacheOutput=\"" + forJava(cachePath) + "\" -XX:+DisplayVMOutputToStderr \"-Xlog:aot*=off\" \"-Xlog:aot*=error:stderr\"";
     }
 
     /** What jr tells the app about itself, as -Dio.github.jarrunner.jr.* properties (PRP-30): start

@@ -124,7 +124,7 @@ The update file (one per app, at a fixed https address you control):
 }
 ```
 
-- `releases` is newest first, and that order is all jr relies on: it finds its own `app.version` by exact match and never parses version strings. `channels` names the release each channel should be on (`update.channel`, default `stable`).
+- `releases` is newest first, and that order is all jr relies on: it finds its own `app.version` by exact match and never parses version strings. `channels` names the release each channel should be on (`update.channel`, default `stable`). A channel other than `stable` also takes stable's release when it comes earlier in the list (PRP-42), so a beta copy moves on to the final release.
 - `-Xjr:update-check` prints the result. Exit 0 up to date (or this build is newer than the channel), 10 a newer version exists, 1 error. A withdrawn version is told so.
 - `-Xjr:update` downloads the exe for this machine (`windows-x86_64` or `windows-aarch64`, falling back to x86_64 on ARM64), tries each https url in turn, and checks the sha256 before touching anything. It then renames the running exe to `<exe>.jr-replaced` (Windows allows renaming a running exe, not overwriting it) and moves the new one into place, putting the old one back if that fails. The next launch deletes the `.jr-replaced` file. It works even when the app's own jar is broken.
 - `format` lets a future jr refuse a file it does not understand instead of misreading it.

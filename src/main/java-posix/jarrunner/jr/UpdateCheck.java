@@ -36,6 +36,15 @@ public final class UpdateCheck {
         var own = indexOf(releases, c.appVersion);
         var newest = indexOf(releases, target.str());
         if (newest < 0) return u.done(ERROR, "The update file names " + target.str() + " on " + channel + " but does not list it.");
+        // A beta (any channel other than stable) also takes stable when stable is newer, so beta users get the final
+        // release instead of staying on its last beta (PRP-42, found on macOS).
+        var stable = root.path("channels", "stable");
+        var stableAt = channel.equals("stable") || stable == null || stable.str() == null ? -1 : indexOf(releases, stable.str());
+        if (stableAt >= 0 && stableAt < newest) {
+            target = stable;
+            newest = stableAt;
+            channel = "stable";
+        }
         var retracted = own < 0 ? null : releases.at(own).get("retracted");
         var note = retracted != null && retracted.str() != null ? "\nThis version was withdrawn: " + retracted.str() : "";
         if (own == newest) return u.done(CURRENT, "Up to date: " + c.appVersion + " (" + channel + ")." + note);

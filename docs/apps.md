@@ -64,7 +64,7 @@ A file fetched by curl carries no download mark, so the unsigned exe meets neith
 
 ## Betas: channels
 
-The update file has channels. An exe follows the channel named in its config (`updateChannel` in jr-maven-plugin, default `stable`). Build a beta with `updateChannel` set to `beta`, publish its GitHub release as a pre-release, and the release writer adds `"beta": "<version>"` while keeping `stable` as it was. Installed stable copies are never offered the beta, and `releases/latest` still points at the last stable release.
+The update file has channels. An exe follows the channel named in its config (`updateChannel` in jr-maven-plugin, default `stable`). Build a beta with `updateChannel` set to `beta`, publish its GitHub release as a pre-release, and the release writer adds `"beta": "<version>"` while keeping `stable` as it was. Installed stable copies are never offered the beta, and `releases/latest` still points at the last stable release. A beta copy is offered the final release as soon as stable is newer than its beta (stable's release comes earlier in `releases`), so beta testers end up on the final release without a new beta.
 
 ## The JVM inside jr's process (`jvm=dll`)
 

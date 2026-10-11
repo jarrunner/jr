@@ -64,5 +64,22 @@ cp "$JR" "$W/app/myapp"; chmod 755 "$W/app/myapp"
 out=$("$W/app/myapp" -Xjr:update -Xjr:batch 2>/dev/null); code=$?
 ok "batch update, bad sha256: exit 1, status error" '[ $code = 1 ] && echo "$out" | grep -q "\"status\":\"error\""'
 
+# channels: stable never sees a beta; a beta takes stable once stable is newer (releases are newest first)
+chan() { # $1 stable  $2 beta  $3.. versions, newest first
+local s="$1" b="$2"; shift 2; local r="" v
+for v in "$@"; do r="$r${r:+,}{\"version\":\"$v\"}"; done
+echo "{\"format\":1,\"app\":\"t:myapp\",\"channels\":{\"stable\":\"$s\",\"beta\":\"$b\"},\"releases\":[$r]}" > app.update.json
+}
+slot() { echo "{\"app\":{\"id\":\"t:myapp\",\"version\":\"$1\"},\"update\":{\"url\":\"https://localhost:$PORT/app.update.json\",\"channel\":\"$2\"}}" > /tmp/jr-test.slot; }
+chan 1.1 1.2-beta.1 1.2-beta.1 1.1 1.0; slot 1.1 stable
+out=$("$W/app/myapp" -Xjr:update-check 2>&1); code=$?
+ok "channels: stable 1.1 is not offered the beta" '[ $code = 0 ] && echo "$out" | grep -q "Up to date: 1.1 (stable)"'
+slot 1.2-beta.1 beta
+out=$("$W/app/myapp" -Xjr:update-check 2>&1); code=$?
+ok "channels: beta on the newest beta is up to date" '[ $code = 0 ] && echo "$out" | grep -q "Up to date: 1.2-beta.1 (beta)"'
+chan 1.2 1.2-beta.1 1.2 1.2-beta.1 1.1 1.0
+out=$("$W/app/myapp" -Xjr:update-check 2>&1); code=$?
+ok "channels: beta is offered the final release when stable is newer" '[ $code = 10 ] && echo "$out" | grep -q "1.2-beta.1 -> 1.2 (stable)"'
+
 rm -f /tmp/jr-test.slot
 finish
