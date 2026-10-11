@@ -80,7 +80,7 @@ The release exe downloads its jar on first run and checks it against the SHA-256
 
 The plugin is ordinary Maven, so CI needs nothing beyond `mvn package` on a Windows runner (the Windows exes are stamped with Windows' own resource calls). macOS outputs (`<platforms>`) are built on any OS. A complete example, published as a live site with working updates, is [examples/hello](https://github.com/jarrunner/jr-maven-plugin/tree/main/examples/hello).
 
-Every parameter is listed in the [plugin's README](https://github.com/jarrunner/jr-maven-plugin#parameters). For apps that want to know they were launched by jr, or to check for updates themselves, there is [jr-runtime](https://github.com/jarrunner/jr-runtime).
+Every parameter is listed in the [plugin's README](https://github.com/jarrunner/jr-maven-plugin#parameters). For apps that want to know they were launched by jr, or to check for updates themselves, there is [jr-apputils](https://github.com/jarrunner/jr-apputils).
 
 How an app gives its users one-file install and update (its own `install` and `update` commands, `-Xjr:batch`, betas on a channel, what a user types): [apps.md](apps.md).
 

@@ -10,7 +10,7 @@ jr does what has to happen before Java runs, or while the app's own code cannot:
 - fetching Java and the app's jar, and checking the jar;
 - the app's identity: the exe's icon and version on Windows; on macOS the `.app` with its icon, its Dock name and its bundle id (`-Xjr:install`), and with `jvm=dll` the JVM inside jr's own process, so the Dock tile and "open with" belong to the app rather than to `java`.
 
-Everything else is the app's, in Java: where it installs, whether it goes on PATH, shortcuts, starting at sign-in, file associations, and anything specific to it (stopping a background process before an update, say). [updateutils](https://github.com/jarrunner/updateutils) does the common parts once, so each app does not have to.
+Everything else is the app's, in Java: where it installs, whether it goes on PATH, shortcuts, starting at sign-in, file associations, and anything specific to it (stopping a background process before an update, say). [jr-apputils](https://github.com/jarrunner/jr-apputils) does the common parts once, so each app does not have to.
 
 ## An app's own `install` and `update`
 
@@ -74,4 +74,4 @@ On Windows `jvm=dll` has long run the JVM inside the exe. On macOS and Linux it 
 
 - [guide.md](guide.md), building an exe with jr-maven-plugin and publishing releases.
 - [macos.md](macos.md), jr on macOS.
-- [jr-runtime](https://github.com/jarrunner/jr-runtime), for an app that wants to check for updates by itself (in the background, at most once a day) and tell the user.
+- jr-apputils also checks for updates by itself (in the background, at most once a day, asking jr) and gives the line to tell the user: `Updater.inBackground` and `Updater.notice`.
