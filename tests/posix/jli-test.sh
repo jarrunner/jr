@@ -22,8 +22,15 @@ J
 "$J/bin/javac" --release 21 Who.java && printf 'Main-Class: Who\n' > m.txt && "$J/bin/jar" cfm who.jar m.txt Who.class || { echo "could not build the test jar"; exit 1; }
 nm "$JR" 2>/dev/null | grep -E ' _?(main|jr_teavm_main|jx_jli_start)$' | sed 's/^/    /'
 
+out=$(limit 120 "$JR" -Xjr:java.home="$J" -Xjr:jvm=exe who.jar a "b c" 2>&1); code=$?
+ok "jvm=exe: runs, java is the process" '[ $code = 0 ] && echo "$out" | grep -q "cmd=.*/bin/java" && echo "$out" | grep -q "args=a|b c"'
+# the default: in-process on macOS (user decision, 2026-10-11), a child process on Linux
 out=$(limit 120 "$JR" -Xjr:java.home="$J" who.jar a "b c" 2>&1); code=$?
-ok "child (default): runs, java is the process" '[ $code = 0 ] && echo "$out" | grep -q "cmd=.*/bin/java" && echo "$out" | grep -q "args=a|b c"'
+if [ "$(uname -s)" = Darwin ]; then
+    ok "default on macOS: in-process (cmd is jr)" '[ $code = 0 ] && echo "$out" | grep -q "cmd=$JR\$"'
+else
+    ok "default on Linux: a child (java is the process)" '[ $code = 0 ] && echo "$out" | grep -q "cmd=.*/bin/java"'
+fi
 
 out=$(limit 120 "$JR" -Xjr:java.home="$J" -Xjr:jvm=dll who.jar seven "b c" 2>&1); code=$?
 echo "$out" | sed 's/^/    dll: /'

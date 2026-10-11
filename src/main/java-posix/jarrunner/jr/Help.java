@@ -1,7 +1,7 @@
 package jarrunner.jr;
 
-/** The diagnostic/help text for PosixJr - trimmed to this build's actual feature set (jvm=dll opt-in since PRP-42,
- *  no resource editing/signing, no auto-install - see PosixJr's class comment for why). */
+/** The diagnostic/help text for PosixJr - trimmed to this build's actual feature set (jvm=dll since PRP-42, the macOS
+ *  default; Java download since PRP-42; no resource editing/signing - see PosixJr's class comment for why). */
 public final class Help {
     private Help() {}
 
@@ -23,7 +23,7 @@ public final class Help {
                 + "  -Xjr:update                 replace this binary (or its .app) with the newest release\n"
                 + "  -Xjr:batch                  with either: no prompts, one JSON line on stdout (for apps)\n"
                 + "  -Xjr:install                macOS: put the app in ~/Applications and a link in ~/.local/bin\n"
-                + "  -Xjr:jvm=dll                run Java inside this process (libjli); off by default for now\n"
+                + "  -Xjr:jvm=dll|exe            Java inside this process (libjli; the macOS default) or as a child\n"
                 + "  -Xjr:yes                    download Java without asking, when the app's Java is missing\n"
                 + "  -Xjr:help                   this help\n\n"
                 + "Without the app's preferred Java, jr offers to download it (Eclipse Temurin) into\n"

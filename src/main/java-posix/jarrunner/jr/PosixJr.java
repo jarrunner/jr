@@ -121,7 +121,9 @@ public final class PosixJr {
                 ? PosixCmdLineBuilder.buildTraditionalMode(opts.appArgs, enableAOT, javaMajor)
                 : PosixCmdLineBuilder.buildConfigMode(config, opts.appArgs, enableAOT, javaMajor);
 
-        if (config.useJvmDll == 1) { // PRP-42: in-process through libjli, only when asked for until it is proven on a Mac
+        // PRP-42: in-process through libjli. The default on macOS (user, 2026-10-11, after a Mac showed the Dock tile is
+        // then the app's own, not java's); on Linux only when asked for. jvm=exe asks for a child process anywhere.
+        if (config.useJvmDll == 1 || (config.useJvmDll == -1 && !Os.LINUX)) {
             var code = JliLauncher.tryLaunch(javaPath, jvmArgs);
             if (code != null) {
                 Log.close();

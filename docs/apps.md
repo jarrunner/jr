@@ -68,7 +68,7 @@ The update file has channels. An exe follows the channel named in its config (`u
 
 ## The JVM inside jr's process (`jvm=dll`)
 
-On Windows `jvm=dll` has long run the JVM inside the exe. On macOS and Linux it does now too, through the JDK's libjli, off by default while it is new: set `jvmMode` to `dll` in the plugin, or run with `-Xjr:jvm=dll`. It is what a Mac app wants, because the Dock tile, the bundle id and Finder's "open with" then belong to the app's process. When in-process start is not possible (no libjli in that Java, or on Linux an `LD_LIBRARY_PATH` that would make libjli restart the program), jr starts Java as a child as before and says why in its log.
+On Windows `jvm=dll` has long run the JVM inside the exe. On macOS and Linux it does now too, through the JDK's libjli. On macOS it is the default (tested on an Apple silicon Mac, 2026-10-11); `jvmMode` `exe` (or `-Xjr:jvm=exe`) starts Java as a child instead. On Linux it is used when asked for (`jvmMode` `dll`). It is what a Mac app wants, because the Dock tile, the bundle id and Finder's "open with" then belong to the app's process. When in-process start is not possible (no libjli in that Java, or on Linux an `LD_LIBRARY_PATH` that would make libjli restart the program), jr starts Java as a child as before and says why in its log.
 
 ## See also
 
