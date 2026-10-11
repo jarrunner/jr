@@ -7,7 +7,8 @@ import java.util.List;
  *  file, never a bare java binary; a version that cannot be read rejects the candidate. Sources: PATH (resolved
  *  through symlinks, so /usr/bin/java -> /etc/alternatives -> the real home), JAVA_HOME, then the usual install
  *  roots on macOS and Linux. Order: exact preferred, else nearest above (up to max), else nearest below (down to
- *  min). No download on this build. Nothing is ever executed: macOS's /usr/bin/java stub is only resolved, and
+ *  min); when the preferred version is missing and java.autoinstall allows it, it is downloaded first (JavaInstall,
+ *  PRP-42), as on Windows. Nothing is ever executed: macOS's /usr/bin/java stub is only resolved, and
  *  without a JDK behind it it is simply rejected. */
 public final class JavaChooser {
     final List<String> homes = new ArrayList<>();
@@ -15,7 +16,26 @@ public final class JavaChooser {
     final StringBuilder report = new StringBuilder();
     String rule = "";
 
-    String choose(JavaRange range) {
+    String choose(JavaRange range, boolean autoInstall, String packageType, boolean assumeYes) {
+        var cacheRoot = JavaInstall.cacheRoot();
+        if (cacheRoot != null) scan(cacheRoot, "");
+        // Test-only, not in help: pretend no Java is installed except in jr's cache (as on Windows, prp/09).
+        if (Cstr.readEnv("JR_TEST_FORCE_NO_JAVA") == null) scanSystem();
+        var exact = pick(range, true);
+        if (exact != null) return exact;
+        var home = autoInstall ? JavaInstall.tryInstall(range.preferred, packageType, assumeYes) : null;
+        if (home != null) {
+            add(home, "downloaded");
+            var i = homes.indexOf(home);
+            if (i >= 0 && range.accepts(majors.get(i))) {
+                rule = "downloaded preferred Java " + range.preferred;
+                return home;
+            }
+        }
+        return pick(range, false);
+    }
+
+    private void scanSystem() {
         var path = JavaFinder.findInPath("java");
         if (path != null) {
             add(JavaFinder.homeOf(path), "PATH");
@@ -41,6 +61,10 @@ public final class JavaChooser {
         }
         scan("/usr/lib/jvm", "");
         scan("/opt/java", "");
+    }
+
+    /** The exact preferred version; with exactOnly false, else the nearest above (up to max), else below (down to min). */
+    private String pick(JavaRange range, boolean exactOnly) {
         String best = null;
         var bestMajor = 0;
         for (var i = 0; i < homes.size(); i++) {
@@ -50,6 +74,7 @@ public final class JavaChooser {
                 rule = "exact match for preferred Java " + m;
                 return homes.get(i);
             }
+            if (exactOnly) continue;
             var better = best == null || (m > range.preferred
                     ? bestMajor < range.preferred || m < bestMajor
                     : bestMajor < range.preferred && m > bestMajor);

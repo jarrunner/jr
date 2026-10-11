@@ -26,6 +26,7 @@ public final class PosixJr {
         var config = Config.load();
         var opts = JrOptions.parse(args, config);
         Ui.batch = opts.batch;
+        Ui.gui = Ui.detectGui(); // macOS, opened by the system: messages also in a dialog (PRP-42)
 
         if (!config.logFile.isBlank()) {
             Log.init(config.logFile, config.logOverwrite);
@@ -106,7 +107,7 @@ public final class PosixJr {
 
         AppBundle.refresh(); // inside an .app: its files follow this binary after an update (PRP-42)
 
-        var resolved = resolveJava(config, javaExeName);
+        var resolved = resolveJava(config, javaExeName, opts.assumeYes);
         if (resolved == null) {
             Log.close();
             PosixApi.exit(1);
@@ -135,7 +136,7 @@ public final class PosixJr {
 
     /** PRP-31: {java path, major}. An explicit java.home is used as given (a warning if its version is outside the
      *  range); otherwise JavaChooser picks by the version rules. Null after printing why nothing qualified. */
-    private static String[] resolveJava(Config config, String javaExeName) {
+    private static String[] resolveJava(Config config, String javaExeName, boolean assumeYes) {
         var range = JavaRange.of(config);
         if (range.error != null) {
             Ui.error(true, "Invalid Java Version Setting", range.error + "\nThis setting is part of the app's own configuration.");
@@ -154,11 +155,11 @@ public final class PosixJr {
             return new String[] {javaPath, String.valueOf(major)};
         }
         var chooser = new JavaChooser();
-        var home = chooser.choose(range);
+        var home = chooser.choose(range, config.javaAutoInstall != 0, config.javaType.isEmpty() ? "jre" : config.javaType, assumeYes);
         if (home == null) {
             Ui.error(true, "Java Not Found", "This app needs Java " + range.preferred + " (" + range.describe() + ").\n"
                     + "Java installations found on this computer:\n" + (chooser.report.length() == 0 ? "- none\n" : chooser.report)
-                    + "Install Java " + range.preferred + ", or set java.home in the app config. This build does not download Java.");
+                    + "Install Java " + range.preferred + ", or set java.home in the app config.");
             return null;
         }
         Log.info("Using " + home + " (" + chooser.rule + ")");

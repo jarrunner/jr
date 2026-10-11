@@ -37,7 +37,7 @@ public final class ProcessLauncher {
                 return new LaunchResult(false, -1);
             }
             var pid = intOf(pidVar);
-            Log.info("Java process started successfully (PID: " + pid + ")");
+            Log.info("Started " + Paths.fileNameOf(javaPath) + " (PID: " + pid + ")");
 
             var statusVar = intVar();
             int waited;
@@ -49,7 +49,7 @@ public final class ProcessLauncher {
             }
             var status = intOf(statusVar);
             var exitCode = PosixApi.wifexited(status) != 0 ? PosixApi.wexitstatus(status) : 128;
-            Log.info("Java process exited with code: " + exitCode);
+            Log.info(Paths.fileNameOf(javaPath) + " exited with code " + exitCode);
             return new LaunchResult(true, exitCode);
         });
     }

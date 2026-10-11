@@ -6,10 +6,8 @@ import java.util.List;
 import static jarrunner.jr.N.*;
 
 /** Directory helpers for the AOT cache - mirrors the Windows Dirs' FindFirstFile-based ones with
- *  opendir/readdir/closedir. The JDK-auto-install directory tree helpers (mkdirRecursive,
- *  removeDirTree, findSingleSubdir, moveDirectory) are not needed by PosixJr v1 (auto-install is
- *  out of scope for this pass - see PRP-21's status file) and are left out rather than ported
- *  speculatively. */
+ *  opendir/readdir/closedir. JavaInstall (PRP-42) moves and removes folders with rename(2) and
+ *  /bin/rm instead of porting the Windows tree helpers. */
 public final class Dirs {
     private Dirs() {}
 

@@ -19,7 +19,7 @@ public class Config {
     // PRP-36: the jrc-json the maven plugin embeds, the same keys as the Windows Config
     boolean embedded = false; // a config is embedded in this binary (its __DATA,__jrc section)
     String loadError;         // a config that could not be read; reported before anything runs
-    String javaType = "";     // read for parity; this build does not download Java
+    String javaType = "";     // jre (the default) or jdk: what JavaInstall downloads
     String runUrl = "";       // run.url / run.maven / run.sha256 - a remote jar, see RemoteJar
     String runMaven = "";
     String runSha256 = "";

@@ -61,7 +61,7 @@ The result, measured rather than claimed:
 - **On Windows it is a real, shipping native program.** jr runs real tools every day. It has a GUI error dialog, progress windows, an HTTPS downloader, resource editing, Authenticode signing and an in-process JVM, all in Java, in about 610 KB.
 - **Size.** A hand-written C launcher would be smaller, but less so than you might think. When the Java port reached feature parity with the old C launcher it was about 4.8x its size (370 KB against 77 KB). Most of that is a fixed cost: TeaVM's runtime is paid for once. Packed with UPX, today's 610 KB exe is about 160 KB, roughly what a C launcher with today's features would be, by our estimate. See [docs/upx.md](docs/upx.md) for the numbers.
 - **Speed.** A jr launch costs about 30 ms on its own. Next to starting a JVM that is noise.
-- **Cross-platform.** Linux builds and runs. macOS builds, but has not yet run on a Mac. So for now the honest claim is: proven on Windows, working on Linux, macOS next.
+- **Cross-platform.** macOS runs: tested on GitHub's Mac runners and on an Apple silicon Mac (macOS 26), including the Java download, dialogs when opened from Finder or the Dock, self-update of a binary and of an app, and the JVM inside jr's own process. Linux builds and runs, as the test bench for the Mac code. Windows is the most used.
 
 ### What the code looks like
 
@@ -357,7 +357,7 @@ jr.exe -Xjr:yes myapp.jar
 
 **How it works:**
 1. Downloads a matching **Eclipse Temurin** build for the requested major version (default: 25), for the machine's native architecture, via the [Foojay Disco API](https://api.foojay.io) - the same API [jbang](https://www.jbang.dev/) itself uses. On Windows on ARM64 it installs a native ARM64 JDK: Temurin where one is published, otherwise **Azul Zulu** (Temurin has no Windows ARM64 build of some versions, 25 among them), and Temurin x64 under emulation only if neither exists.
-2. Installs it into `%USERPROFILE%\.jbang\cache\jdks\<version>\` - **the exact same cache location jbang uses**, so the two tools share downloads. If jbang already installed that version, jr uses it directly with no download; if jr installs one first, `jbang jdk list` picks it up automatically.
+2. Installs it into `%USERPROFILE%\.jbang\cache\jdks\<version>\` (on macOS and Linux `~/.jbang/cache/jdks/<version>`, from Temurin's `.tar.gz`; on macOS the question is a dialog when the app was opened from Finder or the Dock) - **the exact same cache location jbang uses**, so the two tools share downloads. If jbang already installed that version, jr uses it directly with no download; if jr installs one first, `jbang jdk list` picks it up automatically.
 3. Verifies the download's SHA256 checksum before extracting anything.
 4. Extracts with the `tar.exe` already bundled with Windows (10 1803+) - no bundled archive library.
 5. Shows progress matching how jr was launched: a text progress bar in console mode, a small native progress window in GUI mode.

@@ -168,6 +168,7 @@ jobs:
           bash tests/posix/test-build.sh "$RUNNER_TEMP/jrtest"
           bash tests/posix/selfupdate-test.sh "$RUNNER_TEMP/jrtest"
           bash tests/posix/install-test.sh "$RUNNER_TEMP/jrtest" tests/posix/fixtures/slot-1.0.bin tests/posix/fixtures/slot-1.1.bin
+          bash tests/posix/javainstall-test.sh "$RUNNER_TEMP/jrtest"
 
       - name: Upload build
         uses: actions/upload-artifact@v6
