@@ -1,30 +1,35 @@
-# Java Runner (jr) - Make Your JARs Feel Like Native Windows Executables
+<p align="center"><img src="icon/jr-icon.svg" width="112" alt="jr"></p>
 
-A small Windows launcher (about 610 KB, nothing to install) that makes JAR files executable like native .exe files - with automatic console/GUI detection, JDK 25 AOT cache support, Java auto-install and simple configuration. jr itself is written in Java and compiled to a native exe (see [Java compiled to a native exe](#java-compiled-to-a-native-exe)).
+# jr: run your Java app like a native program
 
-## What Makes jr Different?
+jr is a small native launcher for Java apps on Windows and macOS. Your jar gets its own exe or Mac app with your name and icon. jr finds Java or downloads it, starts the app faster from the second run, and can update it in place.
 
-**Make JARs truly executable without GraalVM complexity or jpackage bloat:**
+- **Its own exe, its own name.** An exe (or a macOS app) with your icon and version. It can run the JVM inside that process, so Task Manager shows `myapp.exe`, not another `java.exe`.
+- **Java is taken care of.** jr uses an installed Java that fits the app. If there is none, it asks, then downloads Eclipse Temurin into the same cache jbang uses, checked against its SHA-256.
+- **Faster from the second run.** On Java 25 and newer, jr keeps an AOT cache for each jar and rebuilds it when the jar changes.
+- **Small, nothing to install.** About 600 KB, no runtime bundled. Double-clicked, the app opens with no console window; run from a terminal, its output shows there.
 
-1. **Execute JARs like native .exe files** - Set up Windows file association and PATHEXT, double-click JARs or run them by name from command line
-2. **Automatic AOT cache (JDK 25+)** - 90% faster startup (20-30ms vs 200-300ms) with zero configuration
-3. **Smart console detection** - Automatically uses java.exe (console) or javaw.exe (GUI) based on how you launch it
-4. **Two modes**: Works as generic JAR launcher (no config needed) OR as your app's own exe, its config baked in by [jr-maven-plugin](docs/guide.md)
-5. **Your app gets its own process name** - with `jvm=dll` the JVM runs inside the launcher, so Task Manager shows `myapp.exe` instead of another anonymous `java.exe`
-6. **Small, nothing to install** - about 610 KB (about 160 KB if you pack it with UPX, see [docs/upx.md](docs/upx.md)), no VC++ Redistributable, no bundled JRE, vs 50+ MB (jpackage)
+## Try it
 
-**Key Features:**
-- Automatic console/GUI detection (no manual configuration like Launch4j/WinRun4J)
-- JDK 25 AOT cache support out of box (creates, uses, and cleans up cache automatically)
-- Optional in-process JVM (`jvm=dll`) so each app is its own killable, nameable process
-- Works without any config (traditional mode) or with a config baked into the app's own exe (config mode)
-- Command-line arguments override config settings
-- Debug logging (opt-in only)
-- Finds Java from PATH or set `java.home` (in the app's config, or `-Xjr:java.home=` for one run) to use a specific JDK
+Windows:
 
-## macOS and Linux
+```
+curl.exe -fLo jr.exe https://github.com/jarrunner/jr/releases/latest/download/jr.exe
+.\jr.exe myapp.jar
+```
 
-The Java code that makes up jr also compiles for POSIX systems. The Linux build runs end to end (tested under WSL, with a real JDK), and a macOS build links but has not yet run on a Mac. Neither is released yet: making jr work properly on the Mac is the current focus (see [What comes next](#what-comes-next)). Linux is built and tested mainly because it is the closest thing to a Mac that can be run on the development machine. The baked-in config (a jrc-json) is the same on every platform.
+macOS (installs `jr` into `~/.local/bin`, see [docs/macos.md](docs/macos.md)):
+
+```
+curl -fsSL https://github.com/jarrunner/jr/releases/latest/download/install.sh | sh
+jr myapp.jar
+```
+
+To give your own app its own launcher, add [jr-maven-plugin](https://github.com/jarrunner/jr-maven-plugin) to its build: the [getting-started guide](docs/guide.md) takes you through it.
+
+[Guide](docs/guide.md) · [macOS](docs/macos.md) · [jr-maven-plugin](https://github.com/jarrunner/jr-maven-plugin) · [jr-apputils](https://github.com/jarrunner/jr-apputils) · [Releases](../../releases) · [jarrunner.github.io](https://jarrunner.github.io)
+
+jr itself is written in Java and compiled to a native program (see [Java compiled to a native exe](#java-compiled-to-a-native-exe)). The rest of this page is the reference.
 
 ## Download
 
@@ -36,7 +41,7 @@ The Java code that makes up jr also compiles for POSIX systems. The Linux build 
 - **`jr-macos`** - macOS, one binary for Apple Silicon and Intel (also as `jr-macos-arm64` and `jr-macos-x86_64`), signed ad hoc. Install with `curl -fsSL https://github.com/jarrunner/jr/releases/latest/download/install.sh | sh`; see [docs/macos.md](docs/macos.md).
 - **`SHA256SUMS`** - check a download against it. The release binaries are not code-signed.
 
-Download, rename if desired, and start using immediately! Tested on Windows 11.
+Download, rename if you like, and use it: nothing to install. Tested on Windows 11 and macOS 26.
 
 **New to jr? Read the [getting-started guide](docs/guide.md):** run any jar with jr, then give your own app its own exe with jr-maven-plugin, in your Maven build and in CI.
 
@@ -95,7 +100,7 @@ The rules for native memory are short and written at the top of `N.java`: everyt
 
 Planned, not done:
 
-- **macOS**: run and test on real Macs, then release it.
+- **macOS**: released, built for Apple silicon and Intel; more testing on real Macs, especially of installed apps.
 - **The POSIX launcher catches up** with the Windows one, using the same generated-binding approach.
 - **Windows on ARM64**: run on real hardware.
 - **Fixes in the bindings generator**, so that the code needs fewer workarounds.
