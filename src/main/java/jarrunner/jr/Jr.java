@@ -101,23 +101,19 @@ public final class Jr {
             var result = ReRun.run(opts.stamp);
             var report = result.report();
             var withNewline = report.isEmpty() || report.endsWith("\n") ? report : report + "\n";
-            if (hasConsole) {
-                if (result.ok()) {
-                    Stderr.out(withNewline);
-                } else {
-                    Stderr.print(withNewline);
-                }
-            } else if (result.ok()) {
-                Ui.info(false, "jr", report);
+            // A build tool runs this, often with no console (CI, a reaped shell): never a dialog, which would block
+            // the build. The std handles are still the caller's pipes, so the report and the exit code reach it.
+            if (result.ok()) {
+                Stderr.out(withNewline);
             } else {
-                Ui.error(false, "jr - Error", report);
+                Stderr.print(withNewline);
             }
             Log.close();
             WinApi.exit(result.ok() ? 0 : 1);
             return;
         }
         if (opts.stamp.hasEdits()) {
-            Ui.error(hasConsole, "Invalid jr Option",
+            Ui.error(true, "Invalid jr Option", // a build-time misuse: stderr, never a dialog
                     "Resource and signing options (-Xjr:icon, -Xjr:version..., -Xjr:sign...) need a target:\n"
                             + "-Xjr:make=<new.exe> (a copy of this exe) or -Xjr:edit=<existing.exe>.");
             Log.close();

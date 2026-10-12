@@ -94,7 +94,9 @@ final class AppBundle {
             var made = PosixApi.symlink(inside, link + ".jr-new") == 0 && PosixApi.rename(link + ".jr-new", link) == 0;
             linkNote = made ? "\nThe command " + c.appName + " is " + link + ", a link to the app." : "\nCould not create " + link + ".";
             var path = Cstr.readEnv("PATH");
-            if (made && (path == null || !(":" + path + ":").contains(":" + bin + ":"))) {
+            // Under -Xjr:batch an app's own install drives this and adds the PATH line itself (jr-apputils), so the
+            // advice would read as a contradiction just before it is done.
+            if (made && !Ui.batch && (path == null || !(":" + path + ":").contains(":" + bin + ":"))) {
                 linkNote += "\n" + bin + " is not on your PATH yet: add it in your shell profile.";
             }
         } else {
