@@ -37,7 +37,7 @@ Add the plugin to your app's `pom.xml`, after the shade plugin (or whatever buil
 <plugin>
   <groupId>io.github.jarrunner</groupId>
   <artifactId>jr-maven-plugin</artifactId>
-  <version>1.2.0</version>
+  <version>1.3.0</version>
   <executions><execution><goals><goal>exe</goal></goals></execution></executions>
   <configuration>
     <icon>${project.basedir}/app.ico</icon>
